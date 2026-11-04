@@ -40,11 +40,21 @@ function cleanOp(o) {
   if (!pt(o.a) || !pt(o.b)) return null;
   return { k: o.k, c: o.c, w: o.w, e: !!o.e, a: [o.a[0], o.a[1]], b: [o.b[0], o.b[1]] };
 }
+// Questions may carry <b> <i> <u> <br> and nothing else; any other tag is stripped, stray < > are escaped.
+function cleanHtml(s) {
+  return String(s || '').slice(0, 2000).split(/(<[^>]*>)/).map(tok => {
+    const m = /^<(\/?)(b|i|u)>$/i.exec(tok);
+    if (m) return '<' + m[1] + m[2].toLowerCase() + '>';
+    if (/^<br\s*\/?>$/i.test(tok)) return '<br>';
+    if (/^<[^>]*>$/.test(tok)) return '';
+    return tok.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }).join('');
+}
 function cleanQ(q = {}) {
   const img = typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,') && q.img.length < 4e6 ? q.img : null;
   let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'graph';
   if (bg === 'photo' && !img) bg = 'blank';
-  return { question: String(q.question || '').slice(0, 500), bg, img };
+  return { question: cleanHtml(q.question), bg, img };
 }
 function dropLast(ops) {
   if (!ops.length) return ops;

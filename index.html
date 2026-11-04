@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draw It Out</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+#join .card{max-width:380px;margin:40px auto;text-align:center}
+#join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
+#join #code{letter-spacing:.3em;text-transform:uppercase}
+#err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
+.stack{display:grid;width:min(100%,calc((100vh - 240px)*1.6));margin:auto}
+.stack canvas{grid-area:1/1}
+#pad{touch-action:none;cursor:crosshair;background:transparent;border-color:transparent}
+.swatch{width:40px;height:40px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.swatch.on{box-shadow:0 0 0 3px var(--pri)}
+</style>
+</head>
+<body>
+<main>
+ <div id="join">
+  <form class="card" id="jf">
+   <h1 style="margin:0 0 4px">Join class</h1>
+   <p style="color:var(--mut);margin:0 0 12px">Type your class code and first name</p>
+   <input id="code" maxlength="10" placeholder="CODE" aria-label="Class code" autocomplete="off">
+   <input id="name" maxlength="20" placeholder="Your first name" aria-label="First name" autocomplete="off">
+   <p id="err" role="alert"></p>
+   <button class="btn" style="width:100%">Join</button>
+  </form>
+ </div>
+
+ <div id="play" hidden>
+  <div class="qbar" id="q"></div>
+  <div class="card">
+   <div class="row" style="margin-bottom:10px">
+    <span class="swatch on" style="background:#111" data-c="#111111" aria-label="Black"></span>
+    <span class="swatch" style="background:#2563eb" data-c="#2563eb" aria-label="Blue"></span>
+    <span class="swatch" style="background:#dc2626" data-c="#dc2626" aria-label="Red"></span>
+    <span class="swatch" style="background:#059669" data-c="#059669" aria-label="Green"></span>
+    <button class="btn alt" id="eraser">Eraser</button>
+    <button class="btn alt" id="undo">Undo</button>
+    <button class="btn alt" id="clear">Clear</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="done">I'm done ✓</button>
+   </div>
+   <div class="stack"><canvas id="bg" width="800" height="500"></canvas><canvas id="pad" width="800" height="500"></canvas></div>
+   <p style="color:var(--mut);margin:8px 0 0"><span class="dot" id="dot"></span><span id="st">Connecting…</span> · Your teacher can see your drawing live.</p>
+  </div>
+ </div>
+</main>
+<script src="/common.js"></script>
+<script>
+const pad = $('#pad'), layer = pad; // the visible pad is the drawing layer itself
+let target = null, id = null, ops = [], q = { question: '', bg: 'graph', img: null }, im = null;
+let col = '#111111', eraser = false, cur = null, k = 0, done = false;
+
+const sp = new URLSearchParams(location.search);
+$('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
+$('#name').value = localStorage.do_name || '';
+
+const ws = connect(onmsg, () => target && sendJoin(), ok => {
+  $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Reconnecting…';
+});
+function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, id, ops }); }
+
+$('#jf').onsubmit = e => {
+  e.preventDefault(); $('#err').textContent = '';
+  const code = $('#code').value.trim().toUpperCase(), name = $('#name').value.trim();
+  if (!code || !name) return ($('#err').textContent = 'Type the code and your name');
+  localStorage.do_code = code; localStorage.do_name = name;
+  id = sessionStorage['do_id_' + code] || null;
+  target = { code, name }; sendJoin();
+};
+
+function setQ(nq) {
+  q = nq; $('#q').innerHTML = q.question || 'Waiting for your teacher’s question…'; // server-sanitized: only b/i/u/br
+  im = loadImg(q.img, drawBg); drawBg();
+}
+const drawBg = () => paintBg($('#bg').getContext('2d'), q.bg, im);
+
+function onmsg(m) {
+  if (m.t === 'err') {
+    if ($('#play').hidden) $('#err').textContent = m.m;
+    else if (m.nocls) setTimeout(sendJoin, 3000); // server restarted: keep retrying until the teacher is back
+  } else if (m.t === 'joined') {
+    id = m.id; sessionStorage['do_id_' + target.code] = id;
+    $('#join').hidden = true; $('#play').hidden = false;
+    if (m.q.question || m.q.img) setQ(m.q); else if (!$('#q').innerHTML) setQ(m.q);
+  } else if (m.t === 'q') {
+    ops = []; done = false; $('#done').textContent = "I'm done ✓"; replay(layer, ops); setQ(m.q);
+  }
+}
+
+// drawing
+const pt = e => { const r = pad.getBoundingClientRect(); return [Math.round((e.clientX - r.left) * W / r.width), Math.round((e.clientY - r.top) * H / r.height)]; };
+function seg(a, b) {
+  const o = { k, c: col, w: eraser ? 30 : 4, e: eraser, a, b };
+  ops.push(o); drawOp(pad.getContext('2d'), o); ws.send({ t: 'd', o });
+}
+pad.onpointerdown = e => { pad.setPointerCapture(e.pointerId); k++; cur = pt(e); seg(cur, cur); setDone(false); };
+pad.onpointermove = e => { if (!cur) return; const p = pt(e); seg(cur, p); cur = p; };
+pad.onpointerup = pad.onpointercancel = () => (cur = null);
+
+document.querySelectorAll('.swatch').forEach(s => s.onclick = () => {
+  col = s.dataset.c; eraser = false; $('#eraser').classList.remove('on');
+  document.querySelectorAll('.swatch').forEach(o => o.classList.toggle('on', o === s));
+});
+$('#eraser').onclick = e => { eraser = true; e.target.classList.add('on'); document.querySelectorAll('.swatch').forEach(o => o.classList.remove('on')); };
+$('#undo').onclick = () => { ops = dropLast(ops); replay(layer, ops); ws.send({ t: 'undo' }); };
+$('#clear').onclick = () => { ops = []; replay(layer, ops); ws.send({ t: 'clear' }); };
+function setDone(v) { if (done === v) return; done = v; $('#done').textContent = v ? 'Done ✓ (tap to undo)' : "I'm done ✓"; ws.send({ t: 'done', v }); }
+$('#done').onclick = () => setDone(!done);
+</script>
+</body>
+</html>
