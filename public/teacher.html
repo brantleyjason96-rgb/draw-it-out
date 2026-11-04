@@ -28,15 +28,20 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
    <div class="row">
     <button class="btn alt" id="hide"></button>
     <button class="btn alt" id="proj">Open projector view</button>
-    <button class="btn alt" id="save">Save session (PNG)</button>
+    <button class="btn alt" id="savepng">Save session (PNG)</button>
    </div>
   </div>
   <div class="row mut" style="margin-top:8px">Student link for Google Classroom:
    <code id="link" style="background:#f3f4f6;padding:2px 6px;border-radius:6px"></code>
    <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button></div>
-  <div class="row" style="margin-top:12px;align-items:flex-start">
-   <textarea id="qin" rows="2" placeholder="Type the question students should answer…" style="flex:1;min-width:260px"></textarea>
-   <div class="row">
+ </div>
+ <div class="card" style="margin-top:12px">
+  <div class="row" style="justify-content:space-between"><b>Question set</b>
+   <button class="btn alt" id="add">+ Add question</button></div>
+  <ol id="list" style="padding-left:22px;margin:10px 0 0"></ol>
+  <div id="editor" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+   <textarea id="qin" rows="2" placeholder="Type the question students should answer…"></textarea>
+   <div class="row" style="margin-top:8px">
     <select id="bg" class="btn alt" aria-label="Background">
      <option value="graph">Graph paper</option><option value="lined">Lined</option><option value="blank">Blank</option><option value="photo">Photo</option>
     </select>
@@ -44,10 +49,18 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
     <input type="file" id="file" accept="image/*" hidden>
     <img id="thumb" alt="Photo preview" hidden>
     <button class="btn alt" id="rmimg" hidden>Remove photo</button>
-    <button class="btn" id="send">Send to students</button>
+    <span style="flex:1"></span>
+    <button class="btn alt" id="cancel">Cancel</button>
+    <button class="btn alt" id="sendnow">Send now (don't save)</button>
+    <button class="btn" id="save">Save question</button>
    </div>
+   <div class="mut" style="margin-top:6px">Tip: paste a photo or screenshot (Ctrl+V) to attach it.</div>
   </div>
-  <div class="mut" style="margin-top:6px">Tip: paste a photo (Ctrl+V) or screenshot anywhere on this page.</div>
+ </div>
+ <div id="bar" class="row" style="position:sticky;bottom:0;background:#111827;color:#fff;border-radius:14px;padding:10px 14px;margin-top:12px;justify-content:space-between;z-index:5">
+  <button class="btn alt" id="prev">◀ Previous</button>
+  <b id="pos"></b>
+  <button class="btn" id="next">Next ▶</button>
  </div>
  <div id="grid"></div>
 </main>
@@ -62,7 +75,7 @@ const link = location.origin + '/?code=' + code;
 $('#link').textContent = link;
 
 const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() };
-let photo = null, first = true; // photo = data URL waiting to be sent
+let photo = null; // photo = data URL waiting to be saved/sent
 
 const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
   $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Reconnecting…';
@@ -92,7 +105,6 @@ function onmsg(m) {
     case 'state':
       $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
       m.students.forEach(addStu);
-      if (first) { first = false; $('#qin').value = m.q.question; if (m.q.bg !== 'photo') $('#bg').value = m.q.bg; }
       ui(); break;
     case 'join': addStu(m.s); break;
     case 'd': if (s) { s.ops.push(m.o); drawOp(s.layer.getContext('2d'), m.o); s.dirty = true; } break;
@@ -127,10 +139,68 @@ $('#code').onclick = () => {
   const c = (prompt('New class code (4–10 letters or numbers):', code) || '').toUpperCase().trim();
   if (/^[A-Z0-9]{4,10}$/.test(c) && c !== code) { localStorage.do_tcode = c; location.reload(); }
 };
-$('#send').onclick = () => {
+// ---- question set: lives in this browser (IndexedDB, so photos fit) ----
+let set = [], cur = +localStorage.do_cur, editing = null; // editing: null closed, -1 new, n = index
+if (!(cur >= 0)) cur = -1;
+const db = new Promise((ok, no) => { const o = indexedDB.open('doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; });
+const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
+const persist = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(set, 'set')).catch(() => alert('Could not save the question set in this browser.'));
+idbGet('set').then(v => { set = v || []; if (cur >= set.length) cur = -1; renderSet(); }).catch(renderSet);
+
+const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null });
+function go(i) { if (i < 0 || i >= set.length) return; cur = i; localStorage.do_cur = i; sendQ(set[i]); renderSet(); }
+function renderSet() {
+  const ol = $('#list'); ol.innerHTML = '';
+  set.forEach((q, i) => {
+    const li = document.createElement('li'); li.style.cssText = 'margin:6px 0;padding:8px;border:2px solid ' + (i === cur ? 'var(--pri)' : 'var(--line)') + ';border-radius:10px';
+    const row = document.createElement('div'); row.className = 'row';
+    if (q.img) { const im = document.createElement('img'); im.src = q.img; im.style.cssText = 'height:40px;border-radius:6px'; row.append(im); }
+    const tx = document.createElement('span'); tx.style.flex = '1'; tx.textContent = q.question || '(photo only)'; row.append(tx);
+    [['Send', () => go(i)], ['↑', () => mv(i, -1)], ['↓', () => mv(i, 1)], ['Edit', () => openEditor(i)], ['✕', () => rm(i)]].forEach(([l, f]) => {
+      const b = document.createElement('button'); b.className = 'btn alt'; b.style.cssText = 'min-height:36px;padding:4px 12px'; b.textContent = l; b.onclick = f; row.append(b);
+    });
+    li.append(row); ol.append(li);
+  });
+  $('#pos').textContent = !set.length ? 'No questions yet' : cur < 0 ? set.length + ' questions · none sent yet' : 'Question ' + (cur + 1) + ' of ' + set.length;
+  $('#prev').disabled = cur <= 0; $('#next').disabled = !set.length || cur >= set.length - 1;
+}
+function mv(i, d) {
+  const j = i + d; if (j < 0 || j >= set.length) return;
+  [set[i], set[j]] = [set[j], set[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
+  localStorage.do_cur = cur; persist(); renderSet();
+}
+function rm(i) {
+  if (!confirm('Delete this question?')) return;
+  set.splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
+  localStorage.do_cur = cur; persist(); renderSet();
+}
+function openEditor(i) {
+  editing = i; const q = set[i] || { question: '', bg: 'graph', img: null };
+  $('#qin').value = q.question; $('#bg').value = q.bg; photo = q.img;
+  $('#thumb').hidden = $('#rmimg').hidden = !photo; if (photo) $('#thumb').src = photo;
+  $('#editor').hidden = false; $('#qin').focus();
+}
+const readEditor = () => {
   const bg = $('#bg').value === 'photo' && !photo ? 'blank' : $('#bg').value;
-  ws.send({ t: 'q', question: $('#qin').value, bg, img: bg === 'photo' ? photo : null });
+  return { question: $('#qin').value.trim(), bg, img: bg === 'photo' ? photo : null };
 };
+const closeEditor = () => { editing = null; $('#editor').hidden = true; };
+$('#add').onclick = () => openEditor(-1);
+$('#cancel').onclick = closeEditor;
+$('#save').onclick = () => {
+  const q = readEditor(); if (!q.question && !q.img) return alert('Type a question or add a photo first.');
+  if (editing === -1) set.push(q); else set[editing] = q;
+  persist(); closeEditor(); renderSet();
+};
+$('#sendnow').onclick = () => { const q = readEditor(); if (q.question || q.img) { cur = -1; localStorage.do_cur = -1; sendQ(q); renderSet(); } };
+$('#prev').onclick = () => go(cur - 1);
+$('#next').onclick = () => go(cur + 1);
+// clicker / keyboard: right arrow or Page Down = next, left arrow or Page Up = previous
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') go(cur + 1);
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
+});
 
 // photos: resized to <=1600px JPEG so Chromebooks stay fast
 function takePhoto(file) {
@@ -148,10 +218,10 @@ function takePhoto(file) {
 $('#addimg').onclick = () => $('#file').click();
 $('#file').onchange = e => { takePhoto(e.target.files[0]); e.target.value = ''; };
 $('#rmimg').onclick = () => { photo = null; $('#thumb').hidden = $('#rmimg').hidden = true; if ($('#bg').value === 'photo') $('#bg').value = 'graph'; };
-document.addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) takePhoto(f); });
+document.addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) { if (editing === null) openEditor(-1); takePhoto(f); } });
 
 // save a contact sheet of everyone's work
-$('#save').onclick = () => {
+$('#savepng').onclick = () => {
   const list = [...S.stu.values()], cols = 4, w = W / 2, h = H / 2 + 30;
   const c = document.createElement('canvas'); c.width = cols * w; c.height = Math.max(1, Math.ceil(list.length / cols)) * h;
   const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
