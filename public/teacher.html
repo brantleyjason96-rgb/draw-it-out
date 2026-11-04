@@ -14,6 +14,9 @@
 textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
 #thumb{height:44px;width:auto;border-radius:6px;border:1px solid var(--line)}
 .mut{color:var(--mut);font-size:14px}
+#qin{min-height:64px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px;overflow-wrap:anywhere}
+#qin:empty:before{content:attr(data-ph);color:var(--mut)}
+.sm{min-height:36px!important;padding:4px 12px!important}
 </style>
 </head>
 <body>
@@ -36,11 +39,25 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
    <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button></div>
  </div>
  <div class="card" style="margin-top:12px">
-  <div class="row" style="justify-content:space-between"><b>Question set</b>
+  <div class="row">
+   <b>Question set</b>
+   <select id="setsel" class="btn alt sm" aria-label="Choose a saved set"></select>
+   <button class="btn alt sm" id="newset">New set</button>
+   <button class="btn alt sm" id="renset">Rename</button>
+   <button class="btn alt sm" id="delset">Delete set</button>
+   <button class="btn alt sm" id="exp" title="Download all your sets as a file (backup, or move to another computer)">Export</button>
+   <button class="btn alt sm" id="imp">Import</button>
+   <input type="file" id="impfile" accept=".json,application/json" hidden>
+   <span style="flex:1"></span>
    <button class="btn alt" id="add">+ Add question</button></div>
   <ol id="list" style="padding-left:22px;margin:10px 0 0"></ol>
   <div id="editor" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-   <textarea id="qin" rows="2" placeholder="Type the question students should answer…"></textarea>
+   <div class="row" style="margin-bottom:6px">
+    <button class="btn alt sm fmt" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="btn alt sm fmt" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button class="btn alt sm fmt" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+   </div>
+   <div id="qin" contenteditable="true" role="textbox" aria-label="Question" data-ph="Type the question students should answer…"></div>
    <div class="row" style="margin-top:8px">
     <select id="bg" class="btn alt" aria-label="Background">
      <option value="graph">Graph paper</option><option value="lined">Lined</option><option value="blank">Blank</option><option value="photo">Photo</option>
@@ -139,65 +156,145 @@ $('#code').onclick = () => {
   const c = (prompt('New class code (4–10 letters or numbers):', code) || '').toUpperCase().trim();
   if (/^[A-Z0-9]{4,10}$/.test(c) && c !== code) { localStorage.do_tcode = c; location.reload(); }
 };
-// ---- question set: lives in this browser (IndexedDB, so photos fit) ----
-let set = [], cur = +localStorage.do_cur, editing = null; // editing: null closed, -1 new, n = index
-if (!(cur >= 0)) cur = -1;
+// ---- saved question sets: kept in this browser (IndexedDB). Export/Import moves them between computers. ----
+let sets = [], active = localStorage.do_active, cur = +localStorage.do_cur, editing = null; // editing: null closed, -1 new, n = index
+const cs = () => sets.find(s => s.id === active) || sets[0];
+const qs = () => cs().questions;
 const db = new Promise((ok, no) => { const o = indexedDB.open('doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; });
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
-const persist = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(set, 'set')).catch(() => alert('Could not save the question set in this browser.'));
-idbGet('set').then(v => { set = v || []; if (cur >= set.length) cur = -1; renderSet(); }).catch(renderSet);
+const persist = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(sets, 'sets')).catch(() => alert('Could not save in this browser. Use Export to keep a backup.'));
+function init(s, old) { // old = the single question list from the first version, kept as a set
+  sets = s && s.length ? s : [{ id: crypto.randomUUID(), name: old ? 'My questions' : 'My first set', questions: old || [] }];
+  if (!sets.some(x => x.id === active)) active = sets[0].id;
+  if (!(cur >= 0 && cur < qs().length)) cur = -1;
+  persist(); renderSet();
+}
+Promise.all([idbGet('sets'), idbGet('set')]).then(([s, old]) => init(s, old)).catch(() => init());
+
+// formatted text: keep only b/i/u/br (the server does the same to anything it receives)
+function clean(html) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const walk = n => {
+    let o = '';
+    n.childNodes.forEach((c, i, a) => {
+      if (c.nodeType === 3) o += esc(c.textContent);
+      else if (c.nodeType === 1) {
+        const tg = c.tagName, inner = walk(c);
+        if (tg === 'B' || tg === 'STRONG') o += '<b>' + inner + '</b>';
+        else if (tg === 'I' || tg === 'EM') o += '<i>' + inner + '</i>';
+        else if (tg === 'U') o += '<u>' + inner + '</u>';
+        else if (tg === 'BR') o += '<br>';
+        else if (tg === 'DIV' || tg === 'P') { if (o && !o.endsWith('<br>')) o += '<br>'; o += inner; if (i < a.length - 1 && !inner.endsWith('<br>')) o += '<br>'; }
+        else if (tg !== 'SCRIPT' && tg !== 'STYLE') o += inner;
+      }
+    });
+    return o;
+  };
+  return walk(new DOMParser().parseFromString(html, 'text/html').body).replace(/(<br>)+$/, '');
+}
+const plain = h => new DOMParser().parseFromString(h.replace(/<br>/g, ' '), 'text/html').body.textContent;
+document.querySelectorAll('[data-cmd]').forEach(b => {
+  b.onmousedown = e => e.preventDefault(); // keep the text selected
+  b.onclick = () => document.execCommand(b.dataset.cmd);
+});
+$('#qin').addEventListener('paste', e => { // text pastes as plain text; images are handled by the page-level paste below
+  if ([...e.clipboardData.files].some(f => f.type.startsWith('image/'))) return;
+  e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+});
 
 const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null });
-function go(i) { if (i < 0 || i >= set.length) return; cur = i; localStorage.do_cur = i; sendQ(set[i]); renderSet(); }
+function go(i) { if (i < 0 || i >= qs().length) return; cur = i; localStorage.do_cur = i; sendQ(qs()[i]); renderSet(); }
 function renderSet() {
+  const sel = $('#setsel'); sel.innerHTML = '';
+  sets.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.name + ' (' + s.questions.length + ')'; sel.append(o); });
+  sel.value = cs().id;
   const ol = $('#list'); ol.innerHTML = '';
-  set.forEach((q, i) => {
+  qs().forEach((q, i) => {
     const li = document.createElement('li'); li.style.cssText = 'margin:6px 0;padding:8px;border:2px solid ' + (i === cur ? 'var(--pri)' : 'var(--line)') + ';border-radius:10px';
     const row = document.createElement('div'); row.className = 'row';
     if (q.img) { const im = document.createElement('img'); im.src = q.img; im.style.cssText = 'height:40px;border-radius:6px'; row.append(im); }
-    const tx = document.createElement('span'); tx.style.flex = '1'; tx.textContent = q.question || '(photo only)'; row.append(tx);
+    const tx = document.createElement('span'); tx.style.flex = '1'; tx.textContent = plain(q.question).trim() || '(photo only)'; row.append(tx);
     [['Send', () => go(i)], ['↑', () => mv(i, -1)], ['↓', () => mv(i, 1)], ['Edit', () => openEditor(i)], ['✕', () => rm(i)]].forEach(([l, f]) => {
-      const b = document.createElement('button'); b.className = 'btn alt'; b.style.cssText = 'min-height:36px;padding:4px 12px'; b.textContent = l; b.onclick = f; row.append(b);
+      const b = document.createElement('button'); b.className = 'btn alt sm'; b.textContent = l; b.onclick = f; row.append(b);
     });
     li.append(row); ol.append(li);
   });
-  $('#pos').textContent = !set.length ? 'No questions yet' : cur < 0 ? set.length + ' questions · none sent yet' : 'Question ' + (cur + 1) + ' of ' + set.length;
-  $('#prev').disabled = cur <= 0; $('#next').disabled = !set.length || cur >= set.length - 1;
+  const n = qs().length;
+  $('#pos').textContent = !n ? 'No questions yet' : cur < 0 ? n + ' questions · none sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
+  $('#prev').disabled = cur <= 0; $('#next').disabled = !n || cur >= n - 1;
 }
 function mv(i, d) {
-  const j = i + d; if (j < 0 || j >= set.length) return;
-  [set[i], set[j]] = [set[j], set[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
+  const j = i + d, a = qs(); if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
   localStorage.do_cur = cur; persist(); renderSet();
 }
 function rm(i) {
   if (!confirm('Delete this question?')) return;
-  set.splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
+  qs().splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
   localStorage.do_cur = cur; persist(); renderSet();
 }
+function pick(id) { active = id; localStorage.do_active = id; cur = -1; localStorage.do_cur = -1; closeEditor(); renderSet(); }
+$('#setsel').onchange = e => pick(e.target.value);
+$('#newset').onclick = () => {
+  const name = (prompt('Name for the new set (e.g. Fractions Unit 3):') || '').trim().slice(0, 60); if (!name) return;
+  const s = { id: crypto.randomUUID(), name, questions: [] }; sets.push(s); persist(); pick(s.id);
+};
+$('#renset').onclick = () => {
+  const name = (prompt('Rename this set:', cs().name) || '').trim().slice(0, 60); if (!name) return;
+  cs().name = name; persist(); renderSet();
+};
+$('#delset').onclick = () => {
+  if (!confirm('Delete the set "' + cs().name + '" and all ' + qs().length + ' of its questions? This cannot be undone.')) return;
+  sets = sets.filter(s => s !== cs());
+  if (!sets.length) sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }];
+  persist(); pick(sets[0].id);
+};
+$('#exp').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(sets)], { type: 'application/json' }));
+  a.download = 'draw-it-out-question-sets.json'; a.click();
+};
+$('#imp').onclick = () => $('#impfile').click();
+$('#impfile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text()); let n = 0;
+    (Array.isArray(data) ? data : []).forEach(s => {
+      if (!s || !Array.isArray(s.questions)) return;
+      sets.push({ id: crypto.randomUUID(), name: String(s.name || 'Imported set').slice(0, 60), questions: s.questions.slice(0, 200).map(q => {
+        const img = typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,') ? q.img : null;
+        const bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) && (q.bg !== 'photo' || img) ? q.bg : 'blank';
+        return { question: clean(String(q.question || '')), bg, img };
+      }) }); n++;
+    });
+    if (!n) throw 0;
+    persist(); pick(sets[sets.length - 1].id); alert('Imported ' + n + ' set' + (n === 1 ? '' : 's') + '.');
+  } catch { alert('That file is not a Draw It Out question set.'); }
+};
+
 function openEditor(i) {
-  editing = i; const q = set[i] || { question: '', bg: 'graph', img: null };
-  $('#qin').value = q.question; $('#bg').value = q.bg; photo = q.img;
+  editing = i; const q = qs()[i] || { question: '', bg: 'graph', img: null };
+  $('#qin').innerHTML = clean(q.question); $('#bg').value = q.bg; photo = q.img;
   $('#thumb').hidden = $('#rmimg').hidden = !photo; if (photo) $('#thumb').src = photo;
   $('#editor').hidden = false; $('#qin').focus();
 }
 const readEditor = () => {
   const bg = $('#bg').value === 'photo' && !photo ? 'blank' : $('#bg').value;
-  return { question: $('#qin').value.trim(), bg, img: bg === 'photo' ? photo : null };
+  return { question: clean($('#qin').innerHTML), bg, img: bg === 'photo' ? photo : null };
 };
 const closeEditor = () => { editing = null; $('#editor').hidden = true; };
 $('#add').onclick = () => openEditor(-1);
 $('#cancel').onclick = closeEditor;
 $('#save').onclick = () => {
-  const q = readEditor(); if (!q.question && !q.img) return alert('Type a question or add a photo first.');
-  if (editing === -1) set.push(q); else set[editing] = q;
+  const q = readEditor(); if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  if (editing === -1) qs().push(q); else qs()[editing] = q;
   persist(); closeEditor(); renderSet();
 };
-$('#sendnow').onclick = () => { const q = readEditor(); if (q.question || q.img) { cur = -1; localStorage.do_cur = -1; sendQ(q); renderSet(); } };
+$('#sendnow').onclick = () => { const q = readEditor(); if (plain(q.question).trim() || q.img) { cur = -1; localStorage.do_cur = -1; sendQ(q); renderSet(); } };
 $('#prev').onclick = () => go(cur - 1);
 $('#next').onclick = () => go(cur + 1);
 // clicker / keyboard: right arrow or Page Down = next, left arrow or Page Up = previous
 document.addEventListener('keydown', e => {
-  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.target.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if (e.key === 'ArrowRight' || e.key === 'PageDown') go(cur + 1);
   if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
 });

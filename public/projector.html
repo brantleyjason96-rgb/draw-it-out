@@ -46,7 +46,7 @@ function onmsg(m) {
   draw();
 }
 function draw() {
-  $('#q').textContent = S.q.question;
+  $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
   const s = S.stu.get(S.spot);
   $('#cv').hidden = !s; $('#join').hidden = !!s;
   if (s) { compose($('#cv'), s.layer, S.q.bg, S.im); $('#who').textContent = S.hide ? 'A student’s work' : s.name + '’s work'; }

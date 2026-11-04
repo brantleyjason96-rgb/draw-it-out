@@ -74,7 +74,7 @@ $('#jf').onsubmit = e => {
 };
 
 function setQ(nq) {
-  q = nq; $('#q').textContent = q.question || 'Waiting for your teacher’s question…';
+  q = nq; $('#q').innerHTML = q.question || 'Waiting for your teacher’s question…'; // server-sanitized: only b/i/u/br
   im = loadImg(q.img, drawBg); drawBg();
 }
 const drawBg = () => paintBg($('#bg').getContext('2d'), q.bg, im);
@@ -86,7 +86,7 @@ function onmsg(m) {
   } else if (m.t === 'joined') {
     id = m.id; sessionStorage['do_id_' + target.code] = id;
     $('#join').hidden = true; $('#play').hidden = false;
-    if (m.q.question || m.q.img) setQ(m.q); else if (!$('#q').textContent) setQ(m.q);
+    if (m.q.question || m.q.img) setQ(m.q); else if (!$('#q').innerHTML) setQ(m.q);
   } else if (m.t === 'q') {
     ops = []; done = false; $('#done').textContent = "I'm done ✓"; replay(layer, ops); setQ(m.q);
   }
