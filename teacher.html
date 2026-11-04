@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draw It Out – Teacher</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+.code-pill{background:#111827;color:#fff;border-radius:12px;padding:6px 16px;font-size:28px;letter-spacing:.2em;font-weight:700;cursor:pointer;border:0}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
+.stu{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px;cursor:pointer}
+.stu.spot{border-color:var(--pri);box-shadow:0 0 0 3px #bfdbfe}
+.stu .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:600}
+textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+#thumb{height:44px;width:auto;border-radius:6px;border:1px solid var(--line)}
+.mut{color:var(--mut);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+ <div class="card">
+  <div class="row" style="justify-content:space-between">
+   <div class="row">
+    <span class="mut">Class code</span><button class="code-pill" id="code" title="Click to change"></button>
+    <span class="mut" id="count"></span>
+    <span class="mut"><span class="dot" id="dot"></span><span id="st">Connecting…</span></span>
+   </div>
+   <div class="row">
+    <button class="btn alt" id="hide"></button>
+    <button class="btn alt" id="proj">Open projector view</button>
+    <button class="btn alt" id="save">Save session (PNG)</button>
+   </div>
+  </div>
+  <div class="row mut" style="margin-top:8px">Student link for Google Classroom:
+   <code id="link" style="background:#f3f4f6;padding:2px 6px;border-radius:6px"></code>
+   <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button></div>
+  <div class="row" style="margin-top:12px;align-items:flex-start">
+   <textarea id="qin" rows="2" placeholder="Type the question students should answer…" style="flex:1;min-width:260px"></textarea>
+   <div class="row">
+    <select id="bg" class="btn alt" aria-label="Background">
+     <option value="graph">Graph paper</option><option value="lined">Lined</option><option value="blank">Blank</option><option value="photo">Photo</option>
+    </select>
+    <button class="btn alt" id="addimg">Add photo</button>
+    <input type="file" id="file" accept="image/*" hidden>
+    <img id="thumb" alt="Photo preview" hidden>
+    <button class="btn alt" id="rmimg" hidden>Remove photo</button>
+    <button class="btn" id="send">Send to students</button>
+   </div>
+  </div>
+  <div class="mut" style="margin-top:6px">Tip: paste a photo (Ctrl+V) or screenshot anywhere on this page.</div>
+ </div>
+ <div id="grid"></div>
+</main>
+<script src="/common.js"></script>
+<script>
+const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+let code = localStorage.do_tcode, key = localStorage.do_tkey;
+if (!code) localStorage.do_tcode = code = Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).join('');
+if (!key) localStorage.do_tkey = key = crypto.randomUUID();
+$('#code').textContent = code;
+const link = location.origin + '/?code=' + code;
+$('#link').textContent = link;
+
+const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() };
+let photo = null, first = true; // photo = data URL waiting to be sent
+
+const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
+  $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Reconnecting…';
+});
+
+function addStu(d) {
+  let s = S.stu.get(d.id);
+  if (!s) {
+    s = { id: d.id, layer: mkLayer(), dirty: true };
+    const el = document.createElement('div'); el.className = 'stu';
+    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="800" height="500"></canvas>';
+    el.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
+    $('#grid').append(el); s.el = el; s.cv = el.querySelector('canvas'); S.stu.set(d.id, s);
+  }
+  Object.assign(s, { name: d.name, done: d.done, ops: d.ops, dirty: true });
+  replay(s.layer, s.ops); ui();
+}
+function setQ(q) {
+  S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
+  S.stu.forEach(s => (s.dirty = true));
+}
+
+function onmsg(m) {
+  const s = S.stu.get(m.id);
+  switch (m.t) {
+    case 'err': $('#st').textContent = m.m; break;
+    case 'state':
+      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
+      m.students.forEach(addStu);
+      if (first) { first = false; $('#qin').value = m.q.question; if (m.q.bg !== 'photo') $('#bg').value = m.q.bg; }
+      ui(); break;
+    case 'join': addStu(m.s); break;
+    case 'd': if (s) { s.ops.push(m.o); drawOp(s.layer.getContext('2d'), m.o); s.dirty = true; } break;
+    case 'undo': if (s) { s.ops = dropLast(s.ops); replay(s.layer, s.ops); s.dirty = true; } break;
+    case 'clear': if (s) { s.ops = []; replay(s.layer, s.ops); s.dirty = true; } break;
+    case 'done': if (s) { s.done = m.v; ui(); } break;
+    case 'q': setQ(m.q); S.stu.forEach(x => { x.ops = []; x.done = false; replay(x.layer, x.ops); }); ui(); break;
+    case 'spot': S.spot = m.spot; S.hide = m.hide; ui(); break;
+  }
+}
+
+function ui() {
+  $('#count').textContent = S.stu.size + ' student' + (S.stu.size === 1 ? '' : 's') + ' joined';
+  $('#hide').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector';
+  $('#hide').classList.toggle('on', S.hide);
+  S.stu.forEach(s => {
+    s.el.querySelector('.nm').textContent = s.name;
+    const c = s.el.querySelector('.chip'); c.textContent = s.done ? 'Done ✓' : 'Drawing…'; c.className = 'chip' + (s.done ? ' done' : '');
+    s.el.classList.toggle('spot', S.spot === s.id);
+  });
+}
+(function loop() {
+  S.stu.forEach(s => { if (s.dirty) { s.dirty = false; compose(s.cv, s.layer, S.q.bg, S.im); } });
+  requestAnimationFrame(loop);
+})();
+
+// controls
+$('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
+$('#proj').onclick = () => window.open('/projector?code=' + code, 'projector');
+$('#copy').onclick = () => navigator.clipboard.writeText(link).then(() => ($('#copy').textContent = 'Copied ✓'), () => prompt('Copy this link:', link));
+$('#code').onclick = () => {
+  const c = (prompt('New class code (4–10 letters or numbers):', code) || '').toUpperCase().trim();
+  if (/^[A-Z0-9]{4,10}$/.test(c) && c !== code) { localStorage.do_tcode = c; location.reload(); }
+};
+$('#send').onclick = () => {
+  const bg = $('#bg').value === 'photo' && !photo ? 'blank' : $('#bg').value;
+  ws.send({ t: 'q', question: $('#qin').value, bg, img: bg === 'photo' ? photo : null });
+};
+
+// photos: resized to <=1600px JPEG so Chromebooks stay fast
+function takePhoto(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const u = URL.createObjectURL(file), i = new Image();
+  i.onload = () => {
+    const s = Math.min(1, 1600 / Math.max(i.width, i.height)), c = document.createElement('canvas');
+    c.width = Math.round(i.width * s); c.height = Math.round(i.height * s);
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0, c.width, c.height);
+    photo = c.toDataURL('image/jpeg', 0.82); URL.revokeObjectURL(u);
+    $('#thumb').src = photo; $('#thumb').hidden = $('#rmimg').hidden = false; $('#bg').value = 'photo';
+  };
+  i.src = u;
+}
+$('#addimg').onclick = () => $('#file').click();
+$('#file').onchange = e => { takePhoto(e.target.files[0]); e.target.value = ''; };
+$('#rmimg').onclick = () => { photo = null; $('#thumb').hidden = $('#rmimg').hidden = true; if ($('#bg').value === 'photo') $('#bg').value = 'graph'; };
+document.addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) takePhoto(f); });
+
+// save a contact sheet of everyone's work
+$('#save').onclick = () => {
+  const list = [...S.stu.values()], cols = 4, w = W / 2, h = H / 2 + 30;
+  const c = document.createElement('canvas'); c.width = cols * w; c.height = Math.max(1, Math.ceil(list.length / cols)) * h;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  list.forEach((s, i) => {
+    const t = document.createElement('canvas'); t.width = W; t.height = H; compose(t, s.layer, S.q.bg, S.im);
+    const px = i % cols * w, py = Math.floor(i / cols) * h;
+    x.drawImage(t, px, py + 30, w, H / 2); x.fillStyle = '#000'; x.font = '20px sans-serif'; x.fillText(s.name, px + 8, py + 22);
+  });
+  c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'draw-it-out-' + code + '.png'; a.click(); });
+};
+</script>
+</body>
+</html>
