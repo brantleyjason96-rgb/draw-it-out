@@ -10,11 +10,16 @@
 #join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
 #join #code{letter-spacing:.3em;text-transform:uppercase}
 #err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
-.stack{display:grid;width:min(100%,calc((100vh - 240px)*1.6));margin:auto}
+.stack{display:grid;position:relative;width:min(100%,calc((100vh - 280px)*1.6));margin:auto}
 .stack canvas{grid-area:1/1}
 #pad{touch-action:none;cursor:crosshair;background:transparent;border-color:transparent}
+#pv{pointer-events:none;background:transparent;border-color:transparent}
+#ti{position:absolute;display:none;min-width:140px;padding:0;margin:0;border:1px dashed var(--pri);background:rgba(255,255,255,.85);font-family:"Segoe Print","Comic Sans MS",system-ui,sans-serif;outline:none;z-index:2}
 .swatch{width:40px;height:40px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
 .swatch.on{box-shadow:0 0 0 3px var(--pri)}
+.btn.sm{padding:8px 12px;min-height:44px}
+#tools.locked{opacity:.45;pointer-events:none}
+#lockmsg{background:#92400e;font-size:18px;margin:0 0 10px}
 </style>
 </head>
 <body>
@@ -33,27 +38,40 @@
  <div id="play" hidden>
   <div class="qbar" id="q"></div>
   <div class="card">
-   <div class="row" style="margin-bottom:10px">
+   <div id="lockmsg" class="qbar" hidden></div>
+   <div class="row" id="tools" style="margin-bottom:10px">
     <span class="swatch on" style="background:#111" data-c="#111111" aria-label="Black"></span>
     <span class="swatch" style="background:#2563eb" data-c="#2563eb" aria-label="Blue"></span>
     <span class="swatch" style="background:#dc2626" data-c="#dc2626" aria-label="Red"></span>
     <span class="swatch" style="background:#059669" data-c="#059669" aria-label="Green"></span>
-    <button class="btn alt" id="eraser">Eraser</button>
-    <button class="btn alt" id="undo">Undo</button>
-    <button class="btn alt" id="clear">Clear</button>
-    <span style="flex:1"></span>
-    <button class="btn" id="done">I'm done ✓</button>
+    <button class="btn alt sm tool on" data-t="pen">✏️ Pen</button>
+    <button class="btn alt sm tool" data-t="eraser">Eraser</button>
+    <button class="btn alt sm tool" data-t="text">T Text</button>
+    <button class="btn alt sm tool" data-t="rect" aria-label="Rectangle">▭</button>
+    <button class="btn alt sm tool" data-t="ellipse" aria-label="Circle">◯</button>
+    <button class="btn alt sm tool" data-t="line" aria-label="Line">╱</button>
+    <button class="btn alt sm tool" data-t="arrow" aria-label="Arrow">➚</button>
+    <button class="btn alt sm" id="undo">Undo</button>
+    <button class="btn alt sm" id="clear">Clear</button>
    </div>
-   <div class="stack"><canvas id="bg" width="800" height="500"></canvas><canvas id="pad" width="800" height="500"></canvas></div>
+   <div class="row" style="justify-content:flex-end;margin-bottom:8px"><button class="btn" id="done">I'm done ✓</button></div>
+   <div class="stack">
+    <canvas id="bg" width="800" height="500"></canvas>
+    <canvas id="pad" width="800" height="500"></canvas>
+    <canvas id="pv" width="800" height="500"></canvas>
+    <input id="ti" maxlength="200" aria-label="Type your text, then press Enter" autocomplete="off">
+   </div>
    <p style="color:var(--mut);margin:8px 0 0"><span class="dot" id="dot"></span><span id="st">Connecting…</span> · Your teacher can see your drawing live.</p>
   </div>
  </div>
 </main>
 <script src="/common.js"></script>
 <script>
-const pad = $('#pad'), layer = pad; // the visible pad is the drawing layer itself
+const pad = $('#pad'), pv = $('#pv'), ti = $('#ti'), layer = pad; // the visible pad is the drawing layer itself
 let target = null, id = null, ops = [], q = { question: '', bg: 'graph', img: null }, im = null;
-let col = '#111111', eraser = false, cur = null, k = 0, done = false;
+let col = '#111111', tool = 'pen', cur = null, start = null, last = null, k = 0, tpos = null;
+let lock = { done: false, proj: false };
+const locked = () => lock.done || lock.proj;
 
 const sp = new URLSearchParams(location.search);
 $('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
@@ -79,6 +97,14 @@ function setQ(nq) {
 }
 const drawBg = () => paintBg($('#bg').getContext('2d'), q.bg, im);
 
+function applyLock() {
+  const l = locked(); if (l) cancelText();
+  $('#tools').classList.toggle('locked', l); $('#lockmsg').hidden = !l;
+  $('#lockmsg').textContent = lock.done ? 'Submitted ✓ Ask your teacher to reopen it if you need to add something.' : 'Your work is on the projector. Hold on for a moment…';
+  $('#done').disabled = lock.done; $('#done').textContent = lock.done ? 'Submitted ✓' : "I'm done ✓";
+  pad.style.cursor = l ? 'not-allowed' : 'crosshair';
+}
+
 function onmsg(m) {
   if (m.t === 'err') {
     if ($('#play').hidden) $('#err').textContent = m.m;
@@ -87,30 +113,75 @@ function onmsg(m) {
     id = m.id; sessionStorage['do_id_' + target.code] = id;
     $('#join').hidden = true; $('#play').hidden = false;
     if (m.q.question || m.q.img) setQ(m.q); else if (!$('#q').innerHTML) setQ(m.q);
+    if (!ops.length && m.ops.length) { ops = m.ops; replay(layer, ops); } // page was refreshed: get the drawing back
+    k = Math.max(k, ...ops.map(o => o.k), 0);
+    lock = { done: !!m.done, proj: !!m.proj }; applyLock();
+  } else if (m.t === 'lock') {
+    lock = { done: !!m.done, proj: !!m.proj }; applyLock();
+  } else if (m.t === 'kicked') { // teacher cleared the class
+    cancelText(); sessionStorage.removeItem('do_id_' + target.code); target = id = null; ops = []; k = 0; replay(layer, ops);
+    lock = { done: false, proj: false }; applyLock(); $('#play').hidden = true; $('#join').hidden = false;
+    $('#err').textContent = 'Class ended. Join again when your teacher says so.';
   } else if (m.t === 'q') {
-    ops = []; done = false; $('#done').textContent = "I'm done ✓"; replay(layer, ops); setQ(m.q);
+    ops = []; k = 0; replay(layer, ops); setQ(m.q);
   }
 }
 
-// drawing
+// ---- drawing: pen/eraser stream live; shapes and text are sent when finished ----
 const pt = e => { const r = pad.getBoundingClientRect(); return [Math.round((e.clientX - r.left) * W / r.width), Math.round((e.clientY - r.top) * H / r.height)]; };
-function seg(a, b) {
-  const o = { k, c: col, w: eraser ? 30 : 4, e: eraser, a, b };
-  ops.push(o); drawOp(pad.getContext('2d'), o); ws.send({ t: 'd', o });
-}
-pad.onpointerdown = e => { pad.setPointerCapture(e.pointerId); k++; cur = pt(e); seg(cur, cur); setDone(false); };
-pad.onpointermove = e => { if (!cur) return; const p = pt(e); seg(cur, p); cur = p; };
-pad.onpointerup = pad.onpointercancel = () => (cur = null);
+function add(o) { ops.push(o); drawOp(pad.getContext('2d'), o); ws.send({ t: 'd', o }); }
+const mkOp = (a, b) => ({ k, c: col, w: tool === 'eraser' ? 30 : 4, e: tool === 'eraser', s: ['rect', 'ellipse', 'line', 'arrow'].includes(tool) ? tool : undefined, a, b });
+const isShape = () => !['pen', 'eraser', 'text'].includes(tool);
 
+pad.onpointerdown = e => {
+  if (locked()) return;
+  if (tool === 'text') { e.preventDefault(); return openText(e, pt(e)); }
+  commitText(); pad.setPointerCapture(e.pointerId);
+  k++; cur = start = last = pt(e);
+  if (!isShape()) add(mkOp(cur, cur));
+};
+pad.onpointermove = e => {
+  if (!cur) return; const p = last = pt(e);
+  if (isShape()) { const x = pv.getContext('2d'); x.clearRect(0, 0, W, H); drawOp(x, mkOp(start, p)); }
+  else { add(mkOp(cur, p)); cur = p; }
+};
+pad.onpointerup = pad.onpointercancel = e => {
+  if (!cur) return;
+  if (isShape()) {
+    pv.getContext('2d').clearRect(0, 0, W, H);
+    const p = e.type === 'pointerup' ? pt(e) : last;
+    if (Math.hypot(p[0] - start[0], p[1] - start[1]) > 4) add(mkOp(start, p));
+  }
+  cur = null;
+};
+
+// text box: tap where you want it, type, press Enter (or tap elsewhere)
+function openText(e, p) {
+  commitText(); const r = pad.getBoundingClientRect(), s = r.width / W;
+  Object.assign(ti.style, { left: (e.clientX - r.left) + 'px', top: (e.clientY - r.top) + 'px', fontSize: 32 * s + 'px', color: col, display: 'block' });
+  ti.value = ''; tpos = p; setTimeout(() => ti.focus(), 0);
+}
+function commitText() {
+  if (!tpos) return; const v = ti.value.trim(), p = tpos; cancelText();
+  if (v && !locked()) { k++; add({ k, c: col, w: 32, tx: v, a: p, b: p }); }
+}
+function cancelText() { tpos = null; ti.style.display = 'none'; ti.value = ''; }
+ti.onkeydown = e => { if (e.key === 'Enter') commitText(); else if (e.key === 'Escape') cancelText(); };
+ti.onblur = commitText;
+
+// toolbar
 document.querySelectorAll('.swatch').forEach(s => s.onclick = () => {
-  col = s.dataset.c; eraser = false; $('#eraser').classList.remove('on');
+  col = s.dataset.c; if (tool === 'eraser') setTool('pen');
   document.querySelectorAll('.swatch').forEach(o => o.classList.toggle('on', o === s));
 });
-$('#eraser').onclick = e => { eraser = true; e.target.classList.add('on'); document.querySelectorAll('.swatch').forEach(o => o.classList.remove('on')); };
-$('#undo').onclick = () => { ops = dropLast(ops); replay(layer, ops); ws.send({ t: 'undo' }); };
-$('#clear').onclick = () => { ops = []; replay(layer, ops); ws.send({ t: 'clear' }); };
-function setDone(v) { if (done === v) return; done = v; $('#done').textContent = v ? 'Done ✓ (tap to undo)' : "I'm done ✓"; ws.send({ t: 'done', v }); }
-$('#done').onclick = () => setDone(!done);
+function setTool(t) { commitText(); tool = t; document.querySelectorAll('.tool').forEach(b => b.classList.toggle('on', b.dataset.t === t)); }
+document.querySelectorAll('.tool').forEach(b => b.onclick = () => setTool(b.dataset.t));
+$('#undo').onclick = () => { commitText(); ops = dropLast(ops); replay(layer, ops); ws.send({ t: 'undo' }); };
+$('#clear').onclick = () => { commitText(); ops = []; replay(layer, ops); ws.send({ t: 'clear' }); };
+$('#done').onclick = () => {
+  if (!confirm('Submit your work? Only your teacher can reopen it.')) return;
+  commitText(); lock.done = true; applyLock(); ws.send({ t: 'done', v: true });
+};
 </script>
 </body>
 </html>

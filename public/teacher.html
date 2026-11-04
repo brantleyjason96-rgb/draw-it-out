@@ -6,7 +6,7 @@
 <title>Draw It Out – Teacher</title>
 <link rel="stylesheet" href="/style.css">
 <style>
-.code-pill{background:#111827;color:#fff;border-radius:12px;padding:6px 16px;font-size:28px;letter-spacing:.2em;font-weight:700;cursor:pointer;border:0}
+.code-pill{background:#111827;color:#fff;border-radius:12px;padding:6px 16px;font-size:28px;letter-spacing:.2em;font-weight:700;}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:16px}
 .stu{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px;cursor:pointer}
 .stu.spot{border-color:var(--pri);box-shadow:0 0 0 3px #bfdbfe}
@@ -24,7 +24,8 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
  <div class="card">
   <div class="row" style="justify-content:space-between">
    <div class="row">
-    <span class="mut">Class code</span><button class="code-pill" id="code" title="Click to change"></button>
+    <select id="persel" class="btn alt" aria-label="Class period"></select>
+    <span class="mut">Code</span><span class="code-pill" id="code"></span>
     <span class="mut" id="count"></span>
     <span class="mut"><span class="dot" id="dot"></span><span id="st">Connecting…</span></span>
    </div>
@@ -37,6 +38,11 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
   <div class="row mut" style="margin-top:8px">Student link for Google Classroom:
    <code id="link" style="background:#f3f4f6;padding:2px 6px;border-radius:6px"></code>
    <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button></div>
+  <div class="row" style="margin-top:8px"><span class="mut">Class periods:</span>
+   <button class="btn alt sm" id="newper">+ New period</button>
+   <button class="btn alt sm" id="renper">Rename</button>
+   <button class="btn alt sm" id="delper">Remove period</button>
+   <button class="btn alt sm" id="clearcls">Clear class (send students back to join)</button></div>
  </div>
  <div class="card" style="margin-top:12px">
   <div class="row">
@@ -84,10 +90,35 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
 <script src="/common.js"></script>
 <script>
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-let code = localStorage.do_tcode, key = localStorage.do_tkey;
-if (!code) localStorage.do_tcode = code = Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).join('');
-if (!key) localStorage.do_tkey = key = crypto.randomUUID();
+const rnd = () => Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).join('');
+let periods; try { periods = JSON.parse(localStorage.do_periods); } catch {}
+if (!Array.isArray(periods) || !periods.length) periods = [{ name: 'My class', code: localStorage.do_tcode || rnd() }];
+let code = (periods.find(p => p.code === localStorage.do_tcode) || periods[0]).code;
+let key = localStorage.do_tkey; if (!key) localStorage.do_tkey = key = crypto.randomUUID();
+const savePeriods = () => { localStorage.do_periods = JSON.stringify(periods); localStorage.do_tcode = code; };
+savePeriods();
 $('#code').textContent = code;
+const per = () => periods.find(p => p.code === code);
+$('#persel').innerHTML = ''; periods.forEach(p => { const o = document.createElement('option'); o.value = p.code; o.textContent = p.name; $('#persel').append(o); });
+$('#persel').value = code;
+$('#persel').onchange = e => { code = e.target.value; savePeriods(); location.reload(); };
+$('#newper').onclick = () => {
+  const name = (prompt('Name for the new class period (e.g. Hour 2):') || '').trim().slice(0, 40); if (!name) return;
+  let c; do c = rnd(); while (periods.some(p => p.code === c));
+  periods.push({ name, code: c }); code = c; savePeriods(); location.reload();
+};
+$('#renper').onclick = () => {
+  const name = (prompt('Rename this class period:', per().name) || '').trim().slice(0, 40); if (!name) return;
+  per().name = name; savePeriods(); location.reload();
+};
+$('#delper').onclick = () => {
+  if (periods.length < 2) return alert('You need at least one class period.');
+  if (!confirm('Remove the class period "' + per().name + '"? Its students and their work will be lost.')) return;
+  ws.send({ t: 'reset' }); periods = periods.filter(p => p.code !== code); code = periods[0].code; savePeriods(); setTimeout(() => location.reload(), 300);
+};
+$('#clearcls').onclick = () => {
+  if (confirm('Remove all students from "' + per().name + '"? Save the session PNG first if you want to keep their work.')) ws.send({ t: 'reset' });
+};
 const link = location.origin + '/?code=' + code;
 $('#link').textContent = link;
 
@@ -103,7 +134,8 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, layer: mkLayer(), dirty: true };
     const el = document.createElement('div'); el.className = 'stu';
-    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="800" height="500"></canvas>';
+    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="800" height="500"></canvas><button class="btn alt sm reopen" style="width:100%;margin-top:8px" hidden>Unsubmit (let student edit)</button>';
+    el.querySelector('.reopen').onclick = e => { e.stopPropagation(); ws.send({ t: 'reopen', id: s.id }); };
     el.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
     $('#grid').append(el); s.el = el; s.cv = el.querySelector('canvas'); S.stu.set(d.id, s);
   }
@@ -118,7 +150,10 @@ function setQ(q) {
 function onmsg(m) {
   const s = S.stu.get(m.id);
   switch (m.t) {
-    case 'err': $('#st').textContent = m.m; break;
+    case 'err':
+      $('#st').textContent = m.m;
+      if (/in use/.test(m.m)) { per().code = rnd(); code = per().code; savePeriods(); location.reload(); } // another teacher already has that code
+      break;
     case 'state':
       $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
       m.students.forEach(addStu);
@@ -141,6 +176,7 @@ function ui() {
     s.el.querySelector('.nm').textContent = s.name;
     const c = s.el.querySelector('.chip'); c.textContent = s.done ? 'Done ✓' : 'Drawing…'; c.className = 'chip' + (s.done ? ' done' : '');
     s.el.classList.toggle('spot', S.spot === s.id);
+    s.el.querySelector('.reopen').hidden = !s.done;
   });
 }
 (function loop() {
@@ -152,10 +188,6 @@ function ui() {
 $('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
 $('#proj').onclick = () => window.open('/projector?code=' + code, 'projector');
 $('#copy').onclick = () => navigator.clipboard.writeText(link).then(() => ($('#copy').textContent = 'Copied ✓'), () => prompt('Copy this link:', link));
-$('#code').onclick = () => {
-  const c = (prompt('New class code (4–10 letters or numbers):', code) || '').toUpperCase().trim();
-  if (/^[A-Z0-9]{4,10}$/.test(c) && c !== code) { localStorage.do_tcode = c; location.reload(); }
-};
 // ---- saved question sets: kept in this browser (IndexedDB). Export/Import moves them between computers. ----
 let sets = [], active = localStorage.do_active, cur = +localStorage.do_cur, editing = null; // editing: null closed, -1 new, n = index
 const cs = () => sets.find(s => s.id === active) || sets[0];

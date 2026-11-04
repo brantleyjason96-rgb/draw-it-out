@@ -25,8 +25,20 @@ const mkLayer = () => Object.assign(document.createElement('canvas'), { width: W
 
 function drawOp(x, o) {
   x.globalCompositeOperation = o.e ? 'destination-out' : 'source-over';
-  x.strokeStyle = o.c; x.lineWidth = o.w; x.lineCap = 'round';
-  x.beginPath(); x.moveTo(o.a[0], o.a[1]); x.lineTo(o.b[0], o.b[1]); x.stroke();
+  x.strokeStyle = x.fillStyle = o.c; x.lineWidth = o.w; x.lineCap = x.lineJoin = 'round';
+  const [x1, y1] = o.a, [x2, y2] = o.b;
+  if (o.tx) { x.font = o.w + 'px "Segoe Print","Comic Sans MS",system-ui,sans-serif'; x.textBaseline = 'top'; x.fillText(o.tx, x1, y1); }
+  else if (o.s === 'rect') x.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+  else if (o.s === 'ellipse') { x.beginPath(); x.ellipse((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2, 0, 0, 7); x.stroke(); }
+  else {
+    x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2);
+    if (o.s === 'arrow') { // arrowhead at the end point
+      const a = Math.atan2(y2 - y1, x2 - x1), h = 16 + o.w;
+      x.moveTo(x2, y2); x.lineTo(x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45));
+      x.moveTo(x2, y2); x.lineTo(x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45));
+    }
+    x.stroke(); // plain pen/eraser segments and lines
+  }
   x.globalCompositeOperation = 'source-over';
 }
 function replay(layer, ops) {
