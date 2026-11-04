@@ -152,7 +152,11 @@ wss.on('connection', ws => {
         toWatchers(room, { t: 'state', q: room.q, spot: null, hide: room.hide, students: [] });
       } else if (m.t === 'reopen') { // teacher "unsubmit"
         const s = room.students.get(m.id);
-        if (s && s.done) { s.done = false; toWatchers(room, { t: 'done', id: s.id, v: false }); lockMsg(room, s); }
+        if (s && s.done) {
+          s.done = false; toWatchers(room, { t: 'done', id: s.id, v: false });
+          if (room.spot === s.id) { room.spot = null; toWatchers(room, { t: 'spot', spot: null, hide: room.hide }); } // projected work stays locked, so take it off
+          lockMsg(room, s);
+        }
       }
     }
   });
