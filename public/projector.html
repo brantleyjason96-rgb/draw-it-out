@@ -26,7 +26,7 @@ canvas{border:0}
 <script>
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
-const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() }, layer = mkLayer();
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });
 
 function setQ(q) { S.q = q; S.im = loadImg(q.img, draw); }
@@ -35,12 +35,13 @@ function onmsg(m) {
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
     case 'state': S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
-      m.students.forEach(d => { const l = mkLayer(); replay(l, d.ops); S.stu.set(d.id, { name: d.name, layer: l, ops: d.ops }); }); break;
-    case 'join': { const l = mkLayer(); replay(l, m.s.ops); S.stu.set(m.s.id, { name: m.s.name, layer: l, ops: m.s.ops }); break; }
-    case 'd': if (s) { s.ops.push(m.o); drawOp(s.layer.getContext('2d'), m.o); } break;
-    case 'undo': if (s) { s.ops = dropLast(s.ops); replay(s.layer, s.ops); } break;
-    case 'clear': if (s) { s.ops = []; replay(s.layer, s.ops); } break;
-    case 'q': setQ(m.q); S.stu.forEach(x => { x.ops = []; replay(x.layer, x.ops); }); break;
+      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs })); break;
+    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs }); break;
+    case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); } break;
+    case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) o.pts.push(...m.p); } break;
+    case 'del': if (s) s.objs = s.objs.filter(o => o.id !== m.oid); break;
+    case 'all': if (s) s.objs = m.objs; break;
+    case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; }); break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; break;
   }
   draw();
@@ -49,7 +50,7 @@ function draw() {
   $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
   const s = S.stu.get(S.spot);
   $('#cv').hidden = !s; $('#join').hidden = !!s;
-  if (s) { compose($('#cv'), s.layer, S.q.bg, S.im); $('#who').textContent = S.hide ? 'A student’s work' : s.name + '’s work'; }
+  if (s) { replay(layer, s.objs); compose($('#cv'), layer, S.q.bg, S.im); $('#who').textContent = S.hide ? 'A student’s work' : s.name + '’s work'; }
   else $('#who').textContent = '';
 }
 </script>

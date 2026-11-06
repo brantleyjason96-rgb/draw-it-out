@@ -23,31 +23,65 @@ function paintBg(x, bg, im) {
 
 const mkLayer = () => Object.assign(document.createElement('canvas'), { width: W, height: H });
 
+// ---- drawing objects (shared by student, teacher and projector) ----
+// stroke {pts,pen} | line {s:'line'|'arrow',pts:[a,b]} | shape {s,x,y,w,h,fill} | text {x,y,w,t,size}; all have id, c (color), lw, dash
+const FONT = '"Segoe Print","Comic Sans MS",system-ui,sans-serif';
+const PEN = { pen: { n: 'Pen', m: 1, a: 1 }, pencil: { n: 'Pencil', m: .6, a: .7 }, marker: { n: 'Marker', m: 2.5, a: 1 }, hi: { n: 'Highlighter', m: 6, a: .35 } };
+const mx = document.createElement('canvas').getContext('2d'); // for measuring text
+const ew = o => o.lw * (PEN[o.pen] || PEN.pen).m;
+function wrap(o) {
+  mx.font = o.size + 'px ' + FONT; const out = [];
+  (o.t || '').split('\n').forEach(par => {
+    let line = '';
+    par.split(' ').forEach(w => { const t = line ? line + ' ' + w : w; if (line && mx.measureText(t).width > o.w) { out.push(line); line = w; } else line = t; });
+    out.push(line);
+  });
+  return out;
+}
+function bbox(o) {
+  if (o.k === 'text') return { x: o.x, y: o.y, w: o.w, h: wrap(o).length * o.size * 1.25 };
+  if (o.k === 'shape') return { x: o.x, y: o.y, w: o.w, h: o.h };
+  const xs = o.pts.map(p => p[0]), ys = o.pts.map(p => p[1]), pad = ew(o) / 2 + (o.k === 'line' ? 8 : 0);
+  const x = Math.min(...xs) - pad, y = Math.min(...ys) - pad;
+  return { x, y, w: Math.max(...xs) + pad - x, h: Math.max(...ys) + pad - y };
+}
+function dashOf(x, o) { const w = ew(o); x.setLineDash(o.dash === 'dashed' ? [w * 3, w * 2.2] : o.dash === 'dotted' ? [.1, w * 2.2] : []); }
+function shapePath(x, o) {
+  const { x: X, y: Y, w, h } = o; x.beginPath();
+  if (o.s === 'rect') x.rect(X, Y, w, h);
+  else if (o.s === 'ellipse') x.ellipse(X + w / 2, Y + h / 2, w / 2, h / 2, 0, 0, 7);
+  else if (o.s === 'tri') { x.moveTo(X + w / 2, Y); x.lineTo(X + w, Y + h); x.lineTo(X, Y + h); x.closePath(); }
+  else if (o.s === 'diamond') { x.moveTo(X + w / 2, Y); x.lineTo(X + w, Y + h / 2); x.lineTo(X + w / 2, Y + h); x.lineTo(X, Y + h / 2); x.closePath(); }
+  else { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .42 : 1, px = X + w / 2 + Math.cos(a) * r * w / 2, py = Y + h / 2 + Math.sin(a) * r * h / 2; i ? x.lineTo(px, py) : x.moveTo(px, py); } x.closePath(); }
+}
 function drawOp(x, o) {
-  x.globalCompositeOperation = o.e ? 'destination-out' : 'source-over';
-  x.strokeStyle = x.fillStyle = o.c; x.lineWidth = o.w; x.lineCap = x.lineJoin = 'round';
-  const [x1, y1] = o.a, [x2, y2] = o.b;
-  if (o.tx) { x.font = o.w + 'px "Segoe Print","Comic Sans MS",system-ui,sans-serif'; x.textBaseline = 'top'; x.fillText(o.tx, x1, y1); }
-  else if (o.s === 'rect') x.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
-  else if (o.s === 'ellipse') { x.beginPath(); x.ellipse((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2, 0, 0, 7); x.stroke(); }
-  else {
-    x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2);
-    if (o.s === 'arrow') { // arrowhead at the end point
-      const a = Math.atan2(y2 - y1, x2 - x1), h = 16 + o.w;
-      x.moveTo(x2, y2); x.lineTo(x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45));
-      x.moveTo(x2, y2); x.lineTo(x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45));
+  x.save(); x.lineCap = x.lineJoin = 'round'; x.strokeStyle = x.fillStyle = o.c;
+  if (o.k === 'stroke') {
+    const p = PEN[o.pen] || PEN.pen; x.globalAlpha = p.a; if (o.pen === 'hi') { x.globalCompositeOperation = 'multiply'; x.lineCap = 'butt'; }
+    x.lineWidth = ew(o); dashOf(x, o); const P = o.pts;
+    if (P.length === 1) { x.beginPath(); x.arc(P[0][0], P[0][1], x.lineWidth / 2, 0, 7); x.fill(); }
+    else {
+      x.beginPath(); x.moveTo(P[0][0], P[0][1]);
+      for (let i = 1; i < P.length - 1; i++) x.quadraticCurveTo(P[i][0], P[i][1], (P[i][0] + P[i + 1][0]) / 2, (P[i][1] + P[i + 1][1]) / 2);
+      x.lineTo(P[P.length - 1][0], P[P.length - 1][1]); x.stroke();
     }
-    x.stroke(); // plain pen/eraser segments and lines
+  } else if (o.k === 'shape') {
+    shapePath(x, o); if (o.fill !== 'none') { x.globalAlpha = o.fill === 'light' ? .25 : 1; x.fill(); x.globalAlpha = 1; }
+    x.lineWidth = o.lw; dashOf(x, o); shapePath(x, o); x.stroke();
+  } else if (o.k === 'line') {
+    const [a, b] = o.pts; x.lineWidth = o.lw; dashOf(x, o); x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke();
+    if (o.s === 'arrow') { // arrowhead at the end point
+      x.setLineDash([]); const t = Math.atan2(b[1] - a[1], b[0] - a[0]), h = 14 + o.lw * 2; x.beginPath();
+      x.moveTo(b[0] - h * Math.cos(t - .45), b[1] - h * Math.sin(t - .45)); x.lineTo(b[0], b[1]); x.lineTo(b[0] - h * Math.cos(t + .45), b[1] - h * Math.sin(t + .45)); x.stroke();
+    }
+  } else {
+    x.font = o.size + 'px ' + FONT; x.textBaseline = 'top';
+    wrap(o).forEach((l, i) => x.fillText(l, o.x, o.y + i * o.size * 1.25 + o.size * .125));
   }
-  x.globalCompositeOperation = 'source-over';
+  x.restore();
 }
-function replay(layer, ops) {
-  const x = layer.getContext('2d'); x.clearRect(0, 0, W, H); ops.forEach(o => drawOp(x, o));
-}
-// remove the most recent stroke (all segments sharing the last stroke id)
-function dropLast(ops) {
-  if (!ops.length) return ops;
-  const k = ops[ops.length - 1].k; return ops.filter(o => o.k !== k);
+function replay(layer, objs) {
+  const x = layer.getContext('2d'); x.clearRect(0, 0, W, H); objs.forEach(o => drawOp(x, o));
 }
 function compose(cv, layer, bg, im) {
   const x = cv.getContext('2d'); paintBg(x, bg, im); x.drawImage(layer, 0, 0);
