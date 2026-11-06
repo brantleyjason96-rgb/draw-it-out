@@ -81,7 +81,7 @@ function cleanQ(q = {}) {
   return { question: cleanHtml(q.question), bg, img };
 }
 const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh });
-const toWatchers = (r, o) => r.watchers.forEach(w => tx(w, o));
+const toWatchers = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w => w.readyState === 1 && w.send(str)); }; // stringify once, not once per watcher
 // a student can't edit while their work is on the projector
 const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.spot === s.id });
 

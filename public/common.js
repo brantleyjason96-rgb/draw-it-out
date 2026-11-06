@@ -24,8 +24,6 @@ function paintBg(x, bg, im, pw, ph) {
   x.stroke();
 }
 
-const mkLayer = (w = 800, h = 500) => Object.assign(document.createElement('canvas'), { width: w, height: h });
-
 // ---- drawing objects (shared by student, teacher and projector) ----
 // stroke {pts,pen} | line {s:'line'|'arrow',pts:[a,b]} | shape {s,x,y,w,h,fill} | text {x,y,w,t,size}; all have id, c (color), lw, dash
 const FONT = '"Segoe Print","Comic Sans MS",system-ui,sans-serif';
@@ -83,15 +81,13 @@ function drawOp(x, o) {
   }
   x.restore();
 }
-function replay(layer, objs) {
-  const x = layer.getContext('2d'); x.clearRect(0, 0, layer.width, layer.height); objs.forEach(o => drawOp(x, o));
-}
-// draw a student's page (background + drawing) into cv, scaled to fit with gray bars if the shapes differ
-function compose(cv, layer, bg, im) {
-  const x = cv.getContext('2d'), s = Math.min(cv.width / layer.width, cv.height / layer.height);
+// draw a student's page (background + drawing) straight into cv, scaled to fit with gray bars if the shapes differ
+function paintBoard(cv, objs, bg, im, bw, bh) {
+  const x = cv.getContext('2d'), s = Math.min(cv.width / bw, cv.height / bh);
   x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#e5e7eb'; x.fillRect(0, 0, cv.width, cv.height);
-  x.setTransform(s, 0, 0, s, (cv.width - layer.width * s) / 2, (cv.height - layer.height * s) / 2);
-  paintBg(x, bg, im, layer.width, layer.height); x.drawImage(layer, 0, 0); x.setTransform(1, 0, 0, 1, 0, 0);
+  x.setTransform(s, 0, 0, s, (cv.width - bw * s) / 2, (cv.height - bh * s) / 2);
+  x.save(); x.beginPath(); x.rect(0, 0, bw, bh); x.clip();
+  paintBg(x, bg, im, bw, bh); objs.forEach(o => drawOp(x, o)); x.restore(); x.setTransform(1, 0, 0, 1, 0, 0);
 }
 // load a photo for the background; calls cb when ready
 function loadImg(src, cb) {

@@ -156,13 +156,13 @@ const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
 function addStu(d) {
   let s = S.stu.get(d.id);
   if (!s) {
-    s = { id: d.id, layer: mkLayer(d.bw, d.bh), dirty: true };
+    s = { id: d.id, dirty: true, t: 0 };
     const el = document.createElement('div'); el.className = 'stu';
-    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="800" height="500"></canvas>';
+    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="480" height="300"></canvas>';
     el.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
     $('#grid').append(el); s.el = el; s.cv = el.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, dirty: true }); s.layer.width = d.bw; s.layer.height = d.bh; ui();
+  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, dirty: true }); ui();
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
@@ -204,7 +204,11 @@ function ui() {
   });
 }
 (function loop() {
-  S.stu.forEach(s => { if (s.dirty) { s.dirty = false; replay(s.layer, s.objs); compose(s.cv, s.layer, S.q.bg, S.im); } });
+  // Thumbnails don't need 60 fps: each student refreshes at most every 150ms + 15ms per student in the class,
+  // and at most 3 are repainted per frame (longest-waiting first), so a full class of drawers stays smooth.
+  const now = performance.now(), gap = Math.min(1000, 150 + S.stu.size * 15);
+  [...S.stu.values()].filter(s => s.dirty && now - s.t > gap).sort((a, b) => a.t - b.t).slice(0, 3)
+    .forEach(s => { s.dirty = false; s.t = now; paintBoard(s.cv, s.objs, S.q.bg, S.im, s.bw, s.bh); });
   requestAnimationFrame(loop);
 })();
 
@@ -383,7 +387,7 @@ $('#savepng').onclick = () => {
   const c = document.createElement('canvas'); c.width = cols * w; c.height = Math.max(1, Math.ceil(list.length / cols)) * h;
   const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
   list.forEach((s, i) => {
-    replay(s.layer, s.objs); const t = document.createElement('canvas'); t.width = W; t.height = H; compose(t, s.layer, S.q.bg, S.im);
+    const t = document.createElement('canvas'); t.width = 800; t.height = 500; paintBoard(t, s.objs, S.q.bg, S.im, s.bw, s.bh);
     const px = i % cols * w, py = Math.floor(i / cols) * h;
     x.drawImage(t, px, py + 30, w, H / 2); x.fillStyle = '#000'; x.font = '20px sans-serif'; x.fillText(s.name, px + 8, py + 22);
   });

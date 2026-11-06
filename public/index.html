@@ -162,7 +162,7 @@ $('#jf').onsubmit = e => {
 };
 
 function setQ(nq) {
-  q = nq; $('#q').innerHTML = q.question || 'Waiting for your teacher’s question…'; // server-sanitized: only b/i/u/br
+  q = nq; bump(); $('#q').innerHTML = q.question || 'Waiting for your teacher’s question…'; // server-sanitized: only b/i/u/br
   im = loadImg(q.img, draw); draw();
 }
 function applyLock(proj) { // work on the projector can't be changed
@@ -230,16 +230,25 @@ const inside=(o,b)=>{const k=(o.k==='text'||o.k==='shape')?0:8;return b.x>=-k&&b
 function fit(o){if(o.k!=='text')return;const b=bbox(o);o.x=clamp(o.x,0,W-o.w);o.y=clamp(o.y,0,Math.max(0,H-b.h))}
 
 /* ---------- drawing ---------- */
-const paint=o=>drawOp(cx,o);
+const paint=(o,x=cx)=>drawOp(x,o);
 const handleList=o=>(o.k==='text'?['nw','ne','sw','se','w','e']:Object.keys(HF)).map(id=>{const b=bbox(o),f=HF[id],[x,y]=toScr(b.x+f[0]*b.w,b.y+f[1]*b.h);return{id,x,y}});
-function draw(){
- if(!cv.clientWidth)return;
- const d=devicePixelRatio||1,k=sc()*d;
- cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
- cx.fillStyle='#d1d5db';cx.fillRect(0,0,cv.width,cv.height);
- cx.setTransform(k,0,0,k,(PAD.l-V.ox*sc())*d,(PAD.t-V.oy*sc())*d);cx.save();cx.beginPath();cx.rect(0,0,W,H);cx.clip();
- paintBg(cx,q.bg,im);
- objs.forEach(o=>{if(o!==editing)paint(o)});if(cur)paint(cur);cx.restore();
+// Drawing is split in two so pen strokes stay fast: everything already drawn is painted once into `cache`
+// (rebuilt only when `baseKey` changes), and each frame just copies it and adds the live parts on top.
+const cache=document.createElement('canvas'),bx=cache.getContext('2d');let baseKey='',raf=0,rev=0;
+const bump=()=>{rev++}; // call after changing objs in place
+function draw(){if(!raf)raf=requestAnimationFrame(render)} // many calls in one frame = one repaint
+function world(x,d,k){x.setTransform(k,0,0,k,(PAD.l-V.ox*sc())*d,(PAD.t-V.oy*sc())*d);x.save();x.beginPath();x.rect(0,0,W,H);x.clip()}
+function render(){
+ raf=0;if(!cv.clientWidth)return;
+ const d=devicePixelRatio||1,k=sc()*d,live=g&&(g.type==='mv'||g.type==='rs')?sel:null;
+ const key=[rev,objs.length,V.z,V.ox,V.oy,cv.width,cv.height,PAD.l,q.bg,im&&im.complete,editing&&editing.id,live&&live.id].join();
+ if(key!==baseKey){
+  baseKey=key;if(cache.width!==cv.width||cache.height!==cv.height){cache.width=cv.width;cache.height=cv.height}
+  bx.setTransform(1,0,0,1,0,0);bx.fillStyle='#d1d5db';bx.fillRect(0,0,cache.width,cache.height);
+  world(bx,d,k);paintBg(bx,q.bg,im);objs.forEach(o=>{if(o!==editing&&o!==live)paint(o,bx)});bx.restore();
+ }
+ cx.setTransform(1,0,0,1,0,0);cx.drawImage(cache,0,0);
+ world(cx,d,k);if(live)paint(live);if(cur)paint(cur);cx.restore();
  cx.setTransform(d,0,0,d,0,0);
  if(S.tool==='eraser'&&S.erase==='part'&&ptrCss&&!locked){cx.beginPath();cx.arc(ptrCss[0],ptrCss[1],S.esize,0,7);cx.fillStyle='#ffffff99';cx.fill();cx.lineWidth=2;cx.strokeStyle='#111';cx.stroke()}
  if(sel&&!locked){
@@ -251,10 +260,11 @@ function draw(){
 
 /* ---------- history ---------- */
 function commit(){
+ bump();
  const j=JSON.stringify(objs);if(j===hist[hi]){sync();return}
- hist.length=hi+1;hist.push(j);hi++;if(hist.length>100){hist.shift();hi--}sync();
+ hist.length=hi+1;hist.push(j);hi++;if(hist.length>60){hist.shift();hi--}sync();
 }
-function restore(){const id=sel&&sel.id;commitEdit(true);objs=JSON.parse(hist[hi]);sel=objs.find(o=>o.id===id)||null;sync();all()}
+function restore(){bump();const id=sel&&sel.id;commitEdit(true);objs=JSON.parse(hist[hi]);sel=objs.find(o=>o.id===id)||null;sync();all()}
 const undo=()=>{if(hi>0){hi--;restore()}},redo=()=>{if(hi<hist.length-1){hi++;restore()}};
 function del(){if(!sel)return;objs=objs.filter(o=>o!==sel);sel=null;commit();all()}
 
@@ -320,10 +330,10 @@ function down(e){
  draw();
 }
 function erase(p){
- if(S.erase==='whole'){const n=objs.length;objs=objs.filter(o=>!near(o,p,8/sc()));if(objs.length!==n){g.n+=n-objs.length;draw()}return}
+ if(S.erase==='whole'){const n=objs.length;objs=objs.filter(o=>!near(o,p,8/sc()));if(objs.length!==n){bump();g.n+=n-objs.length;draw()}return}
  const r=S.esize/sc(),out=[];let ch=false; // partial: cut pen lines and arrows/lines apart; shapes and text are left alone
  objs.forEach(o=>{const c=cutObj(o,p,r);if(c===o)out.push(o);else{ch=true;out.push(...c)}});
- if(ch){objs=out;g.n++;draw()}
+ if(ch){bump();objs=out;g.n++;draw()}
 }
 // returns o unchanged, or the pieces of o left after rubbing out a circle (centre p, radius r)
 function cutObj(o,p,r){
@@ -360,7 +370,7 @@ function mk(p0,p1,tiny){
 function move(e){
  if(!g)return;const c=css(e),p=toWorld(c);
  if(g.type==='pan'){V.ox=g.ox-(e.clientX-g.x)/sc();V.oy=g.oy-(e.clientY-g.y)/sc();clampView();ui()}
- else if(g.type==='draw'){const l=cur.pts[cur.pts.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>.5/V.z){cur.pts.push(p);streamPts(cur,p)}}
+ else if(g.type==='draw'){const l=cur.pts[cur.pts.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>1.5/sc()){cur.pts.push(p);streamPts(cur,p)}}
  else if(g.type==='erase'){const l=g.last||p,st=S.erase==='part'?S.esize/sc()/2:1e9,n=Math.max(1,Math.ceil(Math.hypot(p[0]-l[0],p[1]-l[1])/st));for(let i=1;i<=n;i++)erase([l[0]+(p[0]-l[0])*i/n,l[1]+(p[1]-l[1])*i/n]);g.last=p}
  else if(g.type==='make')cur=Math.hypot(p[0]-g.p0[0],p[1]-g.p0[1])>6/V.z?mk(g.p0,p,false):null;
  else if(g.type==='mv'){
@@ -455,7 +465,7 @@ function drawWheel(){
 function setProp(k,v,quiet){
  if(k==='text'||k==='size')v=+v;S[k]=v;
  if(sel){const map={color:'c',pen:'pen',dash:'dash',fill:'fill',shape:'s',text:'size',size:'lw'};
-  if(!(k==='size'&&sel.k==='text')&&!(k==='text'&&sel.k!=='text')){sel[map[k]]=v;if(k==='text')fit(sel)}}
+  if(!(k==='size'&&sel.k==='text')&&!(k==='text'&&sel.k!=='text')){sel[map[k]]=v;bump();if(k==='text')fit(sel)}}
  if(!quiet){renderOpts();if(sel)commit()}else sync();draw();ui();
 }
 function setColor(hex){setProp('color',hex,true);const h=$('#hex'),c=$('#chip');if(h)h.value=hex;if(c)c.style.background=hex;drawWheel()}
@@ -517,7 +527,7 @@ function streamPts(o,p){ // live pen strokes: batch new points ~15 times a secon
  pendT=setTimeout(()=>{pendT=0;if(pend.length)ws.send({t:'pts',oid:pendId,p:pend});pend=[]},70);
 }
 function resetDoc(list){
- commitEdit(true);objs=list;sel=null;cur=null;g=null;hist=[JSON.stringify(objs)];hi=0;
+ bump();commitEdit(true);objs=list;sel=null;cur=null;g=null;hist=[JSON.stringify(objs)];hi=0;
  synced=new Map(objs.map(o=>[o.id,JSON.stringify(o)]));uid=Math.max(uid,...objs.map(o=>o.id+1),1);V={z:1,ox:0,oy:0};all();
 }
 
