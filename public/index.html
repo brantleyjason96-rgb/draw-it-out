@@ -10,6 +10,13 @@
 #join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
 #join #code{letter-spacing:.3em;text-transform:uppercase}
 #err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
+#pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:0 0 12px}
+#pick button{border:3px solid var(--line);background:#fff;border-radius:14px;padding:12px 6px;font-size:18px;font-weight:600;cursor:pointer;min-height:64px;line-height:1.2}
+#pick button small{display:block;font-weight:400;color:var(--mut);font-size:13px}
+#pick button .em{font-size:30px;display:block}
+#pick button:disabled{opacity:.4;cursor:not-allowed}
+#pick .back{grid-column:1/-1;min-height:40px;font-size:15px;font-weight:400;border-style:dashed}
+#tm{display:inline-block;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
 .seg button{border:0;background:#fff;color:var(--ink);padding:8px 12px;min-height:44px}
 .seg button.on{background:var(--ink);color:#fff}
@@ -31,7 +38,7 @@ button{cursor:pointer}
 #stage{position:fixed;inset:0}
 #cv{width:100%;height:100%;display:block;touch-action:none;border:0;border-radius:0;background:none}
 #qbox{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:#1e3a8a;color:#fff;border-radius:14px;padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 14px #0004}
-#qbox span{flex:1;padding-top:2px}
+#qbox span{padding-top:2px}
 #qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;height:34px;padding:0 12px;font-size:14px}
 #qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'❓ Show question  '}
 #qbox:not(.min) #qt:before{content:'Hide ▲'}
@@ -103,11 +110,12 @@ button{cursor:pointer}
  <div id="join">
   <form class="card" id="jf">
    <h1 style="margin:0 0 4px">Join class</h1>
-   <p style="color:var(--mut);margin:0 0 12px">Type your class code and first name</p>
+   <p id="jh" style="color:var(--mut);margin:0 0 12px">Type your class code</p>
    <input id="code" maxlength="10" placeholder="CODE" aria-label="Class code" autocomplete="off">
-   <input id="name" maxlength="20" placeholder="Your first name" aria-label="First name" autocomplete="off">
+   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" aria-label="Nickname" autocomplete="off" hidden>
+   <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
-   <button class="btn" style="width:100%">Join</button>
+   <button class="btn" id="go" style="width:100%">Next</button>
   </form>
  </div>
 
@@ -118,7 +126,7 @@ button{cursor:pointer}
    <div class="ov lockable" id="selbar" hidden><button class="del" data-a="del" aria-label="Delete">🗑</button><button data-a="dup" aria-label="Duplicate">⧉</button><button data-a="front" aria-label="Bring to front">⬆</button></div>
    <div id="mini" hidden title="Where you are on the page"><div id="mv"></div></div>
   </div>
-  <div id="qbox"><span id="q"></span><button id="qt" aria-label="Show or hide the question"></button></div>
+  <div id="qbox"><div style="flex:1"><div id="tm" hidden></div><span id="q"></span></div><button id="qt" aria-label="Show or hide the question"></button></div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
@@ -146,20 +154,59 @@ let target = null, id = null;
 const sp = new URLSearchParams(location.search);
 $('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
 $('#name').value = localStorage.do_name || '';
+let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null;
 
 const ws = connect(onmsg, () => target && sendJoin(), ok => {
   $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
 });
-function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
+function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
 
+// Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
+const pageSize = () => ({ bw: Math.min(3000, Math.max(300, Math.round(innerWidth - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - 140))) }); // the page is the size of this screen
+function jshow(st) {
+  jstep = st; const pk = st === 'tiles' || st === 'ini';
+  $('#name').hidden = st !== 'name'; $('#pick').hidden = !pk; $('#go').hidden = pk; $('#code').readOnly = st !== 'code';
+  $('#go').textContent = st === 'name' ? 'Join' : 'Next';
+  $('#jh').textContent = { code: 'Type your class code', name: 'Type a nickname (no last names)', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
+  if (st === 'name') $('#name').focus();
+}
+function pickBtn(label, sub, color, fn, off) {
+  const b = document.createElement('button'); b.type = 'button'; b.disabled = !!off; b.onclick = fn; if (color) b.style.borderColor = color;
+  const em = document.createElement('span'); em.className = 'em'; em.textContent = label[0]; b.append(em, label[1]);
+  if (sub) { const sm = document.createElement('small'); sm.textContent = sub; b.append(sm); }
+  return b;
+}
+function renderPick(m) {
+  const box = $('#pick'); box.innerHTML = '';
+  if (!m.list) { // team tiles
+    pickTeam = null; jshow('tiles');
+    m.teams.forEach(t => box.append(pickBtn([t.emoji, t.name], t.open ? t.open + ' open' : 'full', t.color, () => ws.send({ t: 'peek', code: target0, team: t.id }), !t.open)));
+    const bk = pickBtn(['', '← Different class code'], '', null, () => { $('#err').textContent = ''; jshow('code'); $('#code').focus(); }); bk.className = 'back'; box.append(bk);
+  } else { // initials for one team
+    pickTeam = m.team; jshow('ini');
+    m.list.forEach(e => box.append(pickBtn(['', e.ini], e.taken ? 'in use' : '', null, () => {
+      target = { code: target0, rid: e.rid, ...pageSize() }; localStorage.do_code = target0; id = sessionStorage['do_id_' + target0] || null; $('#err').textContent = ''; sendJoin();
+    }, e.taken)));
+    const bk = pickBtn(['', '← Back to teams'], '', null, () => { $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); }); bk.className = 'back'; box.append(bk);
+  }
+}
+let target0 = '';
 $('#jf').onsubmit = e => {
   e.preventDefault(); $('#err').textContent = '';
-  const code = $('#code').value.trim().toUpperCase(), name = $('#name').value.trim();
-  if (!code || !name) return ($('#err').textContent = 'Type the code and your name');
-  localStorage.do_code = code; localStorage.do_name = name;
-  id = sessionStorage['do_id_' + code] || null;
-  target = { code, name, bw: Math.min(3000, Math.max(300, Math.round(innerWidth - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - 140))) }; sendJoin(); // the page is the size of this screen
+  if (jstep === 'code') {
+    target0 = $('#code').value.trim().toUpperCase(); if (!target0) return ($('#err').textContent = 'Type the class code');
+    ws.send({ t: 'peek', code: target0 });
+  } else if (jstep === 'name') {
+    const name = $('#name').value.trim(); if (!name) return ($('#err').textContent = 'Type a nickname');
+    localStorage.do_code = target0; localStorage.do_name = name;
+    id = sessionStorage['do_id_' + target0] || null; target = { code: target0, name, ...pageSize() }; sendJoin();
+  }
 };
+function renderTeam() {
+  const t = tmList.find(x => x.id === tmMy), el = $('#tm'); el.hidden = !(t || tmIni);
+  el.textContent = (tmIni ? tmIni + ' · ' : '') + (t ? (t.emoji ? t.emoji + ' ' : '') + t.name + ' · ' + (tmSc[t.id] || 0) + ' pts' : 'No team yet');
+  el.style.background = t ? t.color : '#6b7280';
+}
 
 function setQ(nq) {
   q = nq; bump(); $('#q').innerHTML = q.question || 'Waiting for your teacher’s question…'; // server-sanitized: only b/i/u/br
@@ -171,20 +218,25 @@ function applyLock(proj) { // work on the projector can't be changed
 }
 
 function onmsg(m) {
-  if (m.t === 'err') {
-    if ($('#play').hidden) $('#err').textContent = m.m;
+  if (m.t === 'peek') {
+    if (!m.roster) jshow('name'); else renderPick(m);
+  } else if (m.t === 'score') { tmList = m.teams; tmSc = m.scores; renderTeam();
+  } else if (m.t === 'myteam') { tmMy = m.team; renderTeam();
+  } else if (m.t === 'err') {
+    if ($('#play').hidden) { $('#err').textContent = m.m; if (m.taken) { target = null; if (pickTeam !== null) ws.send({ t: 'peek', code: target0, team: pickTeam }); } }
     else if (m.nocls) setTimeout(sendJoin, 3000); // server restarted: keep retrying until the teacher is back
   } else if (m.t === 'joined') {
     id = m.id; sessionStorage['do_id_' + target.code] = id; W = m.bw; H = m.bh;
     $('#join').hidden = true; $('#play').hidden = false; document.body.classList.add('playing');
     if (m.q.question || m.q.img || !$('#q').innerHTML) setQ(m.q);
     if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
+    tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
     loaded = true; applyLock(!!m.proj); applySimple(!!m.simple);
   } else if (m.t === 'lock') applyLock(!!m.proj);
   else if (m.t === 'mode') applySimple(!!m.simple);
   else if (m.t === 'kicked') { // teacher cleared the class
     sessionStorage.removeItem('do_id_' + target.code); target = id = null; loaded = false; resetDoc([]); applyLock(false);
-    $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); $('#err').textContent = 'Class ended. Join again when your teacher says so.';
+    $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'Class ended. Join again when your teacher says so.' : m.why;
   } else if (m.t === 'q') { setQ(m.q); resetDoc([]); }
 }
 

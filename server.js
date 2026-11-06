@@ -80,7 +80,62 @@ function cleanQ(q = {}) {
   if (bg === 'photo' && !img) bg = 'blank';
   return { question: cleanHtml(q.question), bg, img };
 }
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh });
+// ---- teams and roster ----
+// The roster only ever holds initials and a team. Real names stay in the teacher's browser and are never sent here.
+const MAX_TEAMS = 12, MAX_ROSTER = 100;
+function cleanTeams(a) {
+  const seen = new Set();
+  return (Array.isArray(a) ? a : []).slice(0, MAX_TEAMS).map(t => {
+    if (!t || typeof t.id !== 'string' || !/^[a-z0-9]{1,8}$/.test(t.id) || seen.has(t.id)) return null;
+    seen.add(t.id);
+    return { id: t.id, name: String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#2563eb', emoji: Array.from(String(t.emoji || '')).slice(0, 2).join('') };
+  }).filter(Boolean);
+}
+const cleanIni = s => Array.from(String(s || '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()).slice(0, 6).join('');
+function cleanRoster(a, teams) {
+  const ids = new Set(teams.map(t => t.id)), seen = new Set();
+  return (Array.isArray(a) ? a : []).slice(0, MAX_ROSTER).map(e => {
+    if (!e || typeof e.rid !== 'string' || !/^[a-z0-9]{4,12}$/.test(e.rid) || seen.has(e.rid)) return null;
+    const ini = cleanIni(e.ini); if (!ini) return null;
+    seen.add(e.rid);
+    return { rid: e.rid, ini, team: ids.has(e.team) ? e.team : null, sid: null };
+  }).filter(Boolean);
+}
+const cleanScores = (o, teams) => Object.fromEntries(teams.map(t => [t.id, o && Number.isInteger(o[t.id]) && o[t.id] >= 0 && o[t.id] <= 9999 ? o[t.id] : 0]));
+const live = s => !!(s && s.ws && s.ws.readyState === 1);
+const entryOf = (r, rid) => r.roster.find(e => e.rid === rid);
+const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw });
+const stateMsg = r => ({ t: 'state', q: r.q, simple: r.simple, spot: r.spot, hide: r.hide, board: r.board, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+// a point belongs to the team the student is on; if the student moves teams the point moves with them
+function fixAwards(r) {
+  r.students.forEach(s => {
+    if (!s.aw || s.aw === s.team) return;
+    if (s.aw in r.scores) r.scores[s.aw] = Math.max(0, r.scores[s.aw] - 1);
+    if (s.team) { r.scores[s.team]++; s.aw = s.team; } else s.aw = null;
+  });
+}
+function release(r, s, why) {
+  if (s.rid) { const e = entryOf(r, s.rid); if (e && e.sid === s.id) e.sid = null; }
+  r.students.delete(s.id); if (r.spot === s.id) r.spot = null;
+  tx(s.ws, { t: 'kicked', why }); s.ws = null;
+  toWatchers(r, { t: 'gone', id: s.id }); toWatchers(r, { t: 'spot', spot: r.spot, hide: r.hide });
+}
+function applySetup(r, m) {
+  r.teams = cleanTeams(m.teams); r.cap = !!m.cap;
+  const old = new Map(r.roster.map(e => [e.rid, e]));
+  r.roster = cleanRoster(m.roster, r.teams).map(e => { const o = old.get(e.rid); if (o) e.sid = o.sid; return e; });
+  r.scores = cleanScores(m.scores || r.scores, r.teams);
+  r.students.forEach(s => { if (s.rid && !entryOf(r, s.rid)) release(r, s, 'Your teacher updated the class list. Join again.'); });
+  r.students.forEach(s => { s.team = s.rid ? entryOf(r, s.rid).team : (r.teams.some(t => t.id === s.team) ? s.team : null); });
+  fixAwards(r);
+}
+// tell everyone what changed: scores to all, team/award flags to the teacher and projector
+function pushScores(r) {
+  const o = { t: 'score', teams: r.teams, scores: r.scores, cap: r.cap };
+  toWatchers(r, o); r.students.forEach(s => { tx(s.ws, o); tx(s.ws, { t: 'myteam', team: s.team || null }); });
+  toWatchers(r, { t: 'setup', roster: pubRoster(r), metas: [...r.students.values()].map(s => ({ id: s.id, team: s.team || null, aw: !!s.aw })) });
+}
 const toWatchers = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w => w.readyState === 1 && w.send(str)); }; // stringify once, not once per watcher
 // a student can't edit while their work is on the projector
 const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.spot === s.id });
@@ -103,7 +158,8 @@ wss.on('connection', ws => {
         if (!goodCode(code) || !key) return tx(ws, { t: 'err', m: 'Bad code' });
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), simple: false, spot: null, hide: true, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), simple: false, spot: null, hide: true, board: false, teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
+          if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
         role = 'host';
@@ -112,27 +168,58 @@ wss.on('connection', ws => {
         role = 'watch';
       }
       room = r; r.watchers.add(ws);
-      return tx(ws, { t: 'state', q: r.q, simple: r.simple, spot: r.spot, hide: r.hide, students: [...r.students.values()].map(stuView) });
+      return tx(ws, stateMsg(r));
+    }
+
+    if (m.t === 'peek') { // student asks which teams / initials are on offer; initials are only revealed one team at a time
+      const r = rooms.get(cleanCode(m.code));
+      if (!r) return tx(ws, { t: 'err', m: 'Class not found. Check the code.' });
+      if (!r.roster.length) return tx(ws, { t: 'peek', roster: false });
+      const open = id => r.roster.filter(e => e.team === id && !live(r.students.get(e.sid))).length;
+      if (m.team === undefined) {
+        const teams = r.teams.filter(t => r.roster.some(e => e.team === t.id)).map(t => ({ id: t.id, name: t.name, color: t.color, emoji: t.emoji, open: open(t.id) }));
+        if (r.roster.some(e => !e.team)) teams.push({ id: '', name: 'No team yet', color: '#6b7280', emoji: '', open: open(null) });
+        return tx(ws, { t: 'peek', roster: true, teams });
+      }
+      const tid = m.team || null;
+      return tx(ws, { t: 'peek', roster: true, team: tid || '', list: r.roster.filter(e => e.team === tid).map(e => ({ rid: e.rid, ini: e.ini, taken: live(r.students.get(e.sid)) })) });
     }
 
     if (m.t === 'join') {
       const r = rooms.get(cleanCode(m.code));
       if (!r) return tx(ws, { t: 'err', m: 'Class not found. Check the code.', nocls: true });
-      const name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
-      if (!name) return tx(ws, { t: 'err', m: 'Type your first name' });
       let s = typeof m.id === 'string' ? r.students.get(m.id) : null;
-      if (!s) {
-        if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
-        s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
-        r.students.set(s.id, s);
+      if (r.roster.length) { // a class list is loaded: students sign in by picking their initials, never by typing a name
+        const e = typeof m.rid === 'string' ? entryOf(r, m.rid) : null;
+        if (!e) return tx(ws, { t: 'err', m: 'Pick your initials from the list.', taken: true });
+        const es = e.sid ? r.students.get(e.sid) : null;
+        if (es && es !== s && live(es)) return tx(ws, { t: 'err', m: 'Those initials are already in use. Ask your teacher if that is you.', taken: true });
+        if (es && s && es !== s) release(r, s, ''); // moving onto initials a disconnected student held
+        s = es || s;
+        if (s && s.rid && s.rid !== e.rid) { const old = entryOf(r, s.rid); if (old && old.sid === s.id) old.sid = null; }
+        if (!s) {
+          if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
+          s = { id: randomUUID(), objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
+          r.students.set(s.id, s);
+        }
+        s.rid = e.rid; e.sid = s.id; s.name = e.ini; s.team = e.team;
+      } else {
+        const name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+        if (!name) return tx(ws, { t: 'err', m: 'Type your first name' });
+        if (!s) {
+          if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
+          s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
+          r.students.set(s.id, s);
+        }
+        s.name = name;
       }
-      s.name = name;
       // the student's own copy is the source of truth, so a server restart or dropped connection loses nothing.
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
       if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs, dm(s));
       s.ws = ws; me = s; room = r; role = 'student';
-      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id });
-      return toWatchers(r, { t: 'join', s: stuView(s) });
+      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+      toWatchers(r, { t: 'join', s: stuView(s) });
+      return pushScores(r);
     }
 
     if (!room) return;
@@ -153,8 +240,9 @@ wss.on('connection', ws => {
     } else if (role === 'host') {
       if (m.t === 'q') {
         room.q = cleanQ(m);
-        room.students.forEach(s => { s.objs = []; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); });
+        room.qn++; room.students.forEach(s => { s.objs = []; s.aw = null; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
         toWatchers(room, { t: 'q', q: room.q });
+        pushScores(room);
       } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
         room.simple = !!m.simple;
         room.students.forEach(s => tx(s.ws, { t: 'mode', simple: room.simple }));
@@ -165,10 +253,33 @@ wss.on('connection', ws => {
         room.hide = !!m.hide;
         toWatchers(room, { t: 'spot', spot: room.spot, hide: room.hide });
         [prev, room.spot].forEach(id => { const s = room.students.get(id); if (s) lockMsg(room, s); });
-      } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen
+      } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
-        room.students.clear(); room.spot = null;
-        toWatchers(room, { t: 'state', q: room.q, simple: room.simple, spot: null, hide: room.hide, students: [] });
+        room.students.clear(); room.spot = null; room.roster.forEach(e => (e.sid = null));
+        toWatchers(room, stateMsg(room));
+      } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
+        applySetup(room, m); pushScores(room);
+      } else if (m.t === 'team') { // no class list loaded: put a nickname-joined student on a team (with a class list, the list decides)
+        const s = room.students.get(m.id);
+        if (s && !s.rid) { s.team = room.teams.some(t => t.id === m.team) ? m.team : null; fixAwards(room); pushScores(room); }
+      } else if (m.t === 'award') { // +1 to the student's team for this question; on:false takes it back
+        const s = room.students.get(m.id); if (!s) return;
+        if (m.on && !s.aw) {
+          if (!s.team) return tx(ws, { t: 'note', m: 'Put this student on a team first.' });
+          if (room.cap && [...room.students.values()].some(x => x.aw === s.team)) return tx(ws, { t: 'note', m: 'That team already scored on this question.' });
+          s.aw = s.team; room.scores[s.team] = Math.min(9999, (room.scores[s.team] || 0) + 1); pushScores(room);
+        } else if (!m.on && s.aw) {
+          if (s.aw in room.scores) room.scores[s.aw] = Math.max(0, room.scores[s.aw] - 1);
+          s.aw = null; pushScores(room);
+        }
+      } else if (m.t === 'adj') { // manual +/- on a team
+        if (room.teams.some(t => t.id === m.team) && [1, -1, 5, -5].includes(m.d)) { room.scores[m.team] = Math.min(9999, Math.max(0, room.scores[m.team] + m.d)); pushScores(room); }
+      } else if (m.t === 'resetscores') {
+        room.scores = cleanScores({}, room.teams); room.students.forEach(s => (s.aw = null)); pushScores(room);
+      } else if (m.t === 'board') { // projector shows the leaderboard when no one's work is up
+        room.board = !!m.on; toWatchers(room, { t: 'board', on: room.board });
+      } else if (m.t === 'release') { // free up a student's initials (wrong pick, or a new device)
+        const s = room.students.get(m.id); if (s) { release(room, s, 'Your teacher reset your sign-in. Join again.'); pushScores(room); }
       }
     }
   });

@@ -25,6 +25,24 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
 #qin{min-height:64px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px;overflow-wrap:anywhere}
 #qin:empty:before{content:attr(data-ph);color:var(--mut)}
 .sm{min-height:36px!important;padding:4px 12px!important}
+.stu{border-left:8px solid var(--tc,var(--line))}
+.stu .r2{display:flex;gap:6px;margin-top:6px}
+.stu .tsel{flex:1;min-width:0;padding:4px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.stu .ok{min-height:36px;padding:4px 12px;background:#fff;color:#065f46;border:2px solid #059669;border-radius:10px;cursor:pointer;font-weight:700}
+.stu .ok.on{background:#059669;color:#fff}
+#cur{display:flex;gap:12px;align-items:center;justify-content:space-between}
+#awbig{background:#059669;flex:none}
+.trow{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:6px 8px;border-left:8px solid var(--tc);background:#f9fafb;border-radius:8px;margin:6px 0}
+.trow .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .tn button{border:0;background:none;font-size:20px;cursor:pointer;padding:0 4px}
+.trow .tp{font-size:22px;font-weight:800;min-width:2ch;text-align:center}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:10px;z-index:50}
+dialog{border:0;border-radius:14px;padding:16px;max-width:760px;width:calc(100% - 24px);box-shadow:0 10px 40px #0006}
+dialog::backdrop{background:#0006}
+#rtab{width:100%;border-collapse:collapse;margin-top:8px}
+#rtab td{padding:3px}
+#rtab input,#rtab select{width:100%;padding:6px;border:1px solid var(--line);border-radius:8px}
+#rbox{max-height:46vh;overflow:auto}
 </style>
 </head>
 <body>
@@ -38,6 +56,7 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
     <span class="mut"><span class="dot" id="dot"></span><span id="st">Connecting…</span></span>
    </div>
    <div class="row">
+    <button class="btn alt" id="lbproj" title="Show the team leaderboard on the projector whenever no student's work is up"></button>
     <button class="btn alt" id="simple" title="Students get just a pen and 4 colors. Good for quick checks."></button>
     <button class="btn alt" id="hide"></button>
     <button class="btn alt" id="proj">Open projector view</button>
@@ -103,14 +122,46 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
      <div class="mut" style="margin-top:6px">Tip: paste a photo or screenshot (Ctrl+V) to attach it.</div>
     </div>
    </details>
+   <details open id="tmdet" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><summary><b style="color:var(--ink)">Teams &amp; points</b></summary>
+    <div id="tlist" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:8px">
+     <select id="tn" class="btn alt sm" aria-label="Number of teams"></select>
+     <button class="btn alt sm" id="mkteams">Create teams</button>
+     <button class="btn alt sm" id="addteam">+ Team</button>
+    </div>
+    <label class="mut" style="display:block;margin-top:8px"><input type="checkbox" id="cap"> Max 1 point per team per question</label>
+    <div class="row" style="margin-top:8px"><button class="btn alt sm" id="rsc">Reset scores</button></div>
+    <div class="mut" id="rinfo" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:6px">
+     <button class="btn alt sm" id="rost">Class list…</button>
+     <button class="btn alt sm" id="rclr">Remove class list</button>
+    </div>
+    <div class="mut" style="margin-top:6px">With a class list, students tap their team, then their initials. Names never leave this browser.</div>
+   </details>
   </aside>
 
   <section>
-   <div class="qbar" id="cur"></div>
+   <div class="qbar" id="cur"><div id="curq"></div><button class="btn" id="awbig" hidden></button></div>
    <div id="grid"></div>
   </section>
  </div>
 </main>
+<dialog id="rdlg">
+ <h2 style="margin:0 0 6px">Class list</h2>
+ <p class="mut" style="margin:0 0 8px">Upload a CSV (Google Sheets: File → Download → CSV) or paste names, one per line: <b>First, Last, Team</b> (team is optional). The file is read in this browser only. Students will see just their <b>initials</b>, grouped by team. Real names stay on this computer.</p>
+ <div class="row"><input type="file" id="rfile" accept=".csv,.txt,text/csv,text/plain"><button class="btn alt sm" id="rpastebtn">Paste instead</button></div>
+ <textarea id="rpaste" rows="5" hidden placeholder="Jane, Doe, Granite&#10;Sam, Lee, Basalt"></textarea>
+ <div class="row" id="rpastego" hidden style="margin-top:6px"><button class="btn sm" id="rread">Read pasted list</button></div>
+ <div id="rbox"><table id="rtab"></table></div>
+ <div class="row" style="margin-top:10px">
+  <button class="btn alt sm" id="radd">+ Add student</button>
+  <button class="btn alt sm" id="rrand">Randomize teams</button>
+  <span style="flex:1"></span>
+  <button class="btn alt sm" id="rcancel">Cancel</button>
+  <button class="btn sm" id="rsave">Save class list</button>
+ </div>
+</dialog>
+<div id="toast" hidden></div>
 <script src="/common.js"></script>
 <script>
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -137,8 +188,8 @@ $('#renper').onclick = () => {
 };
 $('#delper').onclick = () => {
   if (periods.length < 2) return alert('You need at least one class period.');
-  if (!confirm('Remove the class period "' + per().name + '"? Its students and their work will be lost.')) return;
-  ws.send({ t: 'reset' }); periods = periods.filter(p => p.code !== code); code = periods[0].code; savePeriods(); setTimeout(() => location.reload(), 300);
+  if (!confirm('Remove the class period "' + per().name + '"? Its students, teams and scores will be lost.')) return;
+  ws.send({ t: 'reset' }); localStorage.removeItem(TK); periods = periods.filter(p => p.code !== code); code = periods[0].code; savePeriods(); setTimeout(() => location.reload(), 300);
 };
 $('#clearcls').onclick = () => {
   if (confirm('Remove all students from "' + per().name + '"? Save the session PNG first if you want to keep their work.')) ws.send({ t: 'reset' });
@@ -146,10 +197,24 @@ $('#clearcls').onclick = () => {
 const link = location.origin + '/?code=' + code;
 $('#link').textContent = link;
 
-const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null, spot: null, hide: true, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null, spot: null, hide: true, board: false, stu: new Map() };
+// Teams, class list (real names!) and running scores live only in this browser, one set per class period.
+// The server is only ever sent initials + team, never names.
+const TK = 'do_team_' + code;
+let TM; try { TM = JSON.parse(localStorage[TK]); } catch {}
+if (!TM || !Array.isArray(TM.teams) || !Array.isArray(TM.roster)) TM = { teams: [], roster: [], cap: false, scores: {} };
+TM.scores = TM.scores || {};
+const saveTM = () => { try { localStorage[TK] = JSON.stringify(TM); } catch {} };
+const pubRoster = () => TM.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
+const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(), cap: TM.cap, scores: withScores ? TM.scores : undefined });
+const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 2800); };
+const teamOf = id => TM.teams.find(t => t.id === id);
+const rosterOf = s => s.rid && TM.roster.find(e => e.rid === s.rid);
+// what the teacher sees on a card: the real name if the class list has it, otherwise whatever the student typed
+const disp = s => { const e = rosterOf(s); return e ? (e.first + (e.last ? ' ' + Array.from(e.last)[0] + '.' : '')) : s.name; };
 let photo = null; // photo = data URL waiting to be saved/sent
 
-const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
+const ws = connect(onmsg, () => ws.send({ t: 'host', code, key, setup: { teams: TM.teams, roster: pubRoster(), cap: TM.cap, scores: TM.scores } }), ok => {
   $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Reconnecting…';
 });
 
@@ -158,11 +223,14 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const el = document.createElement('div'); el.className = 'stu';
-    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="480" height="300"></canvas>';
+    el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Award a point to this team">✓ +1</button></div>';
     el.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
+    el.querySelector('.tsel').onclick = e => e.stopPropagation();
+    el.querySelector('.tsel').onchange = e => setTeam(s, e.target.value || null);
+    el.querySelector('.ok').onclick = e => { e.stopPropagation(); award(s); };
     $('#grid').append(el); s.el = el; s.cv = el.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, dirty: true }); ui();
+  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, dirty: true }); ui();
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
@@ -177,15 +245,24 @@ function onmsg(m) {
       if (/in use/.test(m.m)) { per().code = rnd(); code = per().code; savePeriods(); location.reload(); } // another teacher already has that code
       break;
     case 'state':
-      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.simple = !!m.simple; setQ(m.q);
+      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; setQ(m.q);
       m.students.forEach(addStu);
+      // this browser is the source of truth for teams and the class list; the server's scores win unless it was empty
+      const canon = ts => JSON.stringify(ts.map(t => [t.id, t.name, t.color, t.emoji || '']));
+      if (canon(m.teams) + JSON.stringify(m.roster) + !!m.cap !== canon(TM.teams) + JSON.stringify(pubRoster()) + !!TM.cap) sendSetup(!m.teams.length);
+      else { TM.scores = m.scores; saveTM(); }
       ui(); break;
+    case 'score': TM.scores = m.scores; saveTM(); renderTeams(); break;
+    case 'setup': m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); break;
+    case 'gone': if (s) { s.el.remove(); S.stu.delete(m.id); ui(); } break;
+    case 'board': S.board = m.on; ui(); break;
+    case 'note': toast(m.m); break;
     case 'join': addStu(m.s); break;
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.dirty = true; } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; } break;
-    case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; x.dirty = true; }); ui(); break;
+    case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; x.aw = false; x.dirty = true; }); ui(); break;
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; ui(); break;
   }
@@ -193,15 +270,26 @@ function onmsg(m) {
 
 function ui() {
   $('#count').textContent = S.stu.size + ' student' + (S.stu.size === 1 ? '' : 's') + ' joined';
-  $('#cur').innerHTML = '<small>Students are answering</small>' + (S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet — pick a question on the left')); // server-sanitized: only b/i/u/br
+  $('#curq').innerHTML = '<small>Students are answering</small>' + (S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet — pick a question on the left')); // server-sanitized: only b/i/u/br
   $('#simple').textContent = S.simple ? 'Quick mode: ON (pen + 4 colors)' : 'Quick mode: off'; $('#simple').classList.toggle('on', S.simple);
   $('#hide').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector';
   $('#hide').classList.toggle('on', S.hide);
+  $('#lbproj').textContent = S.board ? 'Leaderboard on projector: ON' : 'Leaderboard on projector: off'; $('#lbproj').classList.toggle('on', S.board);
   S.stu.forEach(s => {
-    s.el.querySelector('.nm').textContent = s.name;
+    s.el.querySelector('.nm').textContent = disp(s);
+    const tm = teamOf(s.team), sel = s.el.querySelector('.tsel'), ok = s.el.querySelector('.ok');
+    s.el.style.setProperty('--tc', tm ? tm.color : '#e5e7eb');
+    sel.hidden = !TM.teams.length; ok.hidden = !TM.teams.length;
+    const want = TM.teams.map(t => t.id).join() + '|' + TM.teams.map(t => t.name).join();
+    if (sel.dataset.k !== want) { sel.dataset.k = want; sel.innerHTML = ''; [['', 'No team'], ...TM.teams.map(t => [t.id, (t.emoji ? t.emoji + ' ' : '') + t.name])].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.append(o); }); }
+    sel.value = s.team || '';
+    ok.classList.toggle('on', !!s.aw); ok.textContent = s.aw ? '✓ Awarded' : '✓ +1'; ok.title = s.aw ? 'Click to take the point back' : 'Give this team a point';
     const c = s.el.querySelector('.chip'); c.textContent = S.spot === s.id ? 'Projected' : ''; c.hidden = S.spot !== s.id;
     s.el.classList.toggle('spot', S.spot === s.id);
   });
+  const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
+  if (sp) { ab.textContent = sp.aw ? '✓ Awarded (undo)' : '✓ Award ' + (teamOf(sp.team) ? teamOf(sp.team).name : 'a team') + ' +1'; ab.onclick = () => award(sp); }
+  renderTeams();
 }
 (function loop() {
   // Thumbnails don't need 60 fps: each student refreshes at most every 150ms + 15ms per student in the class,
@@ -213,6 +301,7 @@ function ui() {
 })();
 
 // controls
+$('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
 $('#simple').onclick = () => ws.send({ t: 'mode', simple: !S.simple });
 $('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
 $('#proj').onclick = () => window.open('/projector?code=' + code, 'projector');
@@ -380,6 +469,134 @@ $('#addimg').onclick = () => $('#file').click();
 $('#file').onchange = e => { takePhoto(e.target.files[0]); e.target.value = ''; };
 $('#rmimg').onclick = () => { photo = null; $('#thumb').hidden = $('#rmimg').hidden = true; if ($('#bg').value === 'photo') $('#bg').value = 'graph'; };
 document.addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) { if (editing === null) openEditor(-1); takePhoto(f); } });
+
+// ---- teams & points ----
+function award(s) {
+  if (!s.team) return toast('Put this student on a team first.');
+  ws.send({ t: 'award', id: s.id, on: !s.aw });
+}
+function setTeam(s, team) {
+  const e = rosterOf(s);
+  if (e) { e.team = team; saveTM(); sendSetup(); } // with a class list, the list decides
+  else ws.send({ t: 'team', id: s.id, team });
+}
+const PRE = [['Granite', '🪨', '#475569'], ['Basalt', '🌋', '#b91c1c'], ['Quartz', '💎', '#0284c7'], ['Magma', '🔥', '#ea580c'], ['Glacier', '🧊', '#0891b2'], ['Fossil', '🦴', '#854d0e'], ['Geyser', '💧', '#1d4ed8'], ['Canyon', '🏜️', '#b45309']];
+const EMO = ['🪨', '🌋', '💎', '🔥', '🧊', '🦴', '💧', '🏜️', '🌊', '⛰️', '🌍', '⭐'];
+const uid4 = () => 't' + Math.random().toString(36).slice(2, 6);
+const newTeam = (list, name) => { const i = list.length, p = PRE[i % PRE.length]; return { id: uid4(), name: (name || p[0] + (i >= PRE.length ? ' ' + (Math.floor(i / PRE.length) + 1) : '')).slice(0, 20), emoji: p[1], color: p[2] }; };
+const teamsChanged = () => { saveTM(); sendSetup(); renderTeams(); ui(); };
+function renderTeams() {
+  const box = $('#tlist'); box.innerHTML = '';
+  [...TM.teams].sort((a, b) => (TM.scores[b.id] || 0) - (TM.scores[a.id] || 0)).forEach(t => {
+    const r = document.createElement('div'); r.className = 'trow'; r.style.setProperty('--tc', t.color);
+    const n = TM.roster.filter(e => e.team === t.id).length + (TM.roster.length ? 0 : [...S.stu.values()].filter(s => s.team === t.id).length);
+    const nm = document.createElement('div'); nm.className = 'tn';
+    const em = document.createElement('button'); em.textContent = t.emoji || '＋'; em.title = 'Change the emoji';
+    em.onclick = () => { t.emoji = EMO[(EMO.indexOf(t.emoji) + 1) % EMO.length]; teamsChanged(); };
+    const b = document.createElement('b'); b.textContent = t.name; b.style.cursor = 'pointer'; b.title = 'Rename';
+    b.onclick = () => { const v = (prompt('Team name:', t.name) || '').trim().slice(0, 20); if (v) { t.name = v; teamsChanged(); } };
+    const sm = document.createElement('span'); sm.className = 'mut'; sm.textContent = ' · ' + n + ' student' + (n === 1 ? '' : 's');
+    nm.append(em, b, sm);
+    const ctl = document.createElement('div'); ctl.className = 'row'; ctl.style.gap = '4px';
+    const mk = (l, f, tt) => { const x = document.createElement('button'); x.className = 'btn alt sm'; x.style.cssText = 'min-height:30px;padding:0 9px'; x.textContent = l; x.title = tt; x.onclick = f; return x; };
+    const pt = document.createElement('span'); pt.className = 'tp'; pt.textContent = TM.scores[t.id] || 0;
+    ctl.append(mk('−', () => ws.send({ t: 'adj', team: t.id, d: -1 }), 'Take 1 point away'), pt, mk('+', () => ws.send({ t: 'adj', team: t.id, d: 1 }), 'Give 1 point'),
+      mk('✕', () => { if (confirm('Remove team "' + t.name + '"? Its students become unassigned and its points are lost.')) { TM.teams = TM.teams.filter(x => x !== t); TM.roster.forEach(e => { if (e.team === t.id) e.team = null; }); delete TM.scores[t.id]; teamsChanged(); } }, 'Remove team'));
+    r.append(nm, ctl); box.append(r);
+  });
+  if (!TM.teams.length) box.innerHTML = '<div class="mut">No teams yet. Create some below.</div>';
+  $('#cap').checked = !!TM.cap;
+  const rs = TM.roster.length, on = [...S.stu.values()].filter(s => s.rid).length;
+  $('#rinfo').textContent = rs ? 'Class list: ' + rs + ' students · ' + on + ' signed in' : 'Class list: none (students type a nickname)';
+  $('#rclr').hidden = !rs;
+}
+renderTeams();
+$('#tn').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + ' teams</option>').join('');
+$('#mkteams').onclick = () => {
+  if (TM.teams.length && !confirm('Replace your current teams? Points for the old teams will be lost.')) return;
+  const n = +$('#tn').value; TM.teams = []; TM.scores = {}; for (let i = 0; i < n; i++) TM.teams.push(newTeam(TM.teams));
+  TM.roster.forEach(e => (e.team = null)); S.stu.forEach(s => { if (!s.rid) ws.send({ t: 'team', id: s.id, team: null }); });
+  teamsChanged(); ws.send({ t: 'resetscores' });
+};
+$('#addteam').onclick = () => { if (TM.teams.length >= 12) return toast('12 teams is the most.'); TM.teams.push(newTeam(TM.teams)); teamsChanged(); };
+$('#cap').onchange = e => { TM.cap = e.target.checked; teamsChanged(); };
+$('#rsc').onclick = () => { if (confirm('Set every team back to 0 points?')) ws.send({ t: 'resetscores' }); };
+$('#rclr').onclick = () => { if (confirm('Remove the class list? Signed-in students will be sent back to the join screen. Teams and points are kept.')) { TM.roster = []; teamsChanged(); } };
+
+// ---- class list dialog ----
+let D = null; // working copy: { teams, rows: [{rid, nm, ini, team}] }
+const rid8 = () => Array.from({ length: 8 }, () => 'abcdefghjkmnpqrstuvwxyz23456789'[Math.random() * 31 | 0]).join('');
+const iniOf = nm => { const p = nm.trim().split(/\s+/).filter(Boolean); return (p.length ? Array.from(p[0])[0] : '') + (p.length > 1 ? Array.from(p[p.length - 1])[0] : ''); };
+function parseCSV(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',' || c === '\t') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  row.push(cur); rows.push(row);
+  return rows.map(r => r.map(x => x.trim())).filter(r => r.some(x => x));
+}
+function readList(text) {
+  let rows = parseCSV(text); if (rows.length && /^(first|student|name)/i.test(rows[0][0])) rows = rows.slice(1); // skip a header row
+  let n = 0;
+  rows.slice(0, 100).forEach(r => {
+    const nm = (r.length === 1 ? r[0] : r[0] + ' ' + (r[1] || '')).replace(/\s+/g, ' ').trim(); if (!nm) return;
+    let team = null;
+    if (r[2]) { team = D.teams.find(t => t.name.toLowerCase() === r[2].toLowerCase()); if (!team && D.teams.length < 12) { team = newTeam(D.teams, r[2]); D.teams.push(team); } team = team ? team.id : null; }
+    D.rows.push({ rid: rid8(), nm, ini: iniOf(nm).toUpperCase(), team }); n++;
+  });
+  drawRows(); toast(n ? 'Read ' + n + ' students.' : 'No names found in that file.');
+}
+function drawRows() {
+  const tb = $('#rtab'); tb.innerHTML = '<tr class="mut"><td>Student (stays on this computer)</td><td style="width:90px">Initials</td><td style="width:150px">Team</td><td style="width:36px"></td></tr>';
+  D.rows.forEach((r, i) => {
+    const tr = document.createElement('tr'), cell = el => { const td = document.createElement('td'); td.append(el); tr.append(td); return el; };
+    const nm = cell(document.createElement('input')); nm.value = r.nm; nm.maxLength = 60; nm.setAttribute('aria-label', 'Student name');
+    const ini = cell(document.createElement('input')); ini.value = r.ini; ini.maxLength = 6; ini.setAttribute('aria-label', 'Initials');
+    nm.oninput = () => { if (r.ini === iniOf(r.nm).toUpperCase()) { r.ini = iniOf(nm.value).toUpperCase(); ini.value = r.ini; } r.nm = nm.value; };
+    ini.oninput = () => (r.ini = ini.value.toUpperCase());
+    const sel = cell(document.createElement('select')); sel.setAttribute('aria-label', 'Team');
+    [['', 'No team'], ...D.teams.map(t => [t.id, (t.emoji ? t.emoji + ' ' : '') + t.name])].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.append(o); });
+    sel.value = r.team || ''; sel.onchange = () => (r.team = sel.value || null);
+    const x = cell(document.createElement('button')); x.className = 'btn alt sm'; x.style.padding = '0 8px'; x.textContent = '✕'; x.setAttribute('aria-label', 'Remove student'); x.onclick = () => { D.rows.splice(i, 1); drawRows(); };
+    tb.append(tr);
+  });
+}
+function openRoster() {
+  D = { teams: TM.teams.map(t => ({ ...t })), rows: TM.roster.map(e => ({ rid: e.rid, nm: (e.first + ' ' + e.last).trim(), ini: e.ini, team: e.team })) };
+  $('#rpaste').hidden = $('#rpastego').hidden = true; $('#rpaste').value = ''; drawRows(); $('#rdlg').showModal();
+}
+$('#rost').onclick = openRoster;
+$('#rcancel').onclick = () => $('#rdlg').close();
+$('#rfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) readList(await f.text()); };
+$('#rpastebtn').onclick = () => { $('#rpaste').hidden = $('#rpastego').hidden = false; $('#rpaste').focus(); };
+$('#rread').onclick = () => { readList($('#rpaste').value); $('#rpaste').value = ''; };
+$('#radd').onclick = () => { D.rows.push({ rid: rid8(), nm: '', ini: '', team: null }); drawRows(); $('#rtab').querySelector('tr:last-child input').focus(); };
+$('#rrand').onclick = () => {
+  if (!D.rows.length) return toast('Add students first.');
+  if (!D.teams.length) { const n = Math.max(2, Math.min(8, +prompt('How many teams? (2-8)', '4') || 0)); for (let i = 0; i < n; i++) D.teams.push(newTeam(D.teams)); }
+  const a = D.rows.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; }
+  a.forEach((r, i) => (r.team = D.teams[i % D.teams.length].id)); drawRows();
+};
+$('#rsave').onclick = () => {
+  const rows = D.rows.filter(r => r.nm.trim() || r.ini.trim());
+  if (rows.some(r => !r.nm.trim())) return alert('Every row needs a name.');
+  if (rows.some(r => !r.ini.trim())) return alert('Every student needs initials.');
+  const seen = new Map(), changed = [];
+  rows.forEach(r => { // two students on the same team can't share initials: JD, JD2, JD3...
+    const k = r.team || '', set = seen.get(k) || seen.set(k, new Set()).get(k); let base = r.ini.trim().toUpperCase(), v = base, n = 1;
+    while (set.has(v)) v = base + ++n; if (v !== base) changed.push(r.nm.trim() + ' → ' + v); set.add(v); r.ini = v;
+  });
+  TM.teams = D.teams;
+  TM.roster = rows.map(r => { const p = r.nm.trim().split(/\s+/); return { rid: r.rid, first: p[0], last: p.slice(1).join(' '), ini: r.ini, team: r.team }; });
+  TM.teams.forEach(t => { if (!(t.id in TM.scores)) TM.scores[t.id] = 0; });
+  $('#rdlg').close(); teamsChanged();
+  if (changed.length) alert('These students share initials with a teammate, so a number was added:\n\n' + changed.join('\n'));
+};
 
 // save a contact sheet of everyone's work
 $('#savepng').onclick = () => {

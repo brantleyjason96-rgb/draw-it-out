@@ -13,11 +13,23 @@ body{background:#0b1220;color:#fff}
 #who{text-align:center;font-size:24px;margin-top:10px;color:#93c5fd}
 main{max-width:1000px}
 canvas{border:0}
+#lb{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.lr{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;gap:14px;transition:transform .5s}
+.lr .nm{font-size:34px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr .rk{font-size:44px;text-align:center;opacity:.8}
+.lr .bar{height:34px;border-radius:10px;min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.lr .pt{font-size:56px;font-weight:800;text-align:right}
+.lr.pop .pt{animation:pop .9s}
+@keyframes pop{30%{transform:scale(1.5);color:#fde047}}
+#corner{position:fixed;top:12px;right:18px;font-size:22px;color:#93c5fd}
+#corner b{letter-spacing:.15em;color:#fff}
 </style>
 </head>
 <body>
+<div id="corner" hidden>Join: <b id="ccode"></b></div>
 <main>
  <div class="qbar" id="q"></div>
+ <div id="lb" hidden></div>
  <canvas id="cv" width="1280" height="800" hidden></canvas>
  <div id="join">Go to <span id="url"></span><b id="code"></b></div>
  <div id="who"></div>
@@ -26,7 +38,8 @@ canvas{border:0}
 <script>
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
-const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, board: false, teams: [], scores: {}, stu: new Map() };
+$('#ccode').textContent = code;
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });
 
 function setQ(q) { S.q = q; S.im = loadImg(q.img, draw); }
@@ -34,7 +47,7 @@ function onmsg(m) {
   const s = S.stu.get(m.id);
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
-    case 'state': S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
+    case 'state': S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; setQ(m.q);
       m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh })); break;
     case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh }); break;
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); } break;
@@ -43,8 +56,28 @@ function onmsg(m) {
     case 'all': if (s) s.objs = m.objs; break;
     case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; }); break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; break;
+    case 'score': S.teams = m.teams; S.scores = m.scores; break;
+    case 'board': S.board = m.on; break;
+    case 'gone': S.stu.delete(m.id); break;
   }
   draw();
+}
+// leaderboard: one persistent row per team so bars slide and rows reorder smoothly
+const rows = new Map(); let prev = {};
+function board() {
+  const box = $('#lb'), max = Math.max(1, ...S.teams.map(t => S.scores[t.id] || 0)), order = [...S.teams].sort((a, b) => (S.scores[b.id] || 0) - (S.scores[a.id] || 0));
+  rows.forEach((r, id) => { if (!S.teams.some(t => t.id === id)) { r.el.remove(); rows.delete(id); } });
+  S.teams.forEach(t => {
+    let r = rows.get(t.id);
+    if (!r) { const el = document.createElement('div'); el.className = 'lr'; el.innerHTML = '<div class="rk"></div><div><div class="nm"></div><div class="bar"></div></div><div class="pt"></div>'; box.append(el); r = { el }; rows.set(t.id, r); }
+    const sc = S.scores[t.id] || 0, i = order.indexOf(t);
+    r.el.style.order = i; r.el.querySelector('.rk').textContent = i === 0 && sc > 0 ? '🏆' : i + 1;
+    r.el.querySelector('.nm').textContent = (t.emoji ? t.emoji + ' ' : '') + t.name;
+    const bar = r.el.querySelector('.bar'); bar.style.background = t.color; bar.style.width = Math.max(2, sc / max * 100) + '%';
+    r.el.querySelector('.pt').textContent = sc;
+    if (prev[t.id] !== undefined && sc > prev[t.id]) { r.el.classList.remove('pop'); void r.el.offsetWidth; r.el.classList.add('pop'); }
+    prev[t.id] = sc;
+  });
 }
 let raf = 0;
 function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
@@ -52,7 +85,9 @@ function paint() {
   raf = 0;
   $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
   const s = S.stu.get(S.spot);
-  $('#cv').hidden = !s; $('#join').hidden = !!s;
+  const lb = !s && S.board && S.teams.length;
+  $('#cv').hidden = !s; $('#join').hidden = !!s || !!lb; $('#lb').hidden = !lb; $('#corner').hidden = !lb;
+  if (lb) board();
   if (s) { paintBoard($('#cv'), s.objs, S.q.bg, S.im, s.bw, s.bh); $('#who').textContent = S.hide ? 'A student’s work' : s.name + '’s work'; }
   else $('#who').textContent = '';
 }
