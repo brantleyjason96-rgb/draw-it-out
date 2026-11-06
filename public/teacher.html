@@ -245,7 +245,7 @@ const disp = s => { const e = rosterOf(s); return e ? (e.first + (e.last ? ' ' +
 let photo = null; // photo = data URL waiting to be saved/sent
 
 const ws = connect(onmsg, () => ws.send({ t: 'host', code, key, setup: { teams: TM.teams, roster: pubRoster(), cap: TM.cap, scores: TM.scores } }), ok => {
-  $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Reconnecting…';
+  $('#dot').classList.toggle('ok', ok); $('#st').textContent = ok ? 'Connected' : 'Connecting… (the server may be waking up, up to a minute)';
 });
 
 function addStu(d) {

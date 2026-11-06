@@ -157,7 +157,8 @@ $('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
 $('#name').value = localStorage.do_name || '';
 let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null, quick = [], qteam = null;
 
-const ws = connect(onmsg, () => target && sendJoin(), ok => {
+let waking = false;
+const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); } if (target) sendJoin(); }, ok => {
   $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
 });
 function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
@@ -202,6 +203,7 @@ $('#jf').onsubmit = e => {
   e.preventDefault(); $('#err').textContent = '';
   if (jstep === 'code') {
     target0 = $('#code').value.trim().toUpperCase(); if (!target0) return ($('#err').textContent = 'Type the class code');
+    if (!ws.open()) { waking = true; $('#err').textContent = 'Connecting… the class server may be waking up. This can take up to a minute. Stay on this page.'; return; }
     ws.send({ t: 'peek', code: target0 });
   } else if (jstep === 'name') {
     const name = $('#name').value.trim();
