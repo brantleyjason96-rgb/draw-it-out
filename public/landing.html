@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draw It Out – See every student's thinking</title>
+<meta name="description" content="Ask a question. Every student draws the answer. You see them all live, pick one for the projector, and award team points.">
+<link rel="stylesheet" href="/style.css">
+<style>
+main{max-width:980px}
+.hero{text-align:center;padding:36px 12px 18px}
+.hero h1{font-size:clamp(32px,6vw,52px);margin:0 0 10px;line-height:1.1}
+.hero p{font-size:20px;color:var(--mut);max-width:640px;margin:0 auto 22px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cta a{text-decoration:none;font-size:20px;padding:14px 26px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:26px 0}
+.steps .card b{display:block;font-size:34px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+h2{margin:30px 0 10px}
+li{margin:6px 0}
+footer{color:var(--mut);font-size:14px;margin:30px 0}
+</style>
+</head>
+<body>
+<main>
+ <section class="hero">
+  <h1>See every student's thinking.<br>All at once.</h1>
+  <p>Ask a question. Every student draws the answer on their own screen. You watch them all live, put any drawing on the projector, and give teams points for getting it right.</p>
+  <div class="cta">
+   <a class="btn" href="/teacher">Start a class</a>
+   <a class="btn alt" href="/teacher?demo=1">Try the demo (no students needed)</a>
+  </div>
+  <p style="font-size:15px;margin-top:14px">No accounts. Runs in the browser, so there is nothing to install.</p>
+ </section>
+
+ <section class="steps">
+  <div class="card"><b>1</b>Open <b style="display:inline;font-size:inherit">Start a class</b>. You get a join code and a QR code.</div>
+  <div class="card"><b>2</b>Students open the link and tap their team and initials (or type a nickname).</div>
+  <div class="card"><b>3</b>Send a question. Everyone draws. Click a drawing to show it, press ✓ to score.</div>
+ </section>
+
+ <h2>What you get</h2>
+ <div class="grid2">
+  <div class="card"><b>Starter question sets</b><br>Earth science, life science, physical science and math sets ready to import. Edit them freely.</div>
+  <div class="card"><b>Share with a colleague</b><br>One link adds a question set to a colleague's sets. Nothing to sign up for.</div>
+  <div class="card"><b>Teams and a live leaderboard</b><br>Upload a class list or let students pick a team. Points show on the projector.</div>
+  <div class="card"><b>Built for every learner</b><br>Draw, label and point. Students can show understanding without writing paragraphs.</div>
+ </div>
+
+ <h2>About student privacy</h2>
+ <div class="card">
+  <ul style="margin:0;padding-left:20px">
+   <li>There are <b>no student accounts</b>, no emails and no Google sign-in.</li>
+   <li>Students use a nickname or tap their <b>initials</b>. With a class list, full names stay in the teacher's own browser and are never sent to the server.</li>
+   <li>Drawings exist only while a class is active. A class that has been idle for 6 hours is deleted from the server.</li>
+   <li>Teams, scores and question sets are saved in the teacher's browser. Use <b>Back up everything</b> to keep a copy.</li>
+  </ul>
+  <p class="mut" style="margin-bottom:0">This tool is designed to collect as little as possible, but every school has its own approval process. Please check with your school's data-privacy contact before using any tool with students.</p>
+ </div>
+
+ <footer>Students: <a href="/">join a class here</a>.</footer>
+</main>
+</body>
+</html>

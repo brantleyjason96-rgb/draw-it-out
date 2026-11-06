@@ -31,13 +31,15 @@ canvas{border:0}
  <div class="qbar" id="q"></div>
  <div id="lb" hidden></div>
  <canvas id="cv" width="1280" height="800" hidden></canvas>
- <div id="join">Go to <span id="url"></span><b id="code"></b></div>
+ <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:260px;height:260px;margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
  <div id="who"></div>
 </main>
+<script src="/qrcode.js"></script>
 <script src="/common.js"></script>
 <script>
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
+try { $('#qr').innerHTML = qrSvg(location.origin + '/?code=' + code); } catch (e) { $('#qr').hidden = true; }
 const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, board: false, teams: [], scores: {}, stu: new Map() };
 $('#ccode').textContent = code;
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });

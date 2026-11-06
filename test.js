@@ -128,4 +128,19 @@ await test('no class list: nickname join still works and host can assign a team'
   h2.send({ t: 'award', id: j.id, on: true }); await sleep(60); assert.equal(h2.last('score').scores.tb, 1);
 });
 
+await test('quick teams: no class list, peek offers teams, student picks a team with no nickname', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'QUICK', key: KEY, setup: { teams, roster: [] } }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'peek', code: 'QUICK' }); const pk = await c.wait('peek');
+  assert.equal(pk.roster, false); assert.equal(pk.teams.length, 2);
+  c.send({ t: 'join', code: 'QUICK', team: 'tb', bw: 800, bh: 500 }); const j = await c.wait('joined');
+  assert.equal(j.team, 'tb'); const card = await h.wait('join'); assert.equal(card.s.name, 'Basalt 1');
+  const d = client(); await d.ready; d.send({ t: 'join', code: 'QUICK', team: 'tb', name: 'Zed' }); await d.wait('joined');
+  assert.equal(d.last('joined').team, 'tb');
+  const e = client(); await e.ready; e.send({ t: 'join', code: 'QUICK' }); assert.match((await e.wait('err')).m, /nickname/);
+  // rejoin must not revert a team the teacher changed
+  h.send({ t: 'team', id: j.id, team: 'ta' }); await sleep(60);
+  c.send({ t: 'join', code: 'QUICK', id: j.id, team: 'tb' }); await sleep(80);
+  assert.equal(c.last('myteam').team, 'ta');
+});
+
 console.log(pass + ' passed'); srv.kill();

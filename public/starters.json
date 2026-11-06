@@ -1,0 +1,238 @@
+[
+ {
+  "id": "es-layers",
+  "name": "Layers of the Earth",
+  "subject": "Earth Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw a cross-section of Earth and <b>label the four layers</b>: crust, mantle, outer core, inner core.",
+    "bg": "blank"
+   },
+   {
+    "question": "Use color or labels to show which layers are <b>solid</b> and which are <b>liquid</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Show how the crust is different under the <b>ocean</b> and under a <b>continent</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Sketch <b>convection currents</b> in the mantle. Use arrows to show where material rises and sinks.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw Earth's magnetic field. Label the layer that helps create it.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "es-plates",
+  "name": "Plate Boundaries",
+  "subject": "Earth Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw a <b>divergent</b> boundary. Use arrows for plate movement and label what forms.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw an <b>ocean plate meeting a continental plate</b>. Label the trench and the volcanoes.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw two <b>continental plates colliding</b>. What landform forms?",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a <b>transform</b> boundary with arrows for plate movement. Add a star where earthquakes happen.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw an earthquake and label the <b>focus</b> and the <b>epicenter</b>.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "es-water",
+  "name": "Water Cycle",
+  "subject": "Earth Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw the water cycle. Label <b>evaporation, condensation, precipitation</b> and <b>collection</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Show where the <b>energy</b> for the water cycle comes from.",
+    "bg": "blank"
+   },
+   {
+    "question": "Add <b>transpiration</b>, <b>runoff</b> and <b>groundwater</b> to your water cycle.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a mountain where one side gets lots of rain and the other side is dry. Explain with arrows.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "es-rocks",
+  "name": "Rock Cycle",
+  "subject": "Earth Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw the rock cycle. Label igneous, sedimentary and metamorphic rock and the <b>processes</b> that connect them.",
+    "bg": "blank"
+   },
+   {
+    "question": "Show how an <b>igneous</b> rock can become a <b>sedimentary</b> rock.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw layers of sedimentary rock. Label the <b>oldest</b> layer.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw where <b>heat and pressure</b> make metamorphic rock.",
+    "bg": "blank"
+   },
+   {
+    "question": "Sketch magma cooling <b>slowly underground</b> and <b>quickly at the surface</b>. Show the crystal sizes.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "es-weather",
+  "name": "Weather and Fronts",
+  "subject": "Earth Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw a <b>cold front</b> from the side. Show the warm air, cold air and where storms form.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a <b>warm front</b> from the side.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a <b>high pressure</b> and a <b>low pressure</b> system. Use arrows for the wind.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw how air moves in a <b>sea breeze</b> on a sunny afternoon.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "ls-cells",
+  "name": "Cell Parts",
+  "subject": "Life Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw a <b>plant cell</b> and label at least 5 organelles.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw an <b>animal cell</b>. Label the nucleus, cell membrane and mitochondria.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw two structures that <b>only plant cells</b> have.",
+    "bg": "blank"
+   },
+   {
+    "question": "Show a substance moving across the cell membrane by <b>diffusion</b>. Use arrows.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "ls-food",
+  "name": "Food Webs and Energy",
+  "subject": "Life Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw a food chain with 4 organisms. Use arrows to show the flow of <b>energy</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a food web with at least 2 producers and 2 consumers.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw what happens to the web if the top predator is <b>removed</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw an <b>energy pyramid</b> and show how much energy moves up each level.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "ps-energy",
+  "name": "Energy and Matter",
+  "subject": "Physical Science",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Draw the particles in a <b>solid, a liquid and a gas</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Show what happens to the particles when ice <b>melts</b>.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw the <b>energy transformations</b> on a roller coaster from the top of the first hill to the bottom.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a light ray <b>reflecting off a mirror</b>. Label the angle of incidence and the angle of reflection.",
+    "bg": "blank"
+   },
+   {
+    "question": "Draw a simple circuit with a battery, a switch and a bulb.",
+    "bg": "blank"
+   }
+  ]
+ },
+ {
+  "id": "m-graphs",
+  "name": "Graphs and Number Lines",
+  "subject": "Math",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Plot (2, 3), (4, 7) and (6, 11) and connect them. What is the <b>slope</b>?",
+    "bg": "graph"
+   },
+   {
+    "question": "Draw a number line from -5 to 5 and plot <b>-3, 0.5 and 4</b>.",
+    "bg": "graph"
+   },
+   {
+    "question": "Sketch a speed-vs-time graph of a car that speeds up, cruises, then stops.",
+    "bg": "graph"
+   },
+   {
+    "question": "Graph <b>y = 2x + 1</b>.",
+    "bg": "graph"
+   },
+   {
+    "question": "Draw fraction bars to model <b>3/4 + 1/2</b>.",
+    "bg": "blank"
+   }
+  ]
+ }
+]

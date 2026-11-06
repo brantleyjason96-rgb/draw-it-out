@@ -36,6 +36,9 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
 .trow .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .trow .tn button{border:0;background:none;font-size:20px;cursor:pointer;padding:0 4px}
 .trow .tp{font-size:22px;font-weight:800;min-width:2ch;text-align:center}
+#demobar{position:fixed;bottom:0;left:0;right:0;background:#111827;color:#fff;padding:10px 16px;z-index:40;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.srow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin:6px 0}
+.srow small{color:var(--mut);display:block}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:10px;z-index:50}
 dialog{border:0;border-radius:14px;padding:16px;max-width:760px;width:calc(100% - 24px);box-shadow:0 10px 40px #0006}
 dialog::backdrop{background:#0006}
@@ -66,12 +69,18 @@ dialog::backdrop{background:#0006}
   <details style="margin-top:6px"><summary>Student link and class periods</summary>
    <div class="row mut" style="margin-top:8px">Student link for Google Classroom:
     <code id="link" style="background:#f3f4f6;padding:2px 6px;border-radius:6px"></code>
-    <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button></div>
+    <button class="btn alt" id="copy" style="min-height:32px;padding:4px 12px">Copy</button>
+    <button class="btn alt" id="qrbtn" style="min-height:32px;padding:4px 12px">QR code</button></div>
    <div class="row" style="margin-top:8px"><span class="mut">Class periods:</span>
     <button class="btn alt sm" id="newper">+ New period</button>
     <button class="btn alt sm" id="renper">Rename</button>
     <button class="btn alt sm" id="delper">Remove period</button>
     <button class="btn alt sm" id="clearcls">Clear class (send students back to join)</button></div>
+   <div class="row" style="margin-top:8px"><span class="mut">Backup:</span>
+    <button class="btn alt sm" id="bkup" title="One file with your question sets, class periods, teams and scores">Back up everything</button>
+    <button class="btn alt sm" id="rstbtn">Restore backup</button>
+    <input type="file" id="restore" accept=".json,application/json" hidden>
+    <span class="mut" id="bknote"></span></div>
   </details>
  </div>
 
@@ -87,11 +96,13 @@ dialog::backdrop{background:#0006}
      <select id="setsel" class="btn alt sm" style="flex:1;min-width:0" aria-label="Choose a saved set"></select>
      <button class="btn alt sm" id="add">+ Add</button>
     </div>
+    <div class="row" style="margin-top:6px"><button class="btn alt sm" id="starter">📚 Starter sets</button></div>
     <details style="margin-top:6px"><summary>Manage sets</summary>
      <div class="row" style="margin-top:6px">
       <button class="btn alt sm" id="newset">New set</button>
       <button class="btn alt sm" id="renset">Rename</button>
       <button class="btn alt sm" id="delset">Delete set</button>
+      <button class="btn alt sm" id="sharelink" title="Make a link a colleague can open to import this set (photos are not included)">Share link</button>
       <button class="btn alt sm" id="exp" title="Download all your sets as a file (backup, or move to another computer)">Export</button>
       <button class="btn alt sm" id="imp">Import</button>
       <input type="file" id="impfile" accept=".json,application/json" hidden>
@@ -161,16 +172,35 @@ dialog::backdrop{background:#0006}
   <button class="btn sm" id="rsave">Save class list</button>
  </div>
 </dialog>
+<dialog id="sdlg">
+ <div class="row" style="justify-content:space-between"><h2 style="margin:0">Starter sets</h2><button class="btn alt sm" id="sclose">Close</button></div>
+ <p class="mut" style="margin:6px 0">Ready-made drawing questions. Importing adds a copy to your sets, so you can edit it freely.</p>
+ <div id="slist"></div>
+</dialog>
+<dialog id="qrdlg" style="text-align:center">
+ <div id="qrbig" style="width:min(80vw,440px);margin:auto;background:#fff"></div>
+ <div style="font-size:20px;margin:8px 0">Scan to join, or go to <b id="qrurl"></b> and enter <b id="qrcode" style="letter-spacing:.2em"></b></div>
+ <button class="btn sm" id="qrclose">Close</button>
+</dialog>
+<div id="demobar" hidden>
+ <span>🎬 <b>Demo mode.</b> Eight practice students are drawing. Send a question, click a drawing, press <b>✓ +1</b>, then try <b>Leaderboard on projector</b>. Nothing here is saved.</span>
+ <a class="btn" href="/teacher" style="text-decoration:none">Start my real class</a>
+</div>
 <div id="toast" hidden></div>
+<script src="/qrcode.js"></script>
 <script src="/common.js"></script>
 <script>
+const DEMO = new URLSearchParams(location.search).has('demo');
+// Demo mode keeps everything in memory so a first-time visitor (or a teacher with real data) can play without changing anything.
+const store = DEMO ? new Proxy({}, { get: (o, k) => (k === 'removeItem' ? x => delete o[x] : o[k]), set: (o, k, v) => ((o[k] = String(v)), true) }) : localStorage;
+if (DEMO) { indexedDB.deleteDatabase('doi-demo'); document.title = 'Draw It Out – Demo'; }
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rnd = () => Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).join('');
-let periods; try { periods = JSON.parse(localStorage.do_periods); } catch {}
-if (!Array.isArray(periods) || !periods.length) periods = [{ name: 'My class', code: localStorage.do_tcode || rnd() }];
-let code = (periods.find(p => p.code === localStorage.do_tcode) || periods[0]).code;
-let key = localStorage.do_tkey; if (!key) localStorage.do_tkey = key = crypto.randomUUID();
-const savePeriods = () => { localStorage.do_periods = JSON.stringify(periods); localStorage.do_tcode = code; };
+let periods; try { periods = JSON.parse(store.do_periods); } catch {}
+if (!Array.isArray(periods) || !periods.length) periods = [{ name: DEMO ? 'Demo class' : 'My class', code: store.do_tcode || rnd() }];
+let code = (periods.find(p => p.code === store.do_tcode) || periods[0]).code;
+let key = store.do_tkey; if (!key) store.do_tkey = key = crypto.randomUUID();
+const savePeriods = () => { store.do_periods = JSON.stringify(periods); store.do_tcode = code; };
 savePeriods();
 $('#code').textContent = code;
 const per = () => periods.find(p => p.code === code);
@@ -189,7 +219,7 @@ $('#renper').onclick = () => {
 $('#delper').onclick = () => {
   if (periods.length < 2) return alert('You need at least one class period.');
   if (!confirm('Remove the class period "' + per().name + '"? Its students, teams and scores will be lost.')) return;
-  ws.send({ t: 'reset' }); localStorage.removeItem(TK); periods = periods.filter(p => p.code !== code); code = periods[0].code; savePeriods(); setTimeout(() => location.reload(), 300);
+  ws.send({ t: 'reset' }); store.removeItem(TK); periods = periods.filter(p => p.code !== code); code = periods[0].code; savePeriods(); setTimeout(() => location.reload(), 300);
 };
 $('#clearcls').onclick = () => {
   if (confirm('Remove all students from "' + per().name + '"? Save the session PNG first if you want to keep their work.')) ws.send({ t: 'reset' });
@@ -201,10 +231,10 @@ const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null
 // Teams, class list (real names!) and running scores live only in this browser, one set per class period.
 // The server is only ever sent initials + team, never names.
 const TK = 'do_team_' + code;
-let TM; try { TM = JSON.parse(localStorage[TK]); } catch {}
+let TM; try { TM = JSON.parse(store[TK]); } catch {}
 if (!TM || !Array.isArray(TM.teams) || !Array.isArray(TM.roster)) TM = { teams: [], roster: [], cap: false, scores: {} };
 TM.scores = TM.scores || {};
-const saveTM = () => { try { localStorage[TK] = JSON.stringify(TM); } catch {} };
+const saveTM = () => { try { store[TK] = JSON.stringify(TM); } catch {} };
 const pubRoster = () => TM.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
 const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(), cap: TM.cap, scores: withScores ? TM.scores : undefined });
 const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 2800); };
@@ -242,7 +272,7 @@ function onmsg(m) {
   switch (m.t) {
     case 'err':
       $('#st').textContent = m.m;
-      if (/in use/.test(m.m)) { per().code = rnd(); code = per().code; savePeriods(); location.reload(); } // another teacher already has that code
+      if (/in use/.test(m.m)) { const old = TK; per().code = rnd(); try { if (store[old]) store['do_team_' + per().code] = store[old]; } catch {} code = per().code; savePeriods(); location.reload(); } // another teacher already has that code
       break;
     case 'state':
       $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; setQ(m.q);
@@ -251,6 +281,8 @@ function onmsg(m) {
       const canon = ts => JSON.stringify(ts.map(t => [t.id, t.name, t.color, t.emoji || '']));
       if (canon(m.teams) + JSON.stringify(m.roster) + !!m.cap !== canon(TM.teams) + JSON.stringify(pubRoster()) + !!TM.cap) sendSetup(!m.teams.length);
       else { TM.scores = m.scores; saveTM(); }
+      if (DEMO && !TM.teams.length) { for (let i = 0; i < 4; i++) TM.teams.push(newTeam(TM.teams)); sendSetup(); }
+      if (DEMO) startBots();
       ui(); break;
     case 'score': TM.scores = m.scores; saveTM(); renderTeams(); break;
     case 'setup': m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); break;
@@ -307,17 +339,17 @@ $('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
 $('#proj').onclick = () => window.open('/projector?code=' + code, 'projector');
 $('#copy').onclick = () => navigator.clipboard.writeText(link).then(() => ($('#copy').textContent = 'Copied ✓'), () => prompt('Copy this link:', link));
 // ---- saved question sets: kept in this browser (IndexedDB). Export/Import moves them between computers. ----
-let sets = [], active = localStorage.do_active, cur = +localStorage.do_cur, editing = null; // editing: null closed, -1 new, n = index
+let sets = [], active = store.do_active, cur = +store.do_cur, editing = null; // editing: null closed, -1 new, n = index
 const cs = () => sets.find(s => s.id === active) || sets[0];
 const qs = () => cs().questions;
-const db = new Promise((ok, no) => { const o = indexedDB.open('doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; });
+const db = new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; });
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
 const persist = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(sets, 'sets')).catch(() => alert('Could not save in this browser. Use Export to keep a backup.'));
 function init(s, old) { // old = the single question list from the first version, kept as a set
   sets = s && s.length ? s : [{ id: crypto.randomUUID(), name: old ? 'My questions' : 'My first set', questions: old || [] }];
   if (!sets.some(x => x.id === active)) active = sets[0].id;
   if (!(cur >= 0 && cur < qs().length)) cur = -1;
-  persist(); renderSet();
+  persist(); renderSet(); afterInit();
 }
 Promise.all([idbGet('sets'), idbGet('set')]).then(([s, old]) => init(s, old)).catch(() => init());
 
@@ -354,7 +386,7 @@ $('#qin').addEventListener('paste', e => { // text pastes as plain text; images 
 
 if (innerWidth < 900) $('#qdet').open = false; // small screens: students first, questions on demand
 const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null });
-function go(i) { if (i < 0 || i >= qs().length) return; cur = i; localStorage.do_cur = i; sendQ(qs()[i]); renderSet(); }
+function go(i) { if (i < 0 || i >= qs().length) return; cur = i; store.do_cur = i; sendQ(qs()[i]); renderSet(); }
 function renderSet() {
   const sel = $('#setsel'); sel.innerHTML = '';
   sets.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.name + ' (' + s.questions.length + ')'; sel.append(o); });
@@ -379,14 +411,14 @@ function renderSet() {
 function mv(i, d) {
   const j = i + d, a = qs(); if (j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
-  localStorage.do_cur = cur; persist(); renderSet();
+  store.do_cur = cur; persist(); renderSet();
 }
 function rm(i) {
   if (!confirm('Delete this question?')) return;
   qs().splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
-  localStorage.do_cur = cur; persist(); renderSet();
+  store.do_cur = cur; persist(); renderSet();
 }
-function pick(id) { active = id; localStorage.do_active = id; cur = -1; localStorage.do_cur = -1; closeEditor(); renderSet(); }
+function pick(id) { active = id; store.do_active = id; cur = -1; store.do_cur = -1; closeEditor(); renderSet(); }
 $('#setsel').onchange = e => pick(e.target.value);
 $('#newset').onclick = () => {
   const name = (prompt('Name for the new set (e.g. Fractions Unit 3):') || '').trim().slice(0, 60); if (!name) return;
@@ -442,7 +474,7 @@ $('#save').onclick = () => {
   if (editing === -1) qs().push(q); else qs()[editing] = q;
   persist(); closeEditor(); renderSet();
 };
-$('#sendnow').onclick = () => { const q = readEditor(); if (plain(q.question).trim() || q.img) { cur = -1; localStorage.do_cur = -1; sendQ(q); renderSet(); } };
+$('#sendnow').onclick = () => { const q = readEditor(); if (plain(q.question).trim() || q.img) { cur = -1; store.do_cur = -1; sendQ(q); renderSet(); } };
 $('#prev').onclick = () => go(cur - 1);
 $('#next').onclick = () => go(cur + 1);
 // clicker / keyboard: right arrow or Page Down = next, left arrow or Page Up = previous
@@ -469,6 +501,129 @@ $('#addimg').onclick = () => $('#file').click();
 $('#file').onchange = e => { takePhoto(e.target.files[0]); e.target.value = ''; };
 $('#rmimg').onclick = () => { photo = null; $('#thumb').hidden = $('#rmimg').hidden = true; if ($('#bg').value === 'photo') $('#bg').value = 'graph'; };
 document.addEventListener('paste', e => { const f = [...e.clipboardData.files].find(f => f.type.startsWith('image/')); if (f) { if (editing === null) openEditor(-1); takePhoto(f); } });
+
+// ---- starter sets, share links, backup, QR code ----
+const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
+  const bg = ['graph', 'lined', 'blank'].includes(q && q.bg) ? q.bg : 'blank';
+  return { question: clean(String((q && q.question) || '')).slice(0, 2000), bg, img: null };
+}).filter(q => plain(q.question).trim());
+function addSet(name, questions) {
+  const st = { id: crypto.randomUUID(), name: String(name || 'Imported set').slice(0, 60), questions: cleanQs(questions) };
+  sets.push(st); persist(); pick(st.id); return st;
+}
+let starters = null;
+const loadStarters = () => starters ? Promise.resolve(starters) : fetch('/starters.json').then(r => r.json()).then(j => (starters = j));
+$('#starter').onclick = async () => {
+  const box = $('#slist'); box.textContent = 'Loading…'; $('#sdlg').showModal();
+  try { await loadStarters(); } catch { box.textContent = 'Could not load the starter sets. Check your connection.'; return; }
+  box.innerHTML = ''; let last = '';
+  starters.forEach(st => {
+    if (st.subject !== last) { last = st.subject; const h = document.createElement('h3'); h.textContent = st.subject; h.style.margin = '12px 0 4px'; box.append(h); }
+    const r = document.createElement('div'); r.className = 'srow';
+    const d = document.createElement('div'); d.textContent = st.name; const sm = document.createElement('small'); sm.textContent = st.questions.length + ' questions · grades ' + st.grade; d.append(sm);
+    const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = 'Import';
+    b.onclick = () => { addSet(st.name, st.questions); b.textContent = 'Added ✓'; b.disabled = true; toast('Added "' + st.name + '" to your sets.'); };
+    r.append(d, b); box.append(r);
+  });
+};
+$('#sclose').onclick = () => $('#sdlg').close();
+// share link: the set is packed into the link itself (text only), so nothing is stored on any server
+const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+async function packSet(st) {
+  const json = JSON.stringify({ n: st.name, q: st.questions.map(q => [q.question, q.bg === 'photo' ? 'blank' : q.bg]) });
+  if (window.CompressionStream) return 'z.' + b64u(new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
+  return 'r.' + b64u(new TextEncoder().encode(json));
+}
+async function unpackSet(t) {
+  const u8 = unb64u(t.slice(2));
+  const json = t[0] === 'z' ? await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(u8);
+  const o = JSON.parse(json); if (!o || !Array.isArray(o.q)) throw 0;
+  return { name: String(o.n || 'Shared set').slice(0, 60), questions: cleanQs(o.q.map(x => ({ question: x[0], bg: x[1] }))) };
+}
+$('#sharelink').onclick = async () => {
+  const photos = qs().filter(q => q.bg === 'photo' || q.img).length;
+  const url = location.origin + '/teacher#set=' + await packSet(cs());
+  if (url.length > 7500) return alert('This set is too long for a link. Use Export instead and send the file.');
+  const note = photos ? '\n\n' + photos + ' question(s) use a photo. Photos are not included in links, so those arrive with a blank background.' : '';
+  navigator.clipboard.writeText(url).then(() => alert('Link copied. Send it to a colleague: opening it offers to add this set.' + note), () => prompt('Copy this link:', url));
+};
+async function checkShared() {
+  const m = /^#set=([zr]\.[A-Za-z0-9_-]+)$/.exec(location.hash); if (!m || DEMO) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  try {
+    const st = await unpackSet(m[1]); if (!st.questions.length) throw 0;
+    if (confirm('Add the set "' + st.name + '" (' + st.questions.length + ' questions) to your sets?')) addSet(st.name, st.questions);
+  } catch { alert('That share link could not be read. Ask for a new one.'); }
+}
+// one-file backup of everything that lives in this browser
+const showBk = () => { const t = +store.do_lastbackup; $('#bknote').textContent = t ? 'Last backup: ' + new Date(t).toLocaleDateString() : 'No backup yet'; };
+$('#bkup').onclick = () => {
+  const withNames = confirm('Include class lists and scores in the backup?\n\nOK = include them (the file will contain student names, so keep it private).\nCancel = back up only your question sets and class periods.');
+  const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, periods, active, teams: {} };
+  if (withNames) periods.forEach(p => { try { const t = JSON.parse(store['do_team_' + p.code]); if (t) data.teams[p.code] = t; } catch {} });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  a.download = 'draw-it-out-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
+  store.do_lastbackup = Date.now(); showBk();
+};
+$('#rstbtn').onclick = () => $('#restore').click();
+const cleanTM = t => {
+  const str = (v, n) => String(v == null ? '' : v).slice(0, n), ids = new Set();
+  const teams = (Array.isArray(t.teams) ? t.teams : []).slice(0, 12).filter(x => x && /^[a-z0-9]{1,8}$/.test(x.id)).map(x => (ids.add(x.id), { id: x.id, name: str(x.name, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(x.color) ? x.color : '#2563eb', emoji: str(x.emoji, 4) }));
+  const roster = (Array.isArray(t.roster) ? t.roster : []).slice(0, 100).filter(x => x && /^[a-z0-9]{4,12}$/.test(x.rid)).map(x => ({ rid: x.rid, first: str(x.first, 40), last: str(x.last, 40), ini: str(x.ini, 6), team: ids.has(x.team) ? x.team : null }));
+  const scores = {}; teams.forEach(x => (scores[x.id] = Number.isInteger(t.scores && t.scores[x.id]) ? Math.max(0, Math.min(9999, t.scores[x.id])) : 0));
+  return { teams, roster, cap: !!t.cap, scores };
+};
+$('#restore').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); if (!d || d.app !== 'draw-it-out' || !Array.isArray(d.sets)) throw 0;
+    if (!confirm('Restore this backup? It adds its question sets and class periods to what is already here. Nothing is deleted.')) return;
+    let ns = 0, np = 0;
+    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { sets.push({ id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: (Array.isArray(x.questions) ? x.questions : []).slice(0, 200).map(q => ({ question: clean(String(q.question || '')), bg: ['graph', 'lined', 'blank', 'photo'].includes(q.bg) && (q.bg !== 'photo' || (typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,'))) ? q.bg : 'blank', img: typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,') ? q.img : null })) }); ns++; } });
+    (Array.isArray(d.periods) ? d.periods : []).forEach(x => {
+      if (!x || !/^[A-Z0-9]{4,10}$/.test(x.code) || periods.some(y => y.code === x.code)) return;
+      periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;
+      if (d.teams && d.teams[x.code]) store['do_team_' + x.code] = JSON.stringify(cleanTM(d.teams[x.code]));
+    });
+    persist(); savePeriods(); alert('Restored ' + ns + ' question set(s) and ' + np + ' class period(s).'); setTimeout(() => location.reload(), 300);
+  } catch { alert('That file is not a Draw It Out backup.'); }
+};
+// QR code so students can scan to join
+$('#qrbtn').onclick = () => {
+  try { $('#qrbig').innerHTML = qrSvg(link); } catch { return alert('Could not make a QR code here.'); }
+  $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal();
+};
+$('#qrclose').onclick = () => $('#qrdlg').close();
+
+// ---- demo mode: eight practice students draw on their own, through the real server ----
+const lastBackupHint = () => { if (!DEMO && TM.roster.length && !+store.do_lastbackup) toast('Tip: open "Student link and class periods" and use Back up everything so your class list is safe.'); };
+function afterInit() {
+  showBk(); checkShared();
+  if (DEMO) loadStarters().then(l => { if (!sets.some(x => x.name === l[0].name)) { addSet(l[0].name, l[0].questions); cur = -1; } });
+  else setTimeout(lastBackupHint, 4000);
+}
+let botsOn = false;
+function startBots() {
+  if (botsOn) return; botsOn = true; $('#demobar').hidden = false; document.body.style.paddingBottom = '70px';
+  ['Maya', 'Jin', 'Sofia', 'Omar', 'Lena', 'Diego', 'Aisha', 'Noah'].forEach((nm, i) => setTimeout(() => bot(nm, i), 500 * i));
+}
+function bot(nm, i) {
+  let id = null, n = 1, timer = 0; const W0 = 800, H0 = 500, COL = ['#2563eb', '#dc2626', '#059669', '#f97316', '#7c3aed', '#111111'];
+  const put = o => b.send({ t: 'set', o: { id: n++, lw: 3, dash: 'solid', ...o } });
+  const scene = () => { // concentric rings with labels, a wobbly arrow and a squiggle: reads like a labelled diagram
+    clearTimeout(timer); n = 1; const cx = 250 + Math.random() * 300, cy = 220 + Math.random() * 60, k = 3 + (i % 2), steps = [];
+    for (let r = 0; r < k; r++) steps.push(() => put({ k: 'shape', s: 'ellipse', c: COL[(i + r) % 5], fill: r === k - 1 ? 'solid' : 'light', x: cx - (k - r) * 45, y: cy - (k - r) * 45, w: (k - r) * 90, h: (k - r) * 90 }));
+    ['crust', 'mantle', 'core'].slice(0, k).forEach((t, r) => steps.push(() => put({ k: 'text', c: '#111111', x: cx + (k - r) * 45 + 12, y: cy - 60 + r * 40, w: 140, size: 22, t })));
+    steps.push(() => put({ k: 'line', s: 'arrow', c: '#dc2626', lw: 4, pts: [[cx - 200, cy + 150], [cx - 70, cy + 40]] }));
+    steps.push(() => put({ k: 'stroke', pen: 'pen', c: COL[i % 5], lw: 4, pts: Array.from({ length: 24 }, (_, j) => [cx - 200 + j * 12, 430 + Math.sin(j / 2 + i) * 16]) }));
+    (function run(j) { if (j < steps.length) { steps[j](); timer = setTimeout(() => run(j + 1), 700 + Math.random() * 900); } })(0);
+  };
+  const b = connect(m => {
+    if (m.t === 'joined') { id = m.id; if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
+    else if (m.t === 'q') setTimeout(scene, 1500 + Math.random() * 3500);
+  }, () => b.send({ t: 'join', code, name: nm, team: TM.teams.length ? TM.teams[i % TM.teams.length].id : null, id, bw: W0, bh: H0 }));
+}
 
 // ---- teams & points ----
 function award(s) {

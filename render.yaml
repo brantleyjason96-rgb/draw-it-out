@@ -1,0 +1,12 @@
+# One-click deploy on Render (https://render.com): New + > Blueprint > pick this repo.
+# IMPORTANT: keep this at ONE instance. Live classes are held in memory, so a second instance would not see them.
+services:
+  - type: web
+    name: draw-it-out
+    runtime: docker
+    plan: starter        # the free plan sleeps when idle, which drops a live class; starter (about $7/mo) stays awake
+    healthCheckPath: /healthz
+    numInstances: 1
+    envVars:
+      - key: MAX_ROOMS
+        value: "300"

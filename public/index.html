@@ -116,6 +116,7 @@ button{cursor:pointer}
    <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
    <button class="btn" id="go" style="width:100%">Next</button>
+   <p style="margin:14px 0 0;font-size:14px"><a href="/start" style="color:var(--mut)">Teacher? Start here</a></p>
   </form>
  </div>
 
@@ -154,20 +155,21 @@ let target = null, id = null;
 const sp = new URLSearchParams(location.search);
 $('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
 $('#name').value = localStorage.do_name || '';
-let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null;
+let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null, quick = [], qteam = null;
 
 const ws = connect(onmsg, () => target && sendJoin(), ok => {
   $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
 });
-function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
+function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
 
 // Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
 const pageSize = () => ({ bw: Math.min(3000, Math.max(300, Math.round(innerWidth - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - 140))) }); // the page is the size of this screen
 function jshow(st) {
   jstep = st; const pk = st === 'tiles' || st === 'ini';
-  $('#name').hidden = st !== 'name'; $('#pick').hidden = !pk; $('#go').hidden = pk; $('#code').readOnly = st !== 'code';
+  $('#name').hidden = st !== 'name'; $('#pick').hidden = !(pk || (st === 'name' && quick.length)); $('#go').hidden = pk; $('#code').readOnly = st !== 'code';
   $('#go').textContent = st === 'name' ? 'Join' : 'Next';
-  $('#jh').textContent = { code: 'Type your class code', name: 'Type a nickname (no last names)', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
+  $('#jh').textContent = { code: 'Type your class code', name: quick.length ? 'Tap your team. A nickname is optional (no last names).' : 'Type a nickname (no last names)', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
+  $('#name').placeholder = quick.length ? 'Nickname (optional)' : 'Your nickname (no last names)';
   if (st === 'name') $('#name').focus();
 }
 function pickBtn(label, sub, color, fn, off) {
@@ -190,6 +192,11 @@ function renderPick(m) {
     const bk = pickBtn(['', '← Back to teams'], '', null, () => { $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); }); bk.className = 'back'; box.append(bk);
   }
 }
+// quick teams (no class list): tap a team, nickname optional
+function renderQuick() {
+  const box = $('#pick'); box.innerHTML = ''; qteam = null;
+  quick.forEach(t => { const b = pickBtn([t.emoji, t.name], '', t.color, () => { qteam = t.id; [...box.children].forEach(x => (x.style.background = '#fff')); b.style.background = '#dbeafe'; $('#err').textContent = ''; }); box.append(b); });
+}
 let target0 = '';
 $('#jf').onsubmit = e => {
   e.preventDefault(); $('#err').textContent = '';
@@ -197,9 +204,11 @@ $('#jf').onsubmit = e => {
     target0 = $('#code').value.trim().toUpperCase(); if (!target0) return ($('#err').textContent = 'Type the class code');
     ws.send({ t: 'peek', code: target0 });
   } else if (jstep === 'name') {
-    const name = $('#name').value.trim(); if (!name) return ($('#err').textContent = 'Type a nickname');
+    const name = $('#name').value.trim();
+    if (quick.length && !qteam) return ($('#err').textContent = 'Tap your team first');
+    if (!quick.length && !name) return ($('#err').textContent = 'Type a nickname');
     localStorage.do_code = target0; localStorage.do_name = name;
-    id = sessionStorage['do_id_' + target0] || null; target = { code: target0, name, ...pageSize() }; sendJoin();
+    id = sessionStorage['do_id_' + target0] || null; target = { code: target0, name, team: qteam, ...pageSize() }; sendJoin();
   }
 };
 function renderTeam() {
@@ -219,7 +228,7 @@ function applyLock(proj) { // work on the projector can't be changed
 
 function onmsg(m) {
   if (m.t === 'peek') {
-    if (!m.roster) jshow('name'); else renderPick(m);
+    if (!m.roster) { quick = m.teams || []; renderQuick(); jshow('name'); } else renderPick(m);
   } else if (m.t === 'score') { tmList = m.teams; tmSc = m.scores; renderTeam();
   } else if (m.t === 'myteam') { tmMy = m.team; renderTeam();
   } else if (m.t === 'err') {

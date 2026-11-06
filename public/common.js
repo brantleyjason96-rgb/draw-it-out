@@ -107,3 +107,9 @@ function connect(onmsg, onopen, onstatus) {
   })();
   return api;
 }
+
+// QR code for a join link (needs /qrcode.js loaded first). Returns an <img>-ready SVG string, black on white with a quiet border.
+function qrSvg(text) {
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({ cellSize: 1, margin: 2, scalable: true });
+}

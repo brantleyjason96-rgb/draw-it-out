@@ -7,9 +7,9 @@ import { WebSocketServer } from 'ws';
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
-const MAX_STU = 60, MAX_ROOMS = 50;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css' };
-const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/projector': 'projector.html' };
+const MAX_STU = 60, MAX_ROOMS = +process.env.MAX_ROOMS || 200;
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/projector': 'projector.html', '/start': 'landing.html' };
 
 // ---- static files ----
 const server = http.createServer((req, res) => {
@@ -21,6 +21,7 @@ const server = http.createServer((req, res) => {
     if (err) { res.statusCode = 404; return res.end('Not found'); }
     res.setHeader('Content-Type', TYPES[path.extname(f)]);
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer'); // class codes and shared-set links are never leaked to other sites
     res.setHeader('Cache-Control', 'no-cache');
     res.end(data);
   });
@@ -174,7 +175,7 @@ wss.on('connection', ws => {
     if (m.t === 'peek') { // student asks which teams / initials are on offer; initials are only revealed one team at a time
       const r = rooms.get(cleanCode(m.code));
       if (!r) return tx(ws, { t: 'err', m: 'Class not found. Check the code.' });
-      if (!r.roster.length) return tx(ws, { t: 'peek', roster: false });
+      if (!r.roster.length) return tx(ws, { t: 'peek', roster: false, teams: r.teams.map(t => ({ id: t.id, name: t.name, color: t.color, emoji: t.emoji })) }); // no class list: students may pick a team and type a nickname
       const open = id => r.roster.filter(e => e.team === id && !live(r.students.get(e.sid))).length;
       if (m.team === undefined) {
         const teams = r.teams.filter(t => r.roster.some(e => e.team === t.id)).map(t => ({ id: t.id, name: t.name, color: t.color, emoji: t.emoji, open: open(t.id) }));
@@ -204,14 +205,15 @@ wss.on('connection', ws => {
         }
         s.rid = e.rid; e.sid = s.id; s.name = e.ini; s.team = e.team;
       } else {
-        const name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
-        if (!name) return tx(ws, { t: 'err', m: 'Type your first name' });
+        let name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
         if (!s) {
+          const tm = r.teams.find(t => t.id === m.team); // quick teams: a student can pick a team with no nickname at all
+          if (!name && tm) name = tm.name + ' ' + ([...r.students.values()].filter(x => x.team === tm.id).length + 1);
+          if (!name) return tx(ws, { t: 'err', m: 'Type a nickname' });
           if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
-          s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
+          s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500, team: tm ? tm.id : null };
           r.students.set(s.id, s);
-        }
-        s.name = name;
+        } else if (name) s.name = name;
       }
       // the student's own copy is the source of truth, so a server restart or dropped connection loses nothing.
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
