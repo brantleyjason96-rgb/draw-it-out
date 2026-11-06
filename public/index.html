@@ -198,7 +198,7 @@ const css=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clien
 const toWorld=c=>[clamp((c[0]-PAD.l)/sc()+V.ox,0,W),clamp((c[1]-PAD.t)/sc()+V.oy,0,H)];
 const clone=o=>JSON.parse(JSON.stringify(o));
 function clampView(){V.z=clamp(V.z,1,6);const vw=aw()/sc(),vh=ah()/sc();V.ox=vw>=W?(W-vw)/2:clamp(V.ox,0,W-vw);V.oy=vh>=H?(H-vh)/2:clamp(V.oy,0,H-vh)}
-function setZoom(z,ax=.5,ay=.5){const vw0=aw()/sc(),vh0=ah()/sc(),wx=V.ox+ax*vw0,wy=V.oy+ay*vh0;V.z=clamp(z,1,6);const vw=aw()/sc(),vh=ah()/sc();V.ox=wx-ax*vw;V.oy=wy-ay*vh;clampView();ui()}
+function setZoom(z,ax=.5,ay=.5){const vw0=aw()/sc(),vh0=ah()/sc(),wx=V.ox+ax*vw0,wy=V.oy+ay*vh0;V.z=clamp(z,1,6);const vw=aw()/sc(),vh=ah()/sc();V.ox=wx-ax*vw;V.oy=wy-ay*vh;clampView();draw();ui()}
 
 function segDist(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy;let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=clamp(t,0,1);return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
 function near(o,p,t){
@@ -253,7 +253,7 @@ function posEd(){
  Object.assign(ed.style,{display:'block',left:x+'px',top:y+'px',width:o.w*sc()+'px',fontSize:o.size*sc()+'px',color:o.c});
  ed.style.height='0';ed.style.height=ed.scrollHeight+'px';
 }
-function startEdit(o,fresh){editing=o;ed.dataset.before=fresh?'':o.t;ed.value=o.t;posEd();ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length);draw()}
+function startEdit(o,fresh){editing=o;ed.dataset.before=fresh?'':o.t;ed.value=o.t;posEd();draw()} // focus happens on pointer-up (see up): focusing during pointer-down gets stolen by the browser
 function commitEdit(quiet){
  const o=editing;if(!o)return;editing=null;ed.style.display='none';o.t=ed.value.trim();
  if(!o.t){objs=objs.filter(x=>x!==o);if(sel===o)sel=null}
@@ -366,6 +366,7 @@ function move(e){
  draw();selBar();
 }
 function up(){
+ if(editing&&document.activeElement!==ed){ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
  const t=g;g=null;if(!t)return;
  if(t.type==='draw'&&cur){objs.push(cur);cur=null;commit()}
  else if(t.type==='erase'&&t.n)commit();
