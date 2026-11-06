@@ -155,13 +155,13 @@ const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
 function addStu(d) {
   let s = S.stu.get(d.id);
   if (!s) {
-    s = { id: d.id, layer: mkLayer(), dirty: true };
+    s = { id: d.id, layer: mkLayer(d.bw, d.bh), dirty: true };
     const el = document.createElement('div'); el.className = 'stu';
     el.innerHTML = '<div class="top"><span class="nm"></span><span class="chip"></span></div><canvas width="800" height="500"></canvas>';
     el.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
     $('#grid').append(el); s.el = el; s.cv = el.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, dirty: true }); ui();
+  Object.assign(s, { name: d.name, objs: d.objs, dirty: true }); s.layer.width = d.bw; s.layer.height = d.bh; ui();
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));

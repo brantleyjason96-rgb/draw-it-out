@@ -1,27 +1,30 @@
 // shared by student, teacher and projector pages
-const W = 800, H = 500;
+// W,H = the drawing page size. Each student's page is the size of their screen (the student page sets these);
+// the teacher and projector pages size every layer from the student's own dimensions instead.
+let W = 800, H = 500;
 const $ = s => document.querySelector(s);
 
-function paintBg(x, bg, im) {
-  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+function paintBg(x, bg, im, pw, ph) {
+  const w = pw || W, h = ph || H; // default: the student page's own size
+  x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
   if (bg === 'photo') {
     if (im && im.complete && im.naturalWidth) {
-      const s = Math.min(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * s, h = im.naturalHeight * s;
-      x.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+      const s = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * s, ih = im.naturalHeight * s;
+      x.drawImage(im, (w - iw) / 2, (h - ih) / 2, iw, ih);
     }
     return;
   }
   x.strokeStyle = '#cfe3f4'; x.lineWidth = 1; x.beginPath();
   if (bg === 'graph') {
-    for (let i = 0; i <= W; i += 25) { x.moveTo(i, 0); x.lineTo(i, H); }
-    for (let i = 0; i <= H; i += 25) { x.moveTo(0, i); x.lineTo(W, i); }
+    for (let i = 0; i <= w; i += 25) { x.moveTo(i, 0); x.lineTo(i, h); }
+    for (let i = 0; i <= h; i += 25) { x.moveTo(0, i); x.lineTo(w, i); }
   } else if (bg === 'lined') {
-    for (let i = 60; i < H; i += 40) { x.moveTo(0, i); x.lineTo(W, i); }
+    for (let i = 60; i < h; i += 40) { x.moveTo(0, i); x.lineTo(w, i); }
   }
   x.stroke();
 }
 
-const mkLayer = () => Object.assign(document.createElement('canvas'), { width: W, height: H });
+const mkLayer = (w = 800, h = 500) => Object.assign(document.createElement('canvas'), { width: w, height: h });
 
 // ---- drawing objects (shared by student, teacher and projector) ----
 // stroke {pts,pen} | line {s:'line'|'arrow',pts:[a,b]} | shape {s,x,y,w,h,fill} | text {x,y,w,t,size}; all have id, c (color), lw, dash
@@ -81,10 +84,14 @@ function drawOp(x, o) {
   x.restore();
 }
 function replay(layer, objs) {
-  const x = layer.getContext('2d'); x.clearRect(0, 0, W, H); objs.forEach(o => drawOp(x, o));
+  const x = layer.getContext('2d'); x.clearRect(0, 0, layer.width, layer.height); objs.forEach(o => drawOp(x, o));
 }
+// draw a student's page (background + drawing) into cv, scaled to fit with gray bars if the shapes differ
 function compose(cv, layer, bg, im) {
-  const x = cv.getContext('2d'); paintBg(x, bg, im); x.drawImage(layer, 0, 0);
+  const x = cv.getContext('2d'), s = Math.min(cv.width / layer.width, cv.height / layer.height);
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#e5e7eb'; x.fillRect(0, 0, cv.width, cv.height);
+  x.setTransform(s, 0, 0, s, (cv.width - layer.width * s) / 2, (cv.height - layer.height * s) / 2);
+  paintBg(x, bg, im, layer.width, layer.height); x.drawImage(layer, 0, 0); x.setTransform(1, 0, 0, 1, 0, 0);
 }
 // load a photo for the background; calls cb when ready
 function loadImg(src, cb) {

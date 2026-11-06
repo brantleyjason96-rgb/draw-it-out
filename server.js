@@ -7,7 +7,7 @@ import { WebSocketServer } from 'ws';
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
-const W = 800, H = 500, MAX_OPS = 40000, MAX_STU = 60, MAX_ROOMS = 50;
+const MAX_STU = 60, MAX_ROOMS = 50;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css' };
 const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/projector': 'projector.html' };
 
@@ -31,37 +31,39 @@ const rooms = new Map();
 const tx = (ws, o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
 const cleanCode = c => (typeof c === 'string' ? c.toUpperCase().trim() : '');
 const goodCode = c => /^[A-Z0-9]{4,10}$/.test(c);
-const num = n => typeof n === 'number' && n >= -50 && n <= W + 50;
 
 const PENS = ['pen', 'pencil', 'marker', 'hi'], KINDS = ['rect', 'ellipse', 'tri', 'diamond', 'star'], LINES = ['line', 'arrow'];
 const MAX_OBJS = 1500, MAX_PTS = 6000;
-const pt = a => Array.isArray(a) && a.length === 2 && num(a[0]) && num(a[1]);
 const rng = (n, lo, hi) => typeof n === 'number' && n >= lo && n <= hi;
+// each student's page is the size of their screen (d = {w,h}); everything must stay on that page
+const dm = s => ({ w: s.bw, h: s.bh });
+const pt = (a, d) => Array.isArray(a) && a.length === 2 && rng(a[0], -50, d.w + 50) && rng(a[1], -50, d.h + 50);
+const dim = n => (Number.isInteger(n) && n >= 300 && n <= 3000 ? n : null);
 // Every drawing object is rebuilt field by field, so nothing unexpected is stored or relayed.
-function cleanObj(o) {
+function cleanObj(o, d) {
   if (!o || !Number.isInteger(o.id) || o.id < 1 || o.id > 1e9 || !/^#[0-9a-fA-F]{6}$/.test(o.c)) return null;
   const base = { id: o.id, c: o.c };
   if (o.k === 'text') {
-    if (typeof o.t !== 'string' || !rng(o.size, 10, 200) || !rng(o.w, 20, W) || !rng(o.x, -50, W) || !rng(o.y, -50, H)) return null;
+    if (typeof o.t !== 'string' || !rng(o.size, 10, 200) || !rng(o.w, 20, d.w) || !rng(o.x, -50, d.w) || !rng(o.y, -50, d.h)) return null;
     return { ...base, k: 'text', x: o.x, y: o.y, w: o.w, size: o.size, t: o.t.slice(0, 300) };
   }
   if (!rng(o.lw, 0.1, 60)) return null;
   const st = { ...base, lw: o.lw, dash: ['solid', 'dashed', 'dotted'].includes(o.dash) ? o.dash : 'solid' };
   if (o.k === 'stroke') {
-    if (!PENS.includes(o.pen) || !Array.isArray(o.pts) || !o.pts.length || o.pts.length > MAX_PTS || !o.pts.every(pt)) return null;
+    if (!PENS.includes(o.pen) || !Array.isArray(o.pts) || !o.pts.length || o.pts.length > MAX_PTS || !o.pts.every(p => pt(p, d))) return null;
     return { ...st, k: 'stroke', pen: o.pen, pts: o.pts.map(p => [p[0], p[1]]) };
   }
   if (o.k === 'line') {
-    if (!LINES.includes(o.s) || !Array.isArray(o.pts) || o.pts.length !== 2 || !o.pts.every(pt)) return null;
+    if (!LINES.includes(o.s) || !Array.isArray(o.pts) || o.pts.length !== 2 || !o.pts.every(p => pt(p, d))) return null;
     return { ...st, k: 'line', s: o.s, pts: o.pts.map(p => [p[0], p[1]]) };
   }
   if (o.k === 'shape') {
-    if (!KINDS.includes(o.s) || !rng(o.x, -50, W) || !rng(o.y, -50, H) || !rng(o.w, 1, W + 100) || !rng(o.h, 1, H + 100)) return null;
+    if (!KINDS.includes(o.s) || !rng(o.x, -50, d.w) || !rng(o.y, -50, d.h) || !rng(o.w, 1, d.w + 100) || !rng(o.h, 1, d.h + 100)) return null;
     return { ...st, k: 'shape', s: o.s, x: o.x, y: o.y, w: o.w, h: o.h, fill: ['none', 'light', 'solid'].includes(o.fill) ? o.fill : 'none' };
   }
   return null;
 }
-const cleanList = a => (Array.isArray(a) ? a.slice(0, MAX_OBJS).map(cleanObj).filter(Boolean) : []);
+const cleanList = (a, d) => (Array.isArray(a) ? a.slice(0, MAX_OBJS).map(o => cleanObj(o, d)).filter(Boolean) : []);
 // Questions may carry <b> <i> <u> <br> and nothing else; any other tag is stripped, stray < > are escaped.
 function cleanHtml(s) {
   return String(s || '').slice(0, 2000).split(/(<[^>]*>)/).map(tok => {
@@ -78,7 +80,7 @@ function cleanQ(q = {}) {
   if (bg === 'photo' && !img) bg = 'blank';
   return { question: cleanHtml(q.question), bg, img };
 }
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs });
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh });
 const toWatchers = (r, o) => r.watchers.forEach(w => tx(w, o));
 // a student can't edit while their work is on the projector
 const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.spot === s.id });
@@ -121,15 +123,15 @@ wss.on('connection', ws => {
       let s = typeof m.id === 'string' ? r.students.get(m.id) : null;
       if (!s) {
         if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
-        s = { id: randomUUID(), name, objs: [] };
+        s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
         r.students.set(s.id, s);
       }
       s.name = name;
       // the student's own copy is the source of truth, so a server restart or dropped connection loses nothing.
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
-      if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs);
+      if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs, dm(s));
       s.ws = ws; me = s; room = r; role = 'student';
-      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, proj: r.spot === s.id });
+      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, proj: r.spot === s.id });
       return toWatchers(r, { t: 'join', s: stuView(s) });
     }
 
@@ -139,15 +141,15 @@ wss.on('connection', ws => {
       if (room.students.get(me.id) !== me) return; // removed by Clear class
       if (room.spot === me.id) return lockMsg(room, me);
       if (m.t === 'set') { // add a new object or replace one with the same id
-        const o = cleanObj(m.o); if (!o) return;
+        const o = cleanObj(m.o, dm(me)); if (!o) return;
         const i = me.objs.findIndex(x => x.id === o.id);
         if (i >= 0) me.objs[i] = o; else if (me.objs.length < MAX_OBJS) me.objs.push(o); else return;
         toWatchers(room, { t: 'set', id: me.id, o });
       } else if (m.t === 'pts') { // more points for a pen stroke that is still being drawn
-        const o = me.objs.find(x => x.id === m.oid), p = Array.isArray(m.p) ? m.p.slice(0, 200).filter(pt) : [];
+        const o = me.objs.find(x => x.id === m.oid), p = Array.isArray(m.p) ? m.p.slice(0, 200).filter(p => pt(p, dm(me))) : [];
         if (o && o.k === 'stroke' && p.length && o.pts.length + p.length <= MAX_PTS) { o.pts.push(...p.map(q => [q[0], q[1]])); toWatchers(room, { t: 'pts', id: me.id, oid: o.id, p }); }
       } else if (m.t === 'del') { me.objs = me.objs.filter(x => x.id !== m.oid); toWatchers(room, { t: 'del', id: me.id, oid: m.oid }); }
-      else if (m.t === 'all') { me.objs = cleanList(m.objs); toWatchers(room, { t: 'all', id: me.id, objs: me.objs }); } // undo/redo/reorder
+      else if (m.t === 'all') { me.objs = cleanList(m.objs, dm(me)); toWatchers(room, { t: 'all', id: me.id, objs: me.objs }); } // undo/redo/reorder
     } else if (role === 'host') {
       if (m.t === 'q') {
         room.q = cleanQ(m);
