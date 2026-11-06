@@ -17,7 +17,12 @@
 body.playing{overflow:hidden;background:#d1d5db;overscroll-behavior:none}
 body.playing main{padding:0;max-width:none}
 #quick{display:none;position:fixed;left:12px;bottom:10px;z-index:12;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004}
-#quick .swb{width:48px;height:48px;min-height:48px}
+#quick{gap:6px}
+#quick .swb{width:44px;height:44px;min-height:44px}
+.qt{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:22px;line-height:1}
+.qt.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.qsep{width:1px;height:32px;background:var(--line);margin:0 4px}
+@media(max-width:900px){body.simple #ur{left:12px;transform:none;bottom:72px}body.simple #zoom{bottom:72px}body.simple #mini{bottom:134px}}
 body.simple #quick{display:flex}
 body.simple #toolsbtn,body.simple #drawer{display:none!important}
 #lockmsg{position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:13;background:#92400e;color:#fff;border-radius:12px;padding:8px 16px;font-size:18px;box-shadow:0 4px 14px #0004}
@@ -115,7 +120,7 @@ button{cursor:pointer}
   </div>
   <div id="qbox"><span id="q"></span><button id="qt" aria-label="Show or hide the question"></button></div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
-  <div id="quick" class="lockable"><span style="font-size:20px">✏️</span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
+  <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
   <div class="ov lockable" id="ur"><button id="undo">↶ Undo</button><button id="redo">↷ Redo</button></div>
   <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" title="Connection"></span></div>
@@ -389,6 +394,7 @@ function selBar(){
  bar.style.left=clamp((x1+x2)/2-bw/2,4,cv.clientWidth-bw-4)+'px';bar.style.top=top+'px';
 }
 function ui(){
+ syncQuick();
  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tool));
  $('#undo').disabled=hi<1;$('#redo').disabled=hi>=hist.length-1;
  $('#zs').value=Math.round(V.z*100);$('#zv').textContent=Math.round(V.z*100)+'%';
@@ -417,11 +423,12 @@ document.onkeydown=e=>{
 /* ---------- quick mode: the teacher limits students to a pen and 4 colors ---------- */
 function applySimple(on){
  document.body.classList.toggle('simple',on);
- if(on){commitEdit(true);sel=null;cur=null;g=null;openDrawer(false);Object.assign(S,{tool:'pen',pen:'pen',size:4,dash:'solid'});if(!['#111111','#2563eb','#dc2626','#059669'].includes(S.color))S.color='#111111'}
+ if(on){commitEdit(true);sel=null;cur=null;g=null;openDrawer(false);Object.assign(S,{tool:'pen',pen:'pen',size:4,dash:'solid',erase:'whole',text:32});if(!['#111111','#2563eb','#dc2626','#059669'].includes(S.color))S.color='#111111'}
  all();syncQuick();
 }
-function syncQuick(){document.querySelectorAll('[data-qc]').forEach(b=>b.classList.toggle('on',b.dataset.qc===S.color))}
-document.querySelectorAll('[data-qc]').forEach(b=>b.onclick=()=>{S.color=b.dataset.qc;syncQuick();all(true)});
+function syncQuick(){document.querySelectorAll('[data-qc]').forEach(b=>b.classList.toggle('on',b.dataset.qc===S.color&&S.tool!=='eraser'));document.querySelectorAll('[data-qt]').forEach(b=>b.classList.toggle('on',b.dataset.qt===S.tool))}
+document.querySelectorAll('[data-qt]').forEach(b=>b.onclick=()=>setTool(b.dataset.qt));
+document.querySelectorAll('[data-qc]').forEach(b=>b.onclick=()=>{S.color=b.dataset.qc;if(S.tool==='eraser')S.tool='pen';all(true)});
 
 /* ---------- floating question + slide-out tools ---------- */
 const drawer=$('#drawer');
