@@ -38,6 +38,7 @@ textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px
     <span class="mut"><span class="dot" id="dot"></span><span id="st">Connecting…</span></span>
    </div>
    <div class="row">
+    <button class="btn alt" id="simple" title="Students get just a pen and 4 colors. Good for quick checks."></button>
     <button class="btn alt" id="hide"></button>
     <button class="btn alt" id="proj">Open projector view</button>
     <button class="btn alt" id="savepng">Save session (PNG)</button>
@@ -145,7 +146,7 @@ $('#clearcls').onclick = () => {
 const link = location.origin + '/?code=' + code;
 $('#link').textContent = link;
 
-const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null, spot: null, hide: true, stu: new Map() };
 let photo = null; // photo = data URL waiting to be saved/sent
 
 const ws = connect(onmsg, () => ws.send({ t: 'host', code, key }), ok => {
@@ -176,7 +177,7 @@ function onmsg(m) {
       if (/in use/.test(m.m)) { per().code = rnd(); code = per().code; savePeriods(); location.reload(); } // another teacher already has that code
       break;
     case 'state':
-      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; setQ(m.q);
+      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.simple = !!m.simple; setQ(m.q);
       m.students.forEach(addStu);
       ui(); break;
     case 'join': addStu(m.s); break;
@@ -185,6 +186,7 @@ function onmsg(m) {
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; } break;
     case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; x.dirty = true; }); ui(); break;
+    case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; ui(); break;
   }
 }
@@ -192,6 +194,7 @@ function onmsg(m) {
 function ui() {
   $('#count').textContent = S.stu.size + ' student' + (S.stu.size === 1 ? '' : 's') + ' joined';
   $('#cur').innerHTML = '<small>Students are answering</small>' + (S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet — pick a question on the left')); // server-sanitized: only b/i/u/br
+  $('#simple').textContent = S.simple ? 'Quick mode: ON (pen + 4 colors)' : 'Quick mode: off'; $('#simple').classList.toggle('on', S.simple);
   $('#hide').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector';
   $('#hide').classList.toggle('on', S.hide);
   S.stu.forEach(s => {
@@ -206,6 +209,7 @@ function ui() {
 })();
 
 // controls
+$('#simple').onclick = () => ws.send({ t: 'mode', simple: !S.simple });
 $('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
 $('#proj').onclick = () => window.open('/projector?code=' + code, 'projector');
 $('#copy').onclick = () => navigator.clipboard.writeText(link).then(() => ($('#copy').textContent = 'Copied ✓'), () => prompt('Copy this link:', link));

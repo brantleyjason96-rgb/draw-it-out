@@ -103,7 +103,7 @@ wss.on('connection', ws => {
         if (!goodCode(code) || !key) return tx(ws, { t: 'err', m: 'Bad code' });
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), spot: null, hide: true, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), simple: false, spot: null, hide: true, students: new Map(), watchers: new Set(), last: Date.now() };
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
         role = 'host';
@@ -112,7 +112,7 @@ wss.on('connection', ws => {
         role = 'watch';
       }
       room = r; r.watchers.add(ws);
-      return tx(ws, { t: 'state', q: r.q, spot: r.spot, hide: r.hide, students: [...r.students.values()].map(stuView) });
+      return tx(ws, { t: 'state', q: r.q, simple: r.simple, spot: r.spot, hide: r.hide, students: [...r.students.values()].map(stuView) });
     }
 
     if (m.t === 'join') {
@@ -131,7 +131,7 @@ wss.on('connection', ws => {
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
       if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs, dm(s));
       s.ws = ws; me = s; room = r; role = 'student';
-      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, proj: r.spot === s.id });
+      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id });
       return toWatchers(r, { t: 'join', s: stuView(s) });
     }
 
@@ -155,6 +155,10 @@ wss.on('connection', ws => {
         room.q = cleanQ(m);
         room.students.forEach(s => { s.objs = []; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); });
         toWatchers(room, { t: 'q', q: room.q });
+      } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
+        room.simple = !!m.simple;
+        room.students.forEach(s => tx(s.ws, { t: 'mode', simple: room.simple }));
+        toWatchers(room, { t: 'mode', simple: room.simple });
       } else if (m.t === 'spot') {
         const prev = room.spot;
         room.spot = room.students.has(m.id) ? m.id : null;
@@ -164,7 +168,7 @@ wss.on('connection', ws => {
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
         room.students.clear(); room.spot = null;
-        toWatchers(room, { t: 'state', q: room.q, spot: null, hide: room.hide, students: [] });
+        toWatchers(room, { t: 'state', q: room.q, simple: room.simple, spot: null, hide: room.hide, students: [] });
       }
     }
   });
