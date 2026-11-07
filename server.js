@@ -268,7 +268,11 @@ wss.on('connection', ws => {
         applySetup(room, m); pushScores(room);
       } else if (m.t === 'team') { // no class list loaded: put a nickname-joined student on a team (with a class list, the list decides)
         const s = room.students.get(m.id);
-        if (s && !s.rid) { s.team = room.teams.some(t => t.id === m.team) ? m.team : null; fixAwards(room); pushScores(room); }
+        if (s) {
+          const tid = room.teams.some(t => t.id === m.team) ? m.team : null, e = s.rid && entryOf(room, s.rid);
+          if (e) e.team = tid; // with a class list, the list entry holds the team
+          s.team = tid; fixAwards(room); pushScores(room);
+        }
       } else if (m.t === 'award') { // +1 to the student's team for this question; on:false takes it back
         const s = room.students.get(m.id); if (!s) return;
         if (m.on && !s.aw) {

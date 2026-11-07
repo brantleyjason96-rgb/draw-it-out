@@ -149,4 +149,13 @@ await test('status: live classes report how many students are connected', async 
   c.clear(); c.send({ t: 'status', code: 'NOPE1' }); const b = await c.wait('status'); assert.deepEqual([b.live, b.here], [false, 0]);
 });
 
+await test('host can move a class-list student to another team without replacing the list', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'MOVE', key: KEY, setup: { teams, roster } }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'join', code: 'MOVE', rid: 'r0001', bw: 800, bh: 500 }); const j = await c.wait('joined');
+  h.send({ t: 'team', id: j.id, team: 'tb' }); await sleep(100);
+  assert.equal(c.last('myteam').team, 'tb');
+  assert.equal(h.last('setup').roster.find(e => e.rid === 'r0001').team, 'tb');
+  assert.equal(h.last('setup').roster.length, 3);
+});
+
 console.log(pass + ' passed'); srv.kill();

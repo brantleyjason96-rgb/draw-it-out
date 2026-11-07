@@ -198,6 +198,14 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
  <div style="display:flex;gap:10px;justify-content:center"><button class="b" id="qrcopy">Copy student link</button><button class="b pri" id="qrclose">Close</button></div>
 </dialog>
 
+<dialog id="rdlg" style="text-align:center;max-width:520px;padding:24px">
+ <h2 style="font-size:24px">Use your phone as a remote</h2>
+ <p class="mut" style="margin:6px 0 12px">Scan this with your phone's camera. Your phone opens this class so you can walk the room, look at drawings and give points.</p>
+ <div id="rqr" style="width:min(80vw,360px);margin:auto;background:#fff"></div>
+ <p style="margin:12px 0 4px;font-size:15px;background:#FFF4DC;border:1px solid #F0D79A;border-radius:10px;padding:10px 12px;color:#5E4300">Keep this private. Anyone who scans it can control this class, so do not show it on the projector.</p>
+ <div style="display:flex;gap:10px;justify-content:center;margin-top:8px"><button class="b" id="rcopy">Copy link instead</button><button class="b pri" id="rclose">Done</button></div>
+</dialog>
+
 <div id="demobar" hidden>
  <span><b>Demo mode.</b> Eight practice students are drawing. Send a question, click a drawing, press ✓, then try the leaderboard. Nothing here is saved.</span>
  <a class="b pri" href="/teacher" style="text-decoration:none">Start my real class</a>
@@ -209,9 +217,17 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 <script src="/tcommon.js"></script>
 <script>
 const sp = new URLSearchParams(location.search);
+// Pairing: the computer's "Use my phone as a remote" QR opens /class?code=ABCD#k=<secret>&n=<name>. The secret stays in the
+// link's # part (never sent to the server). It lets this device control that one class.
+(function pair() {
+  const h = new URLSearchParams(location.hash.slice(1)), c = (sp.get('code') || '').toUpperCase(), k = h.get('k');
+  if (DEMO || !k || !/^[A-Z0-9]{4,10}$/.test(c) || k.length < 8 || k.length > 80) return;
+  if (!periodOf(c)) { periods.push({ name: String(h.get('n') || 'Class').slice(0, 40), code: c }); savePeriods(); }
+  store['do_key_' + c] = k; history.replaceState(null, '', '/class?code=' + c);
+})();
 let code = currentCode((sp.get('code') || '').toUpperCase());
 if (!DEMO && sp.get('code') !== code) history.replaceState(null, '', '/class?code=' + code);
-const key = hostKey();
+const key = store['do_key_' + code] || hostKey();
 const per = () => periodOf(code);
 const link = location.origin + '/?code=' + code;
 document.title = (DEMO ? 'Demo' : per().name) + ' – Draw It Out';
@@ -221,6 +237,19 @@ const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null
 let TM = loadTM(code); TM.scores = TM.scores || {};
 const save = () => saveTM(code, TM);
 const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: withScores ? TM.scores : undefined });
+// Another device (or a student joining) can change teams and the class list on the server; keep this copy in step.
+// Names exist only where the class list was uploaded, so entries are merged by id and a new entry shows initials.
+let pendingSync = false;
+const editing = () => pendingSync || $('#tdlg').open; // don't overwrite what the teacher is typing right now
+function adopt(m) {
+  if (m.teams) { TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap; }
+  if (m.scores) TM.scores = m.scores;
+  if (m.roster) {
+    const old = new Map(TM.roster.map(e => [e.rid, e]));
+    TM.roster = m.roster.map(e => { const o = old.get(e.rid); return o ? { ...o, ini: e.ini, team: e.team } : { rid: e.rid, first: e.ini, last: '', ini: e.ini, team: e.team }; });
+  }
+  save();
+}
 const teamOf = id => TM.teams.find(t => t.id === id);
 const rosterOf = s => s.rid && TM.roster.find(e => e.rid === s.rid);
 // the teacher's card shows the real name if the class list has it; the server only ever knew initials
@@ -268,18 +297,14 @@ function onmsg(m) {
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
-      if (m.teams.length || m.roster.length) {
-        const old = new Map(TM.roster.map(e => [e.rid, e]));
-        TM.teams = m.teams.map(t => ({ ...t }));
-        TM.roster = m.roster.map(e => { const o = old.get(e.rid); return o ? { ...o, ini: e.ini, team: e.team } : { rid: e.rid, first: e.ini, last: '', ini: e.ini, team: e.team }; }); // names exist only on the computer that has the class list
-        TM.cap = !!m.cap; TM.scores = m.scores; save();
-      } else if (TM.teams.length || TM.roster.length) sendSetup(true);
+      if (m.teams.length || m.roster.length) adopt(m);
+      else if (TM.teams.length || TM.roster.length) sendSetup(true);
       if (DEMO && !TM.teams.length) { for (let i = 0; i < 4; i++) TM.teams.push(newTeam(TM.teams)); sendSetup(); }
       if (DEMO) startBots();
       ui(); break;
     }
-    case 'score': TM.scores = m.scores; save(); ui(); sheetUI(); break;
-    case 'setup': m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); break;
+    case 'score': if (editing()) { TM.scores = m.scores; save(); } else adopt(m); ui(); sheetUI(); break;
+    case 'setup': if (!editing()) adopt({ roster: m.roster }); m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); sheetUI(); break;
     case 'gone': if (s) { s.el.remove(); S.stu.delete(m.id); ui(); } break;
     case 'board': S.board = m.on; ui(); break;
     case 'note': toast(m.m); break;
@@ -297,11 +322,7 @@ function award(s) {
   if (!s.team) return toast('Put this student on a team first.');
   ws.send({ t: 'award', id: s.id, on: !s.aw });
 }
-function setTeam(s, team) {
-  const e = rosterOf(s);
-  if (e) { e.team = team; save(); sendSetup(); } // with a class list, the list decides
-  else ws.send({ t: 'team', id: s.id, team });
-}
+function setTeam(s, team) { ws.send({ t: 'team', id: s.id, team }); } // the server updates the class list entry too, then tells everyone
 const teamNm = id => { const t = teamOf(id); return t ? t.name : ''; };
 const teamLabel = t => (t.emoji ? t.emoji + ' ' : '') + t.name;
 
@@ -418,6 +439,7 @@ $('#more').onclick = e => {
     '-',
     { t: 'Save all drawings as a picture (PNG)', f: savePng },
     { t: 'Show QR code to join', f: showQR },
+    { t: 'Use my phone as a remote', sub: 'Scan once to control this class from your phone', f: showRemote },
     { t: 'Copy student link', f: copyLink },
     '-',
     { t: 'Back up everything', f: () => doBackup() },
@@ -438,6 +460,13 @@ $('#setmenu').onclick = e => {
   ], 'top:50px;right:0;min-width:240px');
 };
 $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doRestore(f, () => location.reload()); };
+function showRemote() {
+  const u = location.origin + '/class?code=' + code + '#k=' + encodeURIComponent(key) + '&n=' + encodeURIComponent(per().name);
+  try { $('#rqr').innerHTML = qrSvg(u); } catch { return toast('Could not make a QR code here.'); }
+  $('#rcopy').onclick = () => navigator.clipboard.writeText(u).then(() => toast('Link copied. Open it on your phone (email or message it to yourself).'), () => prompt('Copy this link:', u));
+  $('#rdlg').showModal();
+}
+$('#rclose').onclick = () => $('#rdlg').close();
 function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Student link copied.'), () => prompt('Copy this link:', link)); }
 function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return toast('Could not make a QR code here.'); } $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal(); }
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
@@ -468,7 +497,7 @@ function savePng() { // a contact sheet of everyone's work (initials only, as th
 // ---- teams sheet ----
 const sheet = $('#tdlg');
 let rosterT = 0;
-const syncRoster = () => { save(); clearTimeout(rosterT); rosterT = setTimeout(() => { sendSetup(); ui(); }, 350); };
+const syncRoster = () => { save(); pendingSync = true; clearTimeout(rosterT); rosterT = setTimeout(() => { sendSetup(); pendingSync = false; ui(); }, 350); };
 const teamsChanged = () => { save(); sendSetup(); ui(); sheetUI(); };
 $('#tedit').onclick = () => { sheetUI(); $('#tcls').textContent = per().name; sheet.showModal(); };
 $('#tdone').onclick = () => sheet.close();
