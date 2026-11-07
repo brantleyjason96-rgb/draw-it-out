@@ -5,11 +5,31 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Draw It Out</title>
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/sortkit.css">
 <style>
 #join .card{max-width:380px;margin:40px auto;text-align:center}
 #join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
 #join #code{letter-spacing:.3em;text-transform:uppercase}
 #err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
+/* sort questions: lanes to fill with sticky notes, a pile of cards below */
+body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur,body.sorting #zoom,body.sorting #quick,body.sorting #mini,body.sorting #selbar{display:none!important}
+#sortview{position:fixed;left:12px;right:12px;top:96px;bottom:12px;z-index:5;display:flex;flex-direction:column;gap:10px}
+#sstage{flex:1;min-height:0;display:grid;gap:10px}
+.slane{background:#fff;border:2px dashed #9ca3af;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;min-width:0;transition:background .1s,border-color .1s}
+.slane.over{background:#eff6ff;border-color:var(--pri)}
+.slane h3{margin:0;font-size:18px;text-align:center}
+#sbar{flex:none;display:flex;gap:10px;align-items:stretch}
+#spile{flex:1;min-width:0;max-height:34vh;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004;transition:background .1s}
+#spile.over{background:#eff6ff}
+#spile h4{flex-basis:100%;margin:0;font-size:13px;color:var(--mut);font-weight:600}
+#spile .nc{width:200px}
+#spile .sempty{flex-basis:100%;color:#065f46;font-weight:600;padding:8px 0}
+#sdone{flex:none;width:210px;display:flex;flex-direction:column;gap:6px;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004}
+#sdone b{text-align:center;font-size:15px}
+#smsg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(34vh + 24px);z-index:13;background:#92400e;color:#fff;border-radius:12px;padding:8px 16px;font-size:18px;box-shadow:0 4px 14px #0004;white-space:nowrap}
+.nc.sel{outline:3px solid var(--pri)}
+#sortview.sdone #sstage{opacity:.85}
+@media(max-width:700px){#spile .nc{width:calc(50% - 4px)}#sbar{flex-direction:column}#sdone{width:auto;flex-direction:row;align-items:center;justify-content:space-between}#smsg{font-size:15px;white-space:normal;text-align:center;width:calc(100% - 24px)}}
 #pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:0 0 12px}
 #pick button{border:3px solid var(--line);background:#fff;border-radius:14px;padding:12px 6px;font-size:18px;font-weight:600;cursor:pointer;min-height:64px;line-height:1.2}
 #pick button small{display:block;font-weight:400;color:var(--mut);font-size:13px}
@@ -128,6 +148,11 @@ button{cursor:pointer}
    <div id="mini" hidden title="Where you are on the page"><div id="mv"></div></div>
   </div>
   <div id="qbox"><div style="flex:1"><div id="tm" hidden></div><span id="q"></span></div><button id="qt" aria-label="Show or hide the question"></button></div>
+  <div id="sortview" hidden>
+   <div id="sstage" class="lockable"></div>
+   <div id="sbar"><div id="spile" data-zone="pile" class="lockable"></div><div id="sdone"></div></div>
+  </div>
+  <div id="smsg" hidden>Answer sent. Hold on for your teacher…</div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
@@ -150,6 +175,8 @@ button{cursor:pointer}
  </div>
 </main>
 <script src="/common.js"></script>
+<script src="/sortkit.js"></script>
+<script src="/sortstu.js"></script>
 <script>
 let target = null, id = null;
 const sp = new URLSearchParams(location.search);
@@ -161,6 +188,7 @@ let waking = false;
 const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); } if (target) sendJoin(); }, ok => {
   $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
 });
+SS.init(o => ws.send(o));
 function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
 
 // Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
@@ -229,6 +257,7 @@ function applyLock(proj) { // work on the projector can't be changed
 }
 
 function onmsg(m) {
+  if (SS.msg(m)) return;
   if (m.t === 'peek') {
     if (!m.roster) { quick = m.teams || []; renderQuick(); jshow('name'); } else renderPick(m);
   } else if (m.t === 'score') { tmList = m.teams; tmSc = m.scores; renderTeam();
@@ -242,13 +271,14 @@ function onmsg(m) {
     if (m.q.question || m.q.img || !$('#q').innerHTML) setQ(m.q);
     if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
     tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
+    SS.joined(m);
     loaded = true; applyLock(!!m.proj); applySimple(!!m.simple);
   } else if (m.t === 'lock') applyLock(!!m.proj);
   else if (m.t === 'mode') applySimple(!!m.simple);
   else if (m.t === 'kicked') { // teacher cleared the class
-    sessionStorage.removeItem('do_id_' + target.code); target = id = null; loaded = false; resetDoc([]); applyLock(false);
+    sessionStorage.removeItem('do_id_' + target.code); target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'Class ended. Join again when your teacher says so.' : m.why;
-  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); }
+  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); }
 }
 
 

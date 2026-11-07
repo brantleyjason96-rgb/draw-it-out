@@ -54,19 +54,26 @@ const SK = {
   // a sticky note
   note(card, cls) { const d = document.createElement('div'); d.className = 'nc' + (cls ? ' ' + cls : ''); d.dataset.card = card.id; d.textContent = card.text; return d; },
   // Drag sticky notes (mouse or touch). Drop zones are any element with data-zone; onDrop(cardId, zone) runs on release.
+  // A press that barely moves is a tap, not a drag: nothing happens here and the page's own click handler gets it.
   drag(root, onDrop) {
     root.addEventListener('pointerdown', e => {
       const el = e.target.closest('.nc[data-card]');
       if (!el || !root.contains(el) || e.button > 0) return;
       e.preventDefault();
-      const r = el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
-      const g = el.cloneNode(true); g.classList.add('ghost'); g.style.cssText = 'width:' + r.width + 'px;left:' + r.left + 'px;top:' + r.top + 'px'; document.body.append(g);
-      el.classList.add('drag-src');
-      let last = null;
-      const zoneAt = (x, y) => { g.hidden = true; const t = document.elementFromPoint(x, y); g.hidden = false; return t && t.closest('[data-zone]'); };
-      const mv = ev => { g.style.left = ev.clientX - dx + 'px'; g.style.top = ev.clientY - dy + 'px'; const z = zoneAt(ev.clientX, ev.clientY); if (z !== last) { if (last) last.classList.remove('over'); if (z) z.classList.add('over'); last = z; } };
+      const r = el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, x0 = e.clientX, y0 = e.clientY;
+      let g = null, last = null;
+      const zoneAt = (x, y) => { if (g) g.hidden = true; const t = document.elementFromPoint(x, y); if (g) g.hidden = false; return t && t.closest('[data-zone]'); };
+      const mv = ev => {
+        if (!g) {
+          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
+          g = el.cloneNode(true); g.classList.add('ghost'); g.style.cssText = 'width:' + r.width + 'px;left:' + r.left + 'px;top:' + r.top + 'px'; document.body.append(g); el.classList.add('drag-src');
+        }
+        g.style.left = ev.clientX - dx + 'px'; g.style.top = ev.clientY - dy + 'px';
+        const z = zoneAt(ev.clientX, ev.clientY); if (z !== last) { if (last) last.classList.remove('over'); if (z) z.classList.add('over'); last = z; }
+      };
       const up = ev => {
         document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        if (!g) return;
         const z = zoneAt(ev.clientX, ev.clientY); if (last) last.classList.remove('over');
         g.remove(); el.classList.remove('drag-src');
         if (z && ev.type !== 'pointercancel' && root.contains(z)) onDrop(+el.dataset.card, z.dataset.zone);
