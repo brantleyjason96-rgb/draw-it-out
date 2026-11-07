@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/tstyle.css">
+<link rel="stylesheet" href="/sortkit.css">
 <style>
 body{min-height:100vh;display:flex;flex-direction:column}
 .wrap{flex:1;display:grid;grid-template-columns:330px 440px minmax(0,1fr);min-height:0}
@@ -34,6 +35,27 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .dev canvas{display:block;width:100%;height:auto;border:0;border-radius:0}
 .dev .dock{height:62px;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px}
 .dev .dock i{width:30px;height:30px;border-radius:50%}
+.prev.sort{align-items:stretch;justify-content:flex-start;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
+.srow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.srow .inp{flex:1;min-width:0}
+.ichip{display:inline-flex;align-items:center;font-size:14px;font-weight:600;padding:2px 2px 2px 12px;border-radius:99px;background:var(--pri-l);border:1px solid #BBD7F5;color:var(--pri-d)}
+.ichip button{border:0;background:none;color:inherit;font-size:14px;min-width:32px;min-height:32px}
+.sec{display:flex;flex-direction:column;gap:8px}
+.zone{background:#fff;border:2px dashed #B8C4CF;border-radius:14px;padding:10px;min-height:150px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:background .1s,border-color .1s}
+.zone.over{background:var(--pri-l);border-color:var(--pri)}
+.zone h3{font-size:18px;display:flex;justify-content:space-between;gap:8px}
+.zone h3 span{font-family:var(--body);font-weight:600;color:var(--mut);font-size:15px}
+.tray{min-height:0;background:var(--amber);border-color:var(--amber-b);margin-bottom:12px}
+.board{display:grid;gap:12px;align-items:start}
+.slanes{display:grid;gap:10px;padding:14px;background:#E5E7EB}
+.slane{background:#fff;border:2px dashed #9ca3af;border-radius:12px;min-height:110px;padding:8px}
+.slane h3{font-family:system-ui,sans-serif;font-size:16px;text-align:center}
+.spile{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+.spile .nc{width:calc(33.3% - 6px);min-width:120px;font-size:14px}
+#sstu .dock{justify-content:space-between;font-weight:600;font-size:15px}
+#sstu .dock span+span{color:var(--mut);font-weight:500}
+.issue{font-size:14px;color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:10px;padding:8px 12px}
+.okmsg{font-size:14px;color:#0A5A36;background:#E6F4EC;border-radius:10px;padding:8px 12px;font-weight:600}
 @media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
 </style>
 </head>
@@ -65,6 +87,10 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </div>
   <div id="ebody" style="display:flex;flex-direction:column;gap:14px">
    <div>
+    <div style="font-weight:700;margin-bottom:8px">Question type</div>
+    <div class="seg" id="kindseg" role="group" aria-label="Question type"><button data-k="draw">Draw</button><button data-k="sort">Sort cards into lanes</button></div>
+   </div>
+   <div>
     <div style="font-weight:700;margin-bottom:8px">Question</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
      <button class="b sq fmt" data-cmd="bold" aria-label="Bold"><b>B</b></button>
@@ -73,7 +99,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
     </div>
     <div id="qin" contenteditable="true" role="textbox" aria-label="Question" data-ph="Type the question students should answer…"></div>
    </div>
-   <div>
+   <div id="drawopts">
     <div style="font-weight:700;margin-bottom:8px">Page background</div>
     <div class="bgs" id="bgs"></div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
@@ -82,6 +108,13 @@ body{min-height:100vh;display:flex;flex-direction:column}
      <input type="file" id="file" accept="image/*" hidden>
      <span class="mut" style="font-size:14px;flex:1;min-width:140px">Or paste a screenshot with Ctrl+V.</span>
     </div>
+   </div>
+   <div id="sortopts" class="sec" hidden style="gap:14px">
+    <div class="sec"><div style="font-weight:700">Lanes <span class="mut" style="font-weight:400;font-size:14px">the boxes students drop cards into</span></div><div id="slanes"></div></div>
+    <div class="sec"><div style="font-weight:700">Cards <span class="mut" style="font-weight:400;font-size:14px">the sticky notes</span></div><div id="scards"></div></div>
+    <div class="sec"><div style="font-weight:700">Ideas <span class="mut" style="font-weight:400;font-size:14px">tag cards so results show what to reteach</span></div><div id="sideas" class="sec"></div></div>
+    <div class="sec"><div style="font-weight:700">Options</div><div id="sopts" class="sec"></div></div>
+    <div id="sissues" class="sec"></div>
    </div>
    <div style="margin-top:6px;display:flex;flex-direction:column;gap:10px">
     <button class="b pri big" id="save">Save question</button>
@@ -94,19 +127,26 @@ body{min-height:100vh;display:flex;flex-direction:column}
   <div id="eempty" class="mut" hidden style="font-size:17px">Pick a question on the left, or add a new one.</div>
  </section>
 
- <section class="col prev">
-  <div class="lbl" style="align-self:stretch">How it looks on a student's screen</div>
-  <div class="dev">
+ <section class="col prev" id="prevcol">
+  <div class="lbl" style="align-self:stretch" id="prevlbl">How it looks on a student's screen</div>
+  <div id="sortprev" hidden style="align-self:stretch;display:flex;flex-direction:column;gap:12px">
+   <div class="seg" id="stabs" role="group" aria-label="Right panel view" style="max-width:300px"><button data-v="key" class="on">Answer key</button><button data-v="stu">Student view</button></div>
+   <div id="skey"><div class="mut" style="font-size:15px;margin-bottom:10px">Drag each sticky note into the lane where it belongs. Students never see this.</div><div id="skeyb"></div></div>
+   <div id="sstu" hidden></div>
+  </div>
+  <div class="dev" id="drawprev">
    <div class="qb" id="pq"></div>
    <canvas id="pc" width="900" height="460"></canvas>
    <div class="dock"><i style="background:#111"></i><i style="background:#2563EB"></i><i style="background:#DC2626"></i><i style="background:#059669"></i><span class="mut" style="margin-left:auto;font-weight:600;font-size:14px">Pen · Eraser · Text · Shapes</span></div>
   </div>
-  <div class="mut" style="font-size:15px">Nothing is sent to students from this screen unless you press Send now.</div>
+  <div class="mut" style="font-size:15px" id="prevhint">Nothing is sent to students from this screen unless you press Send now.</div>
  </section>
 </div>
 <div id="toast" hidden></div>
 <script src="/common.js"></script>
+<script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
+<script src="/sortedit.js"></script>
 <script>
 const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
 let set = null, sel = -1, draft = null, dirty = false, pim = null;
@@ -128,7 +168,7 @@ loadSets().then(() => {
 const blank = () => ({ question: '', bg: 'graph', img: null });
 function pick(i, force) {
   if (!force && dirty && !confirm('You have unsaved changes to this question. Leave without saving?')) return;
-  sel = i; draft = i === -1 ? blank() : { ...set.questions[i] }; dirty = false; loadDraft(); renderAll();
+  sel = i; draft = i === -1 ? blank() : JSON.parse(JSON.stringify(set.questions[i])); dirty = false; loadDraft(); renderAll();
 }
 function loadDraft() { $('#qin').innerHTML = clean(draft.question); }
 function readDraft() { draft.question = clean($('#qin').innerHTML); }
@@ -142,7 +182,7 @@ function renderAll() {
     const row = el('div', { className: 'q' + (i === sel ? ' on' : '') }); row.tabIndex = 0; row.setAttribute('role', 'button');
     row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
-    const m = el('div', { className: 'meta' }, el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
+    const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
     const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ' + (cls || ''), textContent: l, title: label, onclick: ev => { ev.stopPropagation(); f(); } }); b.setAttribute('aria-label', label); return b; };
     m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
     row.append(t, m); box.append(row);
@@ -162,10 +202,40 @@ function renderAll() {
     bgs.append(b);
   });
   $('#rmimg').hidden = !draft.img;
+  applyKind();
   preview();
 }
+// Draw and Sort are two kinds of question; the editor shows the fields and preview that belong to the current one
+const isSort = () => draft.kind === 'sort';
+let sortIssues = [];
+function applyKind() {
+  const sort = isSort();
+  $$('#kindseg button').forEach(b => b.classList.toggle('on', (b.dataset.k === 'sort') === sort));
+  $('#drawopts').hidden = sort; $('#sortopts').hidden = !sort;
+  $('#drawprev').hidden = sort; $('#sortprev').hidden = !sort; $('#prevcol').classList.toggle('sort', sort);
+  $('#prevhint').hidden = sort; $('#prevlbl').textContent = sort ? 'Answer key and student view' : "How it looks on a student's screen";
+  if (sort) { if (!draft.sort) draft.sort = SE.blank(); SE.render(); } else refreshSave();
+}
+$$('#kindseg button').forEach(b => (b.onclick = () => {
+  const sort = b.dataset.k === 'sort'; if (sort === isSort()) return;
+  if (sort) { draft.kind = 'sort'; draft.bg = 'blank'; draft.img = null; if (!draft.sort) draft.sort = SE.blank(); } else draft.kind = undefined;
+  markDirty(); renderAll();
+}));
+SE.mount({
+  get: () => draft.sort, changed: markDirty, question: () => { readDraft(); return draft.question; },
+  issues: list => {
+    sortIssues = list; const box = $('#sissues'); box.innerHTML = '';
+    if (list.length) list.forEach(t => box.append(el('div', { className: 'issue', textContent: t })));
+    else box.append(el('div', { className: 'okmsg', textContent: 'Ready. ' + draft.sort.cards.length + ' cards, ' + draft.sort.lanes.length + ' lanes, all in the key.' }));
+    refreshSave();
+  },
+  el: { lanes: $('#slanes'), cards: $('#scards'), ideas: $('#sideas'), opts: $('#sopts'), key: $('#skeyb'), stu: $('#sstu'), tabs: $('#stabs') }
+});
+// Save and Send now wait until a sort question is complete
+function refreshSave() { const bad = isSort() && (sortIssues.length || !plain(draft.question || '').trim()); $('#save').disabled = $('#sendnow').disabled = !!bad; }
 function preview() {
   readDraft();
+  if (isSort()) { SE.preview(); refreshSave(); return; }
   $('#pq').innerHTML = draft.question || '<span style="opacity:.6">Your question appears here…</span>'; // cleaned: only b/i/u/br
   const cv = $('#pc'), x = cv.getContext('2d');
   const paint = () => paintBg(x, draft.bg, pim, cv.width, cv.height);
@@ -196,17 +266,22 @@ $('#file').onchange = e => { gotPhoto(e.target.files[0]); e.target.value = ''; }
 $('#rmimg').onclick = () => { draft.img = null; if (draft.bg === 'photo') draft.bg = 'graph'; markDirty(); renderAll(); };
 document.addEventListener('paste', e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(f => f.type.startsWith('image/')); if (f) gotPhoto(f); });
 
-const finished = () => { readDraft(); const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg; return { question: draft.question, bg, img: bg === 'photo' ? draft.img : null }; };
+const finished = () => {
+  readDraft();
+  if (isSort()) { const sort = SK.clean(draft.sort); return sort ? { question: draft.question, bg: 'blank', img: null, kind: 'sort', sort } : null; }
+  const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg; return { question: draft.question, bg, img: bg === 'photo' ? draft.img : null }; };
 $('#save').onclick = () => {
-  const q = finished(); if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  const q = finished(); if (!q) return alert('This sort question is not finished yet. See the notes under the lanes and cards.');
+  if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
   if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
-  persistSets(); draft = { ...q }; dirty = false; renderAll(); toast('Saved.');
+  persistSets(); draft = JSON.parse(JSON.stringify(q)); dirty = false; renderAll(); toast('Saved.');
 };
 $('#cancel').onclick = () => { if (dirty && !confirm('Discard your changes to this question?')) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
 $('#add').onclick = () => pick(-1);
 $('#sendnow').onclick = () => {
-  const q = finished(); if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
-  hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
+  const q = finished(); if (!q) return alert('This sort question is not finished yet. See the notes under the lanes and cards.');
+  if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
 };
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
