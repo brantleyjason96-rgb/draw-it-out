@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/tstyle.css">
+<link rel="stylesheet" href="/sortres.css">
 <style>
 html,body{height:100%}
 .app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
@@ -14,6 +15,9 @@ html,body{height:100%}
 .cpick{font-weight:700;font-size:17px}
 .stat{font-size:16px;font-weight:500;display:flex;align-items:center}
 .code{font-family:var(--disp);font-weight:800;letter-spacing:.18em;font-size:20px}
+
+#sres{flex:1;min-height:0;overflow:auto;padding-bottom:8px}
+.revd{background:var(--good);border-color:var(--good);color:#fff}
 
 /* question rail */
 #rail{width:340px;flex:none;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -127,13 +131,14 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
   <main>
    <div class="qbar">
     <div style="min-width:0"><div class="lbl">Students are answering</div><div class="q" id="curq"></div></div>
-    <button class="b good big" id="awbig" hidden></button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="b line2 big" id="revbtn" hidden></button><button class="b good big" id="awbig" hidden></button></div>
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div class="mut" id="sub" style="font-size:16px;font-weight:500"></div>
     <button class="tog blue" id="hide"><span id="hidet">Names hidden on projector</span><i></i></button>
    </div>
    <div class="grid" id="grid"></div>
+   <div id="sres" hidden></div>
   </main>
  </div>
 
@@ -216,6 +221,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
+<script src="/sortres.js"></script>
 <script>
 const sp = new URLSearchParams(location.search);
 // Pairing: the computer's "Use my phone as a remote" QR opens /class?code=ABCD#k=<secret>&n=<name>. The secret stays in the
@@ -234,7 +240,7 @@ const link = location.origin + '/?code=' + code;
 document.title = (DEMO ? 'Demo' : per().name) + ' – Draw It Out';
 $('#cpick').textContent = per().name + ' ▾'; $('#code').textContent = code; $('#pname').textContent = per().name; $('#pcode').textContent = code;
 
-const S = { q: { question: '', bg: 'graph', img: null }, simple: false, im: null, spot: null, hide: true, board: false, stu: new Map(), conn: false };
+const S = { q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, hide: true, board: false, stu: new Map(), conn: false };
 let TM = loadTM(code); TM.scores = TM.scores || {};
 const save = () => saveTM(code, TM);
 const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: withScores ? TM.scores : undefined });
@@ -252,6 +258,11 @@ function adopt(m) {
   save();
 }
 const teamOf = id => TM.teams.find(t => t.id === id);
+const sortCtx = () => ({ q: S.q, sk: S.sk, spotId: S.spot, projSum: S.projSum, toast,
+  students: [...S.stu.values()].map(s => ({ id: s.id, name: disp(s), team: teamOf(s.team) || null, sort: s.sort || {}, done: !!s.done, aw: !!s.aw })),
+  award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide }),
+  reopen: s => ws.send({ t: 'reopen', id: s.id }), setProjSum: on => ws.send({ t: 'sres', on }) });
+$('#revbtn').onclick = () => ws.send({ t: 'reveal', on: !S.revealed });
 const rosterOf = s => s.rid && TM.roster.find(e => e.rid === s.rid);
 // the teacher's card shows the real name if the class list has it; the server only ever knew initials
 const disp = s => { const e = rosterOf(s); return e ? (e.first + (e.last ? ' ' + Array.from(e.last)[0] + '.' : '')) : s.name; };
@@ -277,7 +288,7 @@ function addStu(d) {
     c.querySelector('.ok').onclick = e => { e.stopPropagation(); award(s); };
     $('#grid').append(c); s.el = c; s.cv = c.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, dirty: true }); ui();
+  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, sort: d.sort || {}, done: !!d.done, dirty: true }); ui();
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
@@ -294,7 +305,7 @@ function onmsg(m) {
       }
       break;
     case 'state': {
-      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; setQ(m.q);
+      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; setQ(m.q);
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
@@ -314,7 +325,10 @@ function onmsg(m) {
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; } break;
-    case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; x.aw = false; x.dirty = true; }); ui(); break;
+    case 'q': setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.dirty = true; }); ui(); break;
+    case 'sort': if (s) { s.sort = m.p; s.done = m.done; SR.update(); ui(); } break;
+    case 'reveal': S.revealed = m.on; ui(); break;
+    case 'sres': S.projSum = m.on; SR.update(); break;
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; ui(); break;
   }
@@ -333,8 +347,11 @@ function ui() {
   if (S.conn) $('#cnt').textContent = n + (tot ? ' of ' + tot : '') + ' ha' + (n === 1 && !tot ? 's' : 've') + ' joined';
   $('#qtag').hidden = !S.simple;
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
-  const drawn = [...S.stu.values()].filter(s => s.objs && s.objs.length).length;
-  $('#sub').textContent = n ? drawn + ' of ' + n + ' have started · click a drawing to show it on the projector' : 'Waiting for students to join. Code ' + code + '.';
+  const isSort = S.q.kind === 'sort';
+  $('#grid').hidden = isSort; $('#sres').hidden = !isSort;
+  const rb = $('#revbtn'); rb.hidden = !isSort; rb.textContent = S.revealed ? '✓ Answers revealed (hide)' : 'Reveal answers to students'; rb.classList.toggle('revd', S.revealed);
+  const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
+  $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
   $('#hidet').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector'; $('#hide').classList.toggle('on', S.hide);
   $('#lbproj').classList.toggle('on', S.board);
   const gridEmpty = $('#grid .empty');
@@ -354,7 +371,7 @@ function ui() {
   });
   const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
   if (sp) { ab.textContent = sp.aw ? '✓ Point given (undo)' : '✓ Give ' + (teamNm(sp.team) || 'a team') + ' a point'; ab.onclick = () => award(sp); }
-  renderBar(); renderRailHead(); if (ph.matches) renderPhone();
+  renderBar(); renderRailHead(); if (ph.matches) renderPhone(); else if (isSort) SR.update();
 }
 function renderBar() {
   const box = $('#chips'); box.innerHTML = '';
@@ -369,7 +386,7 @@ function renderBar() {
 
 // ---- question rail ----
 let cur = +store.do_cur; const qs = () => activeSet().questions;
-const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null });
+const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
 function go(i) { if (i < 0 || i >= qs().length) return; cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
@@ -379,7 +396,7 @@ function renderSet() {
   const box = $('#qlist'); box.innerHTML = ''; const n = qs().length;
   qs().forEach((q, i) => {
     const row = el('div', { className: 'qi' + (i === cur ? ' on' : '') });
-    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
+    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1' }), ...(q.kind === 'sort' ? [el('span', { className: 'chip proj', textContent: 'Sort' })] : []));
     const mk = (l, f, label, cls) => { const b = el('button', { className: 'b ' + (cls || ''), textContent: l, onclick: f }); b.setAttribute('aria-label', label); return b; };
     const bs = el('div', { className: 'bs' }, mk('Send', () => go(i), 'Send question ' + (i + 1) + ' to students', 'line2'), mk('↑', () => mv(i, -1), 'Move up'), mk('↓', () => mv(i, 1), 'Move down'), mk('Edit', () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code), 'Edit question'), mk('✕', () => rm(i), 'Delete question', 'danger'));
     bs.firstChild.style.flex = '1'; row.append(t, bs); box.append(row);
@@ -473,6 +490,7 @@ function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return 
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
 $('#proj').onclick = $('#pproj').onclick = () => window.open('/projector?code=' + code, 'projector');
 $('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
+SR.mount($('#sres'), sortCtx);
 $('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
 function savePng() { // a contact sheet of everyone's work (initials only, as the server knows them)
   const list = [...S.stu.values()], cols = 4, w = 400, h = 280;
@@ -489,7 +507,8 @@ function savePng() { // a contact sheet of everyone's work (initials only, as th
 // ---- thumbnails: refresh at most every 150ms + 15ms per student, 3 per frame, longest-waiting first ----
 (function loop() {
   const now = performance.now(), gap = Math.min(1000, 150 + S.stu.size * 15);
-  if (!ph.matches) [...S.stu.values()].filter(s => s.dirty && now - s.t > gap).sort((a, b) => a.t - b.t).slice(0, 3)
+  if (S.q.kind === 'sort') { /* results are drawn by sortres.js */ }
+  else if (!ph.matches) [...S.stu.values()].filter(s => s.dirty && now - s.t > gap).sort((a, b) => a.t - b.t).slice(0, 3)
     .forEach(s => { s.dirty = false; s.t = now; paintBoard(s.cv, s.objs, S.q.bg, S.im, s.bw, s.bh); });
   else { const s = phoneList()[pi]; if (s && s.dirty && now - s.t > 120) { s.dirty = false; s.t = now; const cv = $('#pcv'); if (cv) paintBoard(cv, s.objs, S.q.bg, S.im, s.bw, s.bh); } }
   requestAnimationFrame(loop);
