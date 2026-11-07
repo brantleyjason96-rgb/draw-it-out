@@ -158,4 +158,106 @@ await test('host can move a class-list student to another team without replacing
   assert.equal(h.last('setup').roster.length, 3);
 });
 
+
+// ---- sort questions ----
+const SORT = {
+  t: 'q', kind: 'sort', question: 'Sort the rocks',
+  sort: {
+    lanes: [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }, { id: 'C', name: 'Metamorphic' }], shuffle: true, fb: 'reveal',
+    cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'Examples' }, { id: 2, text: 'Limestone', lane: 'B', idea: 'Examples' }, { id: 3, text: 'Marble', lane: 'C', idea: 'Examples' }, { id: 4, text: 'Has fossils', lane: 'B', idea: 'Clues' }]
+  }
+};
+const SH = 'SORT';
+const sh = client(); await sh.ready; sh.send({ t: 'host', code: SH, key: KEY, setup: { teams, roster: [] } }); await sh.wait('state');
+const proj = client(); await proj.ready; proj.send({ t: 'watch', code: SH }); await proj.wait('state');
+const sa = client(); await sa.ready; sa.send({ t: 'join', code: SH, name: 'Sam', bw: 800, bh: 500 }); const saJ = await sa.wait('joined');
+const sb = client(); await sb.ready; sb.send({ t: 'join', code: SH, name: 'Bea', bw: 800, bh: 500 }); const sbJ = await sb.wait('joined');
+
+await test('sort question: the answer key goes to the teacher only', async () => {
+  sh.clear(); proj.clear(); sa.clear();
+  sh.send(SORT); await sleep(100);
+  const hq = sh.last('q'); assert.equal(hq.q.kind, 'sort'); assert.equal(hq.sk.lane[1], 'A'); assert.equal(hq.sk.idea[4], 'Clues');
+  const sq = sa.last('q').q, pq = proj.last('q').q;
+  for (const q of [sq, pq]) {
+    assert.equal(q.kind, 'sort'); assert.equal(q.sort.cards.length, 4); assert.equal(q.sort.lanes.length, 3);
+    const txt = JSON.stringify(q); assert.ok(!('lane' in q.sort.cards[0]) && !txt.includes('Clues') && !txt.includes('"idea"'), 'no key in ' + txt);
+  }
+  assert.equal(sa.last('sk'), undefined); assert.equal(proj.last('sk'), undefined);
+  // a projector that connects later still never sees the key
+  const late = client(); await late.ready; late.send({ t: 'watch', code: SH }); const ls = await late.wait('state');
+  assert.equal(ls.sk, undefined); assert.ok(!JSON.stringify(ls).includes('Clues'));
+  const hs = client(); await hs.ready; hs.send({ t: 'host', code: SH, key: KEY }); assert.equal((await hs.wait('state')).sk.lane[2], 'B');
+});
+
+await test('sort question that is not complete is refused', async () => {
+  sh.clear(); const before = sh.last('q');
+  sh.send({ t: 'q', kind: 'sort', question: 'x', sort: { lanes: [{ id: 'A', name: 'Only one' }], cards: [{ id: 1, text: 'x', lane: 'A' }] } }); await sleep(80);
+  assert.match(sh.last('note').m, /not complete/); assert.equal(sh.last('q'), undefined); assert.equal(before, undefined);
+});
+
+await test('sort answers are cleaned: unknown cards and lanes are dropped', async () => {
+  sh.clear();
+  sa.send({ t: 'sort', p: { 1: 'A', 2: 'A', 3: 'Z', 99: 'A', 4: 'B', x: 'A' } }); await sleep(100);
+  const m = sh.last('sort'); assert.deepEqual(m.p, { 1: 'A', 2: 'A', 4: 'B' }); assert.equal(m.done, false);
+  assert.deepEqual(sa.last('sorted').p, { 1: 'A', 2: 'A', 4: 'B' });
+});
+
+await test('no feedback until the teacher reveals; done needs every card placed', async () => {
+  assert.equal(sa.last('fb'), undefined);
+  sa.send({ t: 'sort', p: { 1: 'A', 2: 'A', 4: 'B' }, done: true }); await sleep(80);
+  assert.equal(sh.last('sort').done, false, 'incomplete answer cannot be handed in');
+  sa.send({ t: 'sort', p: { 1: 'A', 2: 'A', 3: 'C', 4: 'B' }, done: true }); await sleep(80);
+  assert.equal(sh.last('sort').done, true);
+  sa.send({ t: 'sort', p: { 1: 'B', 2: 'B', 3: 'B', 4: 'B' } }); await sleep(80);
+  assert.deepEqual(sh.last('sort').p, { 1: 'A', 2: 'A', 3: 'C', 4: 'B' }, 'locked once handed in');
+});
+
+await test('reveal tells each student what was right and where wrong cards belong', async () => {
+  sh.send({ t: 'reveal', on: true }); await sleep(100);
+  const f = sa.last('fb'); assert.deepEqual(f.ok, { 1: true, 2: false, 3: true, 4: true }); assert.deepEqual(f.where, { 2: 'B' });
+  assert.equal(proj.last('reveal').on, true);
+  sh.send({ t: 'reveal', on: false }); await sleep(80); assert.equal(sa.last('fb').off, true);
+});
+
+await test('teacher can reopen a handed-in answer', async () => {
+  sh.send({ t: 'reopen', id: saJ.id }); await sleep(80);
+  assert.equal(sa.last('sorted').done, false);
+  sa.send({ t: 'sort', p: { 1: 'A', 2: 'B', 3: 'C', 4: 'B' } }); await sleep(80);
+  assert.equal(sh.last('sort').p[2], 'B');
+});
+
+await test('feedback "now" tells students right away, without the key', async () => {
+  const q = { ...SORT, sort: { ...SORT.sort, fb: 'now' } };
+  sh.send(q); await sleep(80); sb.clear();
+  sb.send({ t: 'sort', p: { 1: 'C', 2: 'B' } }); await sleep(80);
+  const f = sb.last('fb'); assert.deepEqual(f.ok, { 1: false, 2: true }); assert.deepEqual(f.where, {});
+  assert.equal(sa.last('q').q.sort.fb, 'now');
+});
+
+await test('a new question clears sort answers; a rejoin gets its answer back', async () => {
+  sb.send({ t: 'sort', p: { 1: 'A' } }); await sleep(60);
+  const again = client(); await again.ready; again.send({ t: 'join', code: SH, name: 'Bea', id: sbJ.id, bw: 800, bh: 500 });
+  const j = await again.wait('joined'); assert.deepEqual(j.sort, { 1: 'A' });
+  sh.send({ t: 'q', question: 'Draw it', bg: 'blank' }); await sleep(80);
+  assert.equal(sh.last('state'), undefined);
+  sb.send({ t: 'sort', p: { 1: 'A' } }); await sleep(60);
+  const st2 = client(); await st2.ready; st2.send({ t: 'host', code: SH, key: KEY }); const s2 = await st2.wait('state');
+  assert.equal(s2.sk, null); assert.deepEqual(s2.students.find(x => x.name === 'Bea').sort, {});
+});
+
+await test('class-wide summary for the projector has percentages, no names and no key', async () => {
+  sh.send(SORT); await sleep(80);
+  sa.send({ t: 'sort', p: { 1: 'A', 2: 'B', 3: 'C', 4: 'B' } }); sb.send({ t: 'sort', p: { 1: 'B', 2: 'B', 3: 'C', 4: 'A' } }); await sleep(100);
+  proj.clear(); sh.send({ t: 'sres', on: true }); await sleep(120);
+  const m = proj.last('sum'); assert.equal(m.n, 2);
+  assert.equal(m.cards.find(c => c.id === 1).pct, 50); assert.equal(m.cards.find(c => c.id === 2).pct, 100);
+  assert.deepEqual(m.ideas.map(i => [i.name, i.pct]).sort(), [['Clues', 50], ['Examples', 83]]);
+  assert.ok(!JSON.stringify(m).includes('Sam') && !JSON.stringify(m).includes('"lane"'));
+});
+
+await test('students cannot reveal, reopen or read results', async () => {
+  sh.clear(); sa.send({ t: 'reveal', on: true }); sa.send({ t: 'sres', on: false }); sa.send({ t: 'reopen', id: sbJ.id }); await sleep(80);
+  assert.equal(sh.last('reveal'), undefined); assert.equal(sh.last('sres'), undefined); assert.equal(sh.last('sort'), undefined);
+});
+
 console.log(pass + ' passed'); srv.kill();

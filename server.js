@@ -81,6 +81,57 @@ function cleanQ(q = {}) {
   if (bg === 'photo' && !img) bg = 'blank';
   return { question: cleanHtml(q.question), bg, img };
 }
+// ---- sort questions: cards the student drops into lanes ----
+// The answer key (which lane each card belongs in, and each card's idea tag) is kept in r.sk and is only ever sent to hosts.
+// Students and the projector get lanes and card text, nothing else.
+const MAX_LANES = 6, MAX_CARDS = 24;
+const cstr = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+function cleanSort(m) {
+  const s = m && m.sort; if (!s || typeof s !== 'object') return null;
+  const lanes = [], lid = new Set();
+  (Array.isArray(s.lanes) ? s.lanes : []).slice(0, MAX_LANES).forEach(l => {
+    const id = l && typeof l.id === 'string' && /^[A-Za-z0-9]{1,8}$/.test(l.id) && !lid.has(l.id) ? l.id : null, name = id && cstr(l.name, 24);
+    if (id && name) { lid.add(id); lanes.push({ id, name }); }
+  });
+  const cards = [], seen = new Set(), lane = {}, idea = {};
+  (Array.isArray(s.cards) ? s.cards : []).slice(0, MAX_CARDS).forEach(c => {
+    if (!c || !Number.isInteger(c.id) || c.id < 1 || c.id > 1e6 || seen.has(c.id)) return;
+    const text = cstr(c.text, 60); if (!text || !lid.has(c.lane)) return;
+    seen.add(c.id); cards.push({ id: c.id, text }); lane[c.id] = c.lane;
+    const i = cstr(c.idea, 30); if (i) idea[c.id] = i;
+  });
+  if (lanes.length < 2 || cards.length < 2) return null;
+  return { pub: { question: cleanHtml(m.question), bg: 'blank', img: null, kind: 'sort', sort: { lanes, cards, shuffle: s.shuffle !== false, fb: s.fb === 'now' ? 'now' : 'reveal' } }, key: { lane, idea } };
+}
+const sortOf = r => (r.q.kind === 'sort' ? r.q.sort : null);
+// a student's placements, rebuilt against the live question: { cardId: laneId }
+function cleanPlace(r, p) {
+  const sq = sortOf(r), out = {}; if (!sq || !p || typeof p !== 'object') return out;
+  sq.cards.forEach(c => { if (sq.lanes.some(l => l.id === p[c.id])) out[c.id] = p[c.id]; });
+  return out;
+}
+const placedAll = (r, s) => { const sq = sortOf(r); return !!sq && sq.cards.every(c => s.sort && s.sort[c.id]); };
+// right/wrong for a student: only when the question gives feedback right away, or the teacher pressed Reveal
+function fbOf(r, s) {
+  const sq = sortOf(r); if (!sq || !r.sk || !(r.revealed || sq.fb === 'now')) return null;
+  const ok = {}, where = {};
+  Object.keys(s.sort || {}).forEach(id => { ok[id] = s.sort[id] === r.sk.lane[id]; if (r.revealed && !ok[id]) where[id] = r.sk.lane[id]; });
+  return { t: 'fb', ok, where };
+}
+const sendFb = (r, s) => { const f = fbOf(r, s); if (f) tx(s.ws, f); };
+// class-wide numbers for the projector: % right per card and per idea (no names, no key)
+function sortSummary(r) {
+  const sq = sortOf(r); if (!sq || !r.sk) return null;
+  const list = [...r.students.values()].filter(s => s.sort && Object.keys(s.sort).length);
+  const cards = sq.cards.map(c => ({ id: c.id, text: c.text, pct: list.length ? Math.round(100 * list.filter(s => s.sort[c.id] === r.sk.lane[c.id]).length / list.length) : 0 }));
+  const by = {}; sq.cards.forEach(c => { const i = r.sk.idea[c.id]; if (i) (by[i] = by[i] || []).push(cards.find(x => x.id === c.id).pct); });
+  return { t: 'sum', n: list.length, cards, ideas: Object.entries(by).map(([name, a]) => ({ name, pct: Math.round(a.reduce((x, y) => x + y, 0) / a.length) })) };
+}
+let sumTimer = new Map();
+function pushSummary(r) { // at most twice a second, and only while the teacher has results on the projector
+  if (!r.sres || sumTimer.get(r)) return;
+  sumTimer.set(r, setTimeout(() => { sumTimer.delete(r); const o = sortSummary(r); if (o) toPublic(r, o); }, 500));
+}
 // ---- teams and roster ----
 // The roster only ever holds initials and a team. Real names stay in the teacher's browser and are never sent here.
 const MAX_TEAMS = 12, MAX_ROSTER = 100;
@@ -106,8 +157,8 @@ const cleanScores = (o, teams) => Object.fromEntries(teams.map(t => [t.id, o && 
 const live = s => !!(s && s.ws && s.ws.readyState === 1);
 const entryOf = (r, rid) => r.roster.find(e => e.rid === rid);
 const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw });
-const stateMsg = r => ({ t: 'state', q: r.q, simple: r.simple, spot: r.spot, hide: r.hide, board: r.board, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done });
+const stateMsg = (r, host) => ({ t: 'state', q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, hide: r.hide, board: r.board, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -138,6 +189,10 @@ function pushScores(r) {
   toWatchers(r, { t: 'setup', roster: pubRoster(r), metas: [...r.students.values()].map(s => ({ id: s.id, team: s.team || null, aw: !!s.aw })) });
 }
 const toWatchers = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w => w.readyState === 1 && w.send(str)); }; // stringify once, not once per watcher
+const toHosts = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w => w.isHost && w.readyState === 1 && w.send(str)); }; // the answer key goes here and nowhere else
+const toPublic = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w => !w.isHost && w.readyState === 1 && w.send(str)); };
+// the host copy of the room state carries the answer key; the projector's copy never does
+const broadcastState = r => r.watchers.forEach(w => w.readyState === 1 && w.send(JSON.stringify(stateMsg(r, w.isHost))));
 // a student can't edit while their work is on the projector
 const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.spot === s.id });
 
@@ -159,7 +214,7 @@ wss.on('connection', ws => {
         if (!goodCode(code) || !key) return tx(ws, { t: 'err', m: 'Bad code' });
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), simple: false, spot: null, hide: true, board: false, teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, hide: true, board: false, teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
           if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
@@ -168,8 +223,8 @@ wss.on('connection', ws => {
         if (!r) return tx(ws, { t: 'err', m: 'No class with that code yet' });
         role = 'watch';
       }
-      room = r; r.watchers.add(ws);
-      return tx(ws, stateMsg(r));
+      room = r; ws.isHost = role === 'host'; r.watchers.add(ws);
+      return tx(ws, stateMsg(r, ws.isHost));
     }
 
     if (m.t === 'status') { // the teacher's home page asks whether each class is live and how many students are in it
@@ -224,7 +279,7 @@ wss.on('connection', ws => {
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
       if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs, dm(s));
       s.ws = ws; me = s; room = r; role = 'student';
-      tx(ws, { t: 'joined', id: s.id, q: r.q, objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+      tx(ws, { t: 'joined', id: s.id, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
       toWatchers(r, { t: 'join', s: stuView(s) });
       return pushScores(r);
     }
@@ -234,7 +289,13 @@ wss.on('connection', ws => {
     if (role === 'student') {
       if (room.students.get(me.id) !== me) return; // removed by Clear class
       if (room.spot === me.id) return lockMsg(room, me);
-      if (m.t === 'set') { // add a new object or replace one with the same id
+      if (m.t === 'sort') { // a sort question: the student's whole answer is one small map, card id to lane id
+        if (!sortOf(room) || me.done) return;
+        me.sort = cleanPlace(room, m.p);
+        if (m.done === true && placedAll(room, me)) me.done = true;
+        toWatchers(room, { t: 'sort', id: me.id, p: me.sort, done: !!me.done });
+        tx(me.ws, { t: 'sorted', p: me.sort, done: !!me.done }); sendFb(room, me); pushSummary(room);
+      } else if (m.t === 'set') { // add a new object or replace one with the same id
         const o = cleanObj(m.o, dm(me)); if (!o) return;
         const i = me.objs.findIndex(x => x.id === o.id);
         if (i >= 0) me.objs[i] = o; else if (me.objs.length < MAX_OBJS) me.objs.push(o); else return;
@@ -246,9 +307,11 @@ wss.on('connection', ws => {
       else if (m.t === 'all') { me.objs = cleanList(m.objs, dm(me)); toWatchers(room, { t: 'all', id: me.id, objs: me.objs }); } // undo/redo/reorder
     } else if (role === 'host') {
       if (m.t === 'q') {
-        room.q = cleanQ(m);
-        room.qn++; room.students.forEach(s => { s.objs = []; s.aw = null; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
-        toWatchers(room, { t: 'q', q: room.q });
+        let nq, nk = null;
+        if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        room.q = nq; room.sk = nk; room.revealed = false;
+        room.qn++; room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
+        toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk });
         pushScores(room);
       } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
         room.simple = !!m.simple;
@@ -263,7 +326,7 @@ wss.on('connection', ws => {
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
         room.students.clear(); room.spot = null; room.roster.forEach(e => (e.sid = null));
-        toWatchers(room, stateMsg(room));
+        broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
         applySetup(room, m); pushScores(room);
       } else if (m.t === 'team') { // no class list loaded: put a nickname-joined student on a team (with a class list, the list decides)
@@ -285,6 +348,16 @@ wss.on('connection', ws => {
         }
       } else if (m.t === 'adj') { // manual +/- on a team
         if (room.teams.some(t => t.id === m.team) && [1, -1, 5, -5].includes(m.d)) { room.scores[m.team] = Math.min(9999, Math.max(0, room.scores[m.team] + m.d)); pushScores(room); }
+      } else if (m.t === 'reveal') { // show students which of their cards were right (and where the wrong ones belong)
+        if (!sortOf(room)) return;
+        room.revealed = !!m.on; toWatchers(room, { t: 'reveal', on: room.revealed });
+        room.students.forEach(s => { if (room.revealed) sendFb(room, s); else tx(s.ws, { t: 'fb', ok: {}, where: {}, off: true }); });
+      } else if (m.t === 'reopen') { // let one student change their sort again
+        const s = room.students.get(m.id); if (!s || !s.done) return;
+        s.done = false; tx(s.ws, { t: 'sorted', p: s.sort || {}, done: false }); toWatchers(room, { t: 'sort', id: s.id, p: s.sort || {}, done: false });
+      } else if (m.t === 'sres') { // class-wide sort results on the projector
+        room.sres = !!m.on; toWatchers(room, { t: 'sres', on: room.sres });
+        const o = room.sres && sortSummary(room); if (o) toPublic(room, o);
       } else if (m.t === 'resetscores') {
         room.scores = cleanScores({}, room.teams); room.students.forEach(s => (s.aw = null)); pushScores(room);
       } else if (m.t === 'board') { // projector shows the leaderboard when no one's work is up
