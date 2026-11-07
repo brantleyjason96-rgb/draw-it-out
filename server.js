@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MAX_STU = 60, MAX_ROOMS = +process.env.MAX_ROOMS || 200;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
-const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/projector': 'projector.html', '/start': 'landing.html' };
+const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/classic': 'classic.html', '/projector': 'projector.html', '/start': 'landing.html' };
 
 // ---- static files ----
 const server = http.createServer((req, res) => {
@@ -170,6 +170,11 @@ wss.on('connection', ws => {
       }
       room = r; r.watchers.add(ws);
       return tx(ws, stateMsg(r));
+    }
+
+    if (m.t === 'status') { // the teacher's home page asks whether each class is live and how many students are in it
+      const r = rooms.get(cleanCode(m.code));
+      return tx(ws, { t: 'status', code: cleanCode(m.code), live: !!r, here: r ? [...r.students.values()].filter(live).length : 0 });
     }
 
     if (m.t === 'peek') { // student asks which teams / initials are on offer; initials are only revealed one team at a time

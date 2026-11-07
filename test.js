@@ -143,4 +143,10 @@ await test('quick teams: no class list, peek offers teams, student picks a team 
   assert.equal(c.last('myteam').team, 'ta');
 });
 
+await test('status: live classes report how many students are connected', async () => {
+  const c = client(); await c.ready;
+  c.send({ t: 'status', code: CODE }); const a = await c.wait('status'); assert.equal(a.live, true); assert.ok(a.here >= 1);
+  c.clear(); c.send({ t: 'status', code: 'NOPE1' }); const b = await c.wait('status'); assert.deepEqual([b.live, b.here], [false, 0]);
+});
+
 console.log(pass + ' passed'); srv.kill();

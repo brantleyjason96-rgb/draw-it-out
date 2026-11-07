@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draw It Out – Edit questions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/tstyle.css">
+<style>
+body{min-height:100vh;display:flex;flex-direction:column}
+.wrap{flex:1;display:grid;grid-template-columns:330px 440px minmax(0,1fr);min-height:0}
+.col{padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.list{background:#fff;border-right:1px solid var(--line)}
+.edit{background:#fff;border-right:1px solid var(--line)}
+.q{border:2px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#fff;cursor:pointer;text-align:left;width:100%}
+.q.on{border-color:var(--pri);background:var(--pri-l)}
+.q .t{display:flex;gap:10px;align-items:flex-start}
+.q .n{flex:none;width:28px;height:28px;border-radius:50%;background:#E8EDF2;color:#394551;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.q.on .n{background:var(--pri);color:#fff}
+.q .x{font-size:15px;line-height:1.35;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.q .meta{display:flex;align-items:center;gap:6px}
+#qin{min-height:150px;border:2px solid var(--pri);border-radius:12px;padding:14px 16px;font-size:19px;line-height:1.4;background:#fff;overflow-wrap:anywhere}
+#qin:empty:before{content:attr(data-ph);color:var(--mut)}
+.bgs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bgs button{border:1px solid #D5DEE6;border-radius:12px;overflow:hidden;background:#fff;padding:0;display:flex;flex-direction:column;min-height:0}
+.bgs button.on{border:3px solid var(--pri)}
+.bgs .sw2{height:50px;background-color:#fff}
+.bgs .lb{height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.bgs button.on .lb{background:var(--pri-l);font-weight:700}
+.prev{align-items:center;justify-content:center}
+.dev{width:100%;max-width:900px;background:#fff;border:1px solid #D5DEE6;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(23,33,43,.14)}
+.dev .qb{background:#1E3A8A;color:#fff;padding:16px 22px;font-size:21px;line-height:1.35;min-height:62px}
+.dev canvas{display:block;width:100%;height:auto;border:0;border-radius:0}
+.dev .dock{height:62px;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px}
+.dev .dock i{width:30px;height:30px;border-radius:50%}
+@media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
+</style>
+</head>
+<body>
+<div class="tb">
+ <div class="grp">
+  <a class="b dk" id="back" href="/teacher" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg><span id="backt">Today</span></a>
+  <div style="font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sname"></div>
+ </div>
+ <div class="grp" style="position:relative">
+  <button class="b dk" id="share">Share link</button>
+  <button class="b dk" id="manage">Manage set ▾</button>
+ </div>
+</div>
+<div class="wrap">
+ <section class="col list">
+  <div>
+   <div class="lbl" id="cnt"></div>
+   <h2 style="font-size:24px;margin-top:2px">Questions</h2>
+  </div>
+  <div id="qlist" style="display:flex;flex-direction:column;gap:8px"></div>
+  <button class="b" id="add">+ Add question</button>
+ </section>
+
+ <section class="col edit">
+  <div>
+   <div class="lbl" id="elbl"></div>
+   <h2 style="font-size:28px;margin-top:2px" id="etitle"></h2>
+  </div>
+  <div id="ebody" style="display:flex;flex-direction:column;gap:14px">
+   <div>
+    <div style="font-weight:700;margin-bottom:8px">Question</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+     <button class="b sq fmt" data-cmd="bold" aria-label="Bold"><b>B</b></button>
+     <button class="b sq fmt" data-cmd="italic" aria-label="Italic"><i>I</i></button>
+     <button class="b sq fmt" data-cmd="underline" aria-label="Underline"><u>U</u></button>
+    </div>
+    <div id="qin" contenteditable="true" role="textbox" aria-label="Question" data-ph="Type the question students should answer…"></div>
+   </div>
+   <div>
+    <div style="font-weight:700;margin-bottom:8px">Page background</div>
+    <div class="bgs" id="bgs"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+     <button class="b" id="addimg">Add a photo</button>
+     <button class="b" id="rmimg" hidden>Remove photo</button>
+     <input type="file" id="file" accept="image/*" hidden>
+     <span class="mut" style="font-size:14px;flex:1;min-width:140px">Or paste a screenshot with Ctrl+V.</span>
+    </div>
+   </div>
+   <div style="margin-top:6px;display:flex;flex-direction:column;gap:10px">
+    <button class="b pri big" id="save">Save question</button>
+    <div style="display:flex;gap:10px">
+     <button class="b" id="cancel" style="flex:1">Cancel</button>
+     <button class="b" id="sendnow" style="flex:2" hidden title="Students see it now. It is not added to your set.">Send now, don't save</button>
+    </div>
+   </div>
+  </div>
+  <div id="eempty" class="mut" hidden style="font-size:17px">Pick a question on the left, or add a new one.</div>
+ </section>
+
+ <section class="col prev">
+  <div class="lbl" style="align-self:stretch">How it looks on a student's screen</div>
+  <div class="dev">
+   <div class="qb" id="pq"></div>
+   <canvas id="pc" width="900" height="460"></canvas>
+   <div class="dock"><i style="background:#111"></i><i style="background:#2563EB"></i><i style="background:#DC2626"></i><i style="background:#059669"></i><span class="mut" style="margin-left:auto;font-weight:600;font-size:14px">Pen · Eraser · Text · Shapes</span></div>
+  </div>
+  <div class="mut" style="font-size:15px">Nothing is sent to students from this screen unless you press Send now.</div>
+ </section>
+</div>
+<div id="toast" hidden></div>
+<script src="/common.js"></script>
+<script src="/tcommon.js"></script>
+<script>
+const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
+let set = null, sel = -1, draft = null, dirty = false, pim = null;
+const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo']];
+const backUrl = classCode ? '/class?code=' + classCode : '/teacher';
+$('#back').href = backUrl; $('#backt').textContent = classCode ? ((periodOf(classCode) || {}).name || 'Class') : 'Today';
+$('#sendnow').hidden = !classCode;
+
+loadSets().then(() => {
+  set = setById(sp.get('id'));
+  if (!set) return (location.href = backUrl);
+  store.do_active = set.id;
+  const q = sp.get('q');
+  if (q === 'new' || !set.questions.length) pick(-1, true);
+  else pick(q !== null && +q >= 0 && +q < set.questions.length ? +q : 0, true);
+  renderAll();
+});
+
+const blank = () => ({ question: '', bg: 'graph', img: null });
+function pick(i, force) {
+  if (!force && dirty && !confirm('You have unsaved changes to this question. Leave without saving?')) return;
+  sel = i; draft = i === -1 ? blank() : { ...set.questions[i] }; dirty = false; loadDraft(); renderAll();
+}
+function loadDraft() { $('#qin').innerHTML = clean(draft.question); }
+function readDraft() { draft.question = clean($('#qin').innerHTML); }
+const markDirty = () => { dirty = true; };
+
+function renderAll() {
+  $('#sname').textContent = set.name;
+  const n = set.questions.length; $('#cnt').textContent = set.name + ' · ' + n + ' question' + (n === 1 ? '' : 's');
+  const box = $('#qlist'); box.innerHTML = '';
+  set.questions.forEach((q, i) => {
+    const row = el('div', { className: 'q' + (i === sel ? ' on' : '') }); row.tabIndex = 0; row.setAttribute('role', 'button');
+    row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
+    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
+    const m = el('div', { className: 'meta' }, el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
+    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ' + (cls || ''), textContent: l, title: label, onclick: ev => { ev.stopPropagation(); f(); } }); b.setAttribute('aria-label', label); return b; };
+    m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
+    row.append(t, m); box.append(row);
+  });
+  $('#etitle').textContent = sel === -1 ? 'New question' : 'Edit question ' + (sel + 1);
+  $('#elbl').textContent = set.name;
+  // background chooser
+  const bgs = $('#bgs'); bgs.innerHTML = '';
+  BG.forEach(([k, label]) => {
+    const b = el('button', { className: draft.bg === k ? 'on' : '' }); b.type = 'button';
+    const sw = el('div', { className: 'sw2' });
+    if (k === 'graph') { sw.style.backgroundImage = 'linear-gradient(#D9E7F4 1px,transparent 1px),linear-gradient(90deg,#D9E7F4 1px,transparent 1px)'; sw.style.backgroundSize = '12px 12px'; }
+    if (k === 'lined') { sw.style.backgroundImage = 'linear-gradient(#D9E7F4 1px,transparent 1px)'; sw.style.backgroundSize = '100% 16px'; }
+    if (k === 'photo') sw.style.backgroundImage = draft.img ? 'url(' + draft.img + ')' : 'linear-gradient(135deg,#C9D6E2,#E9EEF3)', sw.style.backgroundSize = 'cover';
+    b.append(sw, el('div', { className: 'lb', textContent: label }));
+    b.onclick = () => { if (k === 'photo' && !draft.img) return $('#file').click(); draft.bg = k; markDirty(); renderAll(); };
+    bgs.append(b);
+  });
+  $('#rmimg').hidden = !draft.img;
+  preview();
+}
+function preview() {
+  readDraft();
+  $('#pq').innerHTML = draft.question || '<span style="opacity:.6">Your question appears here…</span>'; // cleaned: only b/i/u/br
+  const cv = $('#pc'), x = cv.getContext('2d');
+  const paint = () => paintBg(x, draft.bg, pim, cv.width, cv.height);
+  if (draft.bg === 'photo' && draft.img) { if (!pim || pim.dataset.src !== draft.img) { pim = loadImg(draft.img, paint); pim.dataset.src = draft.img; } }
+  paint();
+}
+function move(i, d) {
+  const j = i + d, a = set.questions; if (j < 0 || j >= a.length) return;
+  if (dirty && !confirm('You have unsaved changes to this question. Move anyway? Unsaved changes will be lost.')) return;
+  [a[i], a[j]] = [a[j], a[i]]; persistSets(); pick(sel === i ? j : sel === j ? i : sel, true);
+}
+function remove(i) {
+  if (!confirm('Delete question ' + (i + 1) + '?')) return;
+  set.questions.splice(i, 1); persistSets();
+  if (!set.questions.length) pick(-1, true); else pick(Math.min(i, set.questions.length - 1), true);
+}
+
+// editing
+$('#qin').addEventListener('input', () => { markDirty(); preview(); });
+$('#qin').addEventListener('paste', e => { // text pastes as plain text; images are handled by the page-level paste below
+  if ([...e.clipboardData.files].some(f => f.type.startsWith('image/'))) return;
+  e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+});
+$$('.fmt').forEach(b => { b.onmousedown = e => e.preventDefault(); b.onclick = () => { document.execCommand(b.dataset.cmd); markDirty(); preview(); }; });
+async function gotPhoto(file) { const d = await takePhoto(file); if (d) { draft.img = d; draft.bg = 'photo'; markDirty(); renderAll(); } }
+$('#addimg').onclick = () => $('#file').click();
+$('#file').onchange = e => { gotPhoto(e.target.files[0]); e.target.value = ''; };
+$('#rmimg').onclick = () => { draft.img = null; if (draft.bg === 'photo') draft.bg = 'graph'; markDirty(); renderAll(); };
+document.addEventListener('paste', e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(f => f.type.startsWith('image/')); if (f) gotPhoto(f); });
+
+const finished = () => { readDraft(); const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg; return { question: draft.question, bg, img: bg === 'photo' ? draft.img : null }; };
+$('#save').onclick = () => {
+  const q = finished(); if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
+  persistSets(); draft = { ...q }; dirty = false; renderAll(); toast('Saved.');
+};
+$('#cancel').onclick = () => { if (dirty && !confirm('Discard your changes to this question?')) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
+$('#add').onclick = () => pick(-1);
+$('#sendnow').onclick = () => {
+  const q = finished(); if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
+};
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// share + manage
+$('#share').onclick = () => copyShareLink(set);
+let menu = null;
+const closeMenu = () => { if (menu) { menu.remove(); menu = null; } };
+document.addEventListener('click', e => { if (menu && !menu.contains(e.target) && e.target !== $('#manage')) closeMenu(); });
+$('#manage').onclick = e => {
+  e.stopPropagation(); if (menu) return closeMenu();
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
+  const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
+  add('Rename this set', () => { const v = (prompt('Rename this set:', set.name) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
+  add('Export this set as a file', () => exportSets([set]));
+  add('Delete this set', () => {
+    if (!confirm('Delete the set "' + set.name + '" and all ' + set.questions.length + ' of its questions? This cannot be undone.')) return;
+    dirty = false; sets = sets.filter(s => s !== set); if (!sets.length) sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }];
+    persistSets().then(() => (location.href = backUrl));
+  }, 'danger');
+  $('#manage').parentNode.append(menu);
+};
+</script>
+</body>
+</html>

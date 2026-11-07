@@ -97,13 +97,13 @@ function loadImg(src, cb) {
 
 // WebSocket with automatic reconnect. onopen runs on every (re)connect so pages can re-handshake.
 function connect(onmsg, onopen, onstatus) {
-  let ws, delay = 500;
-  const api = { send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }, open() { return !!ws && ws.readyState === 1; } };
+  let ws, delay = 500, closed = false;
+  const api = { send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }, open() { return !!ws && ws.readyState === 1; }, close() { closed = true; if (ws) ws.close(); } };
   (function open() {
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
     ws.onopen = () => { delay = 500; onstatus && onstatus(true); onopen(); };
     ws.onmessage = e => { try { onmsg(JSON.parse(e.data)); } catch (err) { console.error(err); } };
-    ws.onclose = () => { onstatus && onstatus(false); setTimeout(open, (delay = Math.min(delay * 2, 8000))); };
+    ws.onclose = () => { onstatus && onstatus(false); if (!closed) setTimeout(open, (delay = Math.min(delay * 2, 8000))); };
   })();
   return api;
 }

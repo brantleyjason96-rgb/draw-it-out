@@ -3,8 +3,13 @@
 Teachers ask a question, every student draws the answer live, the teacher sees all drawings, puts one on the projector, and awards team points.
 
 - Students: `/` (join with a class code)
-- Teachers: `/teacher` (landing page at `/start`, demo at `/teacher?demo=1`)
-- Projector: opened from the teacher page
+- Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
+  - `/class?code=…` is the teaching screen (also a phone layout under 700px wide)
+  - `/sets?id=…` is the question editor (its own screen)
+  - `/class?demo=1` is the demo (eight practice students; nothing is saved)
+  - `/classic` is the previous single-page teacher screen, kept as a fallback
+- Landing page: `/start`
+- Projector: opened from the teaching screen
 
 ## Run locally
 ```
