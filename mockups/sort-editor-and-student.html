@@ -1,247 +1,263 @@
 <title>Sort Editor and Student Screen</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: tab 1 copies public/teacher.html (top bar, 400px sidebar with editor, main column). Tab 2 copies the student play screen in public/index.html (floating navy question box, white floating panels, gray stage). Tokens come from public/style.css. */
-:root{--ink:#1f2937;--mut:#6b7280;--line:#e5e7eb;--pri:#2563eb;--bg:#f3f4f6;color-scheme:light}
+/* Layout: tab 1 is the set editor (public/sets.html): top bar, question list, editor, and a right column. Tab 2 is the student play screen (public/index.html, public/style.css). Teacher tokens come from public/tstyle.css. */
+:root{--ink:#17212B;--mut:#5B6772;--line:#E1E6EB;--line2:#CBD3DA;--bg:#F3F5F7;--pri:#0B6BCB;--pri-d:#0B5CAD;--pri-l:#F1F7FE;--good:#0E7C4A;--bad:#B3261E;--dark:#17212B;--dark2:#2A3846;--sky:#2F8BEA;--amber:#FFF4DC;--amber-b:#F0D79A;--amber-d:#5E4300;
+--disp:'Bricolage Grotesque','Figtree',system-ui,sans-serif;--body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;color-scheme:light}
 *{box-sizing:border-box}
-html{background:#f3f4f6}
-body{margin:0;font:16px/1.4 system-ui,sans-serif;color:var(--ink);background:var(--bg)}
-button,select,input,textarea{font:inherit}
-main{padding:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1600px;margin:auto}
-.btn{background:var(--pri);color:#fff;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;min-height:44px}
-.btn.alt{background:#fff;color:var(--ink);border:1px solid var(--line)}
-.btn.on{background:var(--ink);color:#fff}
-.btn:disabled{opacity:.4;cursor:default}
-.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.qbar{background:#1e3a8a;color:#fff;border-radius:14px;padding:14px 18px;font-size:22px;margin-bottom:12px;overflow-wrap:anywhere}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px}
-.dot.ok{background:#059669}
+html,body{margin:0}
+html{background:#F3F5F7}
+body{font:16px/1.4 var(--body);color:var(--ink);background:var(--bg)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
 [hidden]{display:none!important}
-:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
-.code-pill{background:#111827;color:#fff;border-radius:12px;padding:6px 16px;font-size:28px;letter-spacing:.2em;font-weight:700}
-.layout{display:grid;grid-template-columns:400px minmax(0,1fr);gap:12px;align-items:start;margin-top:12px}
-#side{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;padding:12px}
-#cur{font-size:18px;padding:10px 16px;margin-bottom:12px}
-#cur small{opacity:.75;display:block;font-size:13px}
-details>summary{cursor:pointer;color:var(--mut)}
-.mut{color:var(--mut);font-size:14px}
-.sm{min-height:36px!important;padding:4px 12px!important}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
-.seg button{border:0;background:#fff;color:var(--ink);padding:8px 12px;min-height:44px;cursor:pointer}
-.seg button.on{background:var(--ink);color:#fff}
-.seg button:disabled{color:#9ca3af;cursor:default}
-@media(max-width:900px){.layout{grid-template-columns:1fr}#side{position:static;max-height:none}}
+h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.15}
+.mut{color:var(--mut)}
+.lbl{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+:focus-visible{outline:3px solid #7DB8F5;outline-offset:2px}
+.tb{height:68px;background:var(--dark);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px}
+.tb .grp{display:flex;align-items:center;gap:12px;min-width:0}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--ink);font-weight:600;font-size:15px;white-space:nowrap}
+.b:disabled{opacity:.45;cursor:not-allowed}
+.b.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.b.dk{background:transparent;border-color:#3A4856;color:#fff}
+.b.big{min-height:56px;font-size:18px;font-weight:700;border-radius:12px;padding:0 22px}
+.b.sq{min-width:44px;padding:0 10px}
+.b.danger{color:var(--bad)}
+.b.sm{min-height:36px;min-width:36px;padding:0 10px;font-size:14px}
+.tog{display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;width:100%;justify-content:space-between;text-align:left}
+.tog i{position:relative;flex:none;width:44px;height:26px;border-radius:99px;background:#C5CED7;transition:background .15s}
+.tog i:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.tog.on i{background:var(--good)}.tog.on i:after{left:21px}
+.chip{font-size:13px;font-weight:700;border-radius:99px;padding:3px 10px;white-space:nowrap;background:#E8EDF2;color:#394551}
+.chip.kind{background:#DCEBFB;color:var(--pri-d)}
+.inp{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:#fff;min-width:0}
+select.inp{padding-right:8px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:#fff;font-weight:600}
+.seg button.on{background:var(--pri-l);color:var(--pri-d);font-weight:700;box-shadow:inset 0 0 0 2px var(--pri)}
+.seg button:disabled{color:#9AA5B0;cursor:not-allowed}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:12px 20px;border-radius:12px;z-index:1200;max-width:90vw;text-align:center}
 
 /* page tabs (mockup only) */
-.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-.tabs .mut{margin-left:auto}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px max(16px,env(safe-area-inset-left,0px));background:#fff;border-bottom:1px solid var(--line)}
+.tabs .mut{margin-left:auto;font-size:14px}
 
-/* sidebar list, same as teacher.html */
-#list{padding-left:22px;margin:10px 0 0}
-#list li{margin:6px 0;padding:8px;border:2px solid var(--line);border-radius:10px}
-#list li.cur{border-color:var(--pri)}
-#list .tx{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-#list .top{display:flex;gap:8px;align-items:center}
-#list .row{margin-top:6px}
-.kind{font-size:12px;padding:2px 8px;border-radius:99px;background:#dbeafe;color:#1e40af;white-space:nowrap}
-
-/* editor */
-#editor{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
-.lbl{font-size:13px;font-weight:600;color:var(--mut);margin:14px 0 6px;display:flex;justify-content:space-between;align-items:baseline}
-.lbl span{font-weight:400}
-#qin{min-height:64px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px;overflow-wrap:anywhere}
-.fld{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:0}
+/* set editor, same grid as sets.html */
+.wrap{display:grid;grid-template-columns:330px 440px minmax(0,1fr);min-height:calc(100vh - 150px)}
+.col{padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.list,.edit{background:#fff;border-right:1px solid var(--line)}
+.q{border:2px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#fff;text-align:left;width:100%;cursor:pointer}
+.q.on{border-color:var(--pri);background:var(--pri-l)}
+.q .t{display:flex;gap:10px;align-items:flex-start}
+.q .n{flex:none;width:28px;height:28px;border-radius:50%;background:#E8EDF2;color:#394551;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.q.on .n{background:var(--pri);color:#fff}
+.q .x{font-size:15px;line-height:1.35;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.q .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#qin{min-height:110px;border:2px solid var(--pri);border-radius:12px;padding:14px 16px;font-size:19px;line-height:1.4;background:#fff;overflow-wrap:anywhere}
+.fl{font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fl span{font-weight:400;font-size:14px;color:var(--mut)}
 .item{display:flex;gap:6px;align-items:center;margin-bottom:6px}
-.item .fld{flex:1}
-.item select.fld{flex:none;width:118px;font-size:14px}
-.idea-chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:2px 4px 2px 10px;border-radius:99px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a}
-.idea-chip button{border:0;background:none;cursor:pointer;color:inherit;font-size:14px;padding:2px 6px}
-.chk{display:flex;gap:8px;align-items:center;font-size:15px;margin:8px 0}
-.chk input{width:18px;height:18px}
-.warn{font-size:13px;color:#92400e;background:#fef3c7;border-radius:8px;padding:6px 10px;margin-top:8px}
-.okmsg{font-size:13px;color:#065f46;background:#d1fae5;border-radius:8px;padding:6px 10px;margin-top:8px}
+.item select.inp{flex:none;width:128px;font-size:14px}
+.idea-chip{display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;padding:2px 2px 2px 12px;border-radius:99px;background:var(--pri-l);border:1px solid #BBD7F5;color:var(--pri-d)}
+.idea-chip button{border:0;background:none;color:inherit;font-size:14px;min-width:32px;min-height:32px}
+.warn{font-size:14px;color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:10px;padding:8px 12px}
+.okmsg{font-size:14px;color:#0A5A36;background:#E6F4EC;border-radius:10px;padding:8px 12px;font-weight:600}
+.rcol{background:var(--bg);position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.rhead .seg{width:280px}
 
-/* draggable sticky notes (shared by both tabs) */
-.nc{background:#fef08a;color:#422006;border-radius:6px;padding:8px 10px;box-shadow:0 1px 3px #0003;font-size:15px;line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:anywhere}
-.nc small{display:block;font-size:11px;opacity:.7;margin-top:2px}
-.nc.ghost{position:fixed;z-index:1000;pointer-events:none;transform:rotate(-2deg);box-shadow:0 8px 20px #0005;opacity:.95}
+/* sticky notes */
+.nc{background:#FDE68A;color:#422006;border-radius:6px;padding:8px 10px;box-shadow:0 1px 3px #0003;font-size:15px;line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:anywhere}
+.nc small{display:block;font-size:11px;opacity:.75;margin-top:2px}
+.nc.still{cursor:default}
+.nc.ghost{position:fixed;z-index:1000;pointer-events:none;transform:rotate(-2deg);box-shadow:0 8px 20px #0005;opacity:.95;margin:0}
 .nc.drag-src{opacity:.3}
 .nc.right{outline:3px solid #059669}.nc.wrong{outline:3px solid #dc2626}
-
-/* answer key board (teacher main column) */
-.board{display:grid;gap:12px;align-items:start}
-.zone{background:#f9fafb;border:2px dashed #cbd5e1;border-radius:14px;padding:10px;min-height:140px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:background .1s,border-color .1s}
-.zone.over{background:#eff6ff;border-color:var(--pri)}
-.zone h3{margin:0;font-size:16px;display:flex;justify-content:space-between;gap:8px}
-.zone h3 span{font-weight:400;color:var(--mut);font-size:14px}
-.tray{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px;background:#fffbeb;border-color:#fcd34d}
+.zone{background:#fff;border:2px dashed #B8C4CF;border-radius:14px;padding:10px;min-height:150px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:background .1s,border-color .1s}
+.zone.over{background:var(--pri-l);border-color:var(--pri)}
+.zone h3{font-size:18px;display:flex;justify-content:space-between;gap:8px}
+.zone h3 span{font-family:var(--body);font-weight:600;color:var(--mut);font-size:15px}
+.tray{min-height:0;flex-direction:row;flex-wrap:wrap;align-items:flex-start;background:var(--amber);border-color:var(--amber-b)}
 .tray h3{flex-basis:100%}
-.tray .nc{width:200px}
-.head2{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline;margin-bottom:10px}
-h2{font-size:18px;margin:0}
+.tray .nc{width:190px}
+.board{display:grid;gap:12px;align-items:start}
+.dev{background:#fff;border:1px solid #D5DEE6;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(23,33,43,.14)}
+.dev .qb{background:#1E3A8A;color:#fff;padding:16px 22px;font-size:21px;line-height:1.35}
+.dev .lanes{display:grid;gap:10px;padding:14px;background:#E5E7EB}
+.dev .lane{background:#fff;border:2px dashed #9ca3af;border-radius:12px;min-height:130px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.dev .lane h3{font-family:system-ui,sans-serif;font-size:16px;text-align:center}
+.dev .pile{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:#fff}
+.dev .pile .nc{width:calc(33.3% - 6px);min-width:130px;font-size:14px}
+.dev .dock{height:56px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-weight:600;font-size:15px}
+@media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
 
-/* student screen frame (the real one is full-window and fixed; this fakes a device) */
-.frame{position:relative;background:#d1d5db;border:1px solid #9ca3af;border-radius:14px;overflow:hidden;height:660px;margin:0 auto;max-width:1180px;transition:max-width .2s}
-.frame.phone{max-width:390px;height:720px}
-.frame .qbox{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:#1e3a8a;color:#fff;border-radius:14px;padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 14px #0004}
-.frame .qbox span{flex:1;padding-top:2px}
+/* ---- student screen: styles from public/style.css and public/index.html ---- */
+.sw{font-family:system-ui,sans-serif;--sink:#1f2937;--smut:#6b7280;--sline:#e5e7eb;--spri:#2563eb}
+.frame{position:relative;background:#d1d5db;border:1px solid #9ca3af;border-radius:14px;overflow:hidden;height:660px;margin:0 auto;max-width:1180px;transition:max-width .2s;font:16px/1.4 system-ui,sans-serif;color:var(--sink)}
+.frame.phone{max-width:390px;height:740px}
+.sbtn{background:var(--spri);color:#fff;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;min-height:44px;font:inherit}
+.sbtn:disabled{opacity:.4;cursor:default}
+.sbtn.alt{background:#fff;color:var(--sink);border:1px solid var(--sline)}
+.seg2{display:inline-flex;border:1px solid var(--sline);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
+.seg2 button{border:0;background:#fff;color:var(--sink);padding:8px 12px;min-height:44px;font:inherit;cursor:pointer}
+.seg2 button.on{background:var(--sink);color:#fff}
+.qbox{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:#1e3a8a;color:#fff;border-radius:14px;padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 14px #0004}
+.qbox .in{flex:1}
+.qbox span.sqt{padding-top:2px}
 .frame.phone .qbox{font-size:16px}
+#tm{display:inline-block;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6;background:#475569}
 .qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;height:34px;padding:0 12px;font-size:14px;cursor:pointer}
-.qbox.min{width:auto}.qbox.min span{display:none}
-.stage{position:absolute;left:12px;right:12px;top:96px;bottom:156px;display:grid;gap:10px}
-.frame.phone .stage{top:110px;bottom:190px;gap:6px}
+.qbox.min{width:auto}.qbox.min .sqt,.qbox.min #tm{display:none}
+.stage{position:absolute;left:12px;right:12px;top:112px;bottom:156px;display:grid;gap:10px}
+.frame.phone .stage{top:126px;bottom:190px;gap:6px}
 .frame.qmin .stage{top:64px}
-.lane{background:#fff;border:2px dashed #9ca3af;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;min-width:0;transition:background .1s,border-color .1s}
-.lane.over{background:#eff6ff;border-color:var(--pri)}
-.lane h3{margin:0;font-size:18px;text-align:center}
-.frame.phone .lane{padding:6px}.frame.phone .lane h3{font-size:14px}
+.lane2{background:#fff;border:2px dashed #9ca3af;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;min-width:0;transition:background .1s,border-color .1s}
+.lane2.over{background:#eff6ff;border-color:var(--spri)}
+.lane2 h3{margin:0;font-family:system-ui,sans-serif;font-size:18px;text-align:center}
+.frame.phone .lane2{padding:6px}.frame.phone .lane2 h3{font-size:14px}
 .frame.phone .nc{font-size:13px;padding:6px 7px}
-.ov{position:absolute;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004;z-index:6}
-.pile{left:12px;right:230px;bottom:10px;max-height:136px;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;transition:background .1s}
-.pile.over{background:#eff6ff}
-.pile h4{flex-basis:100%;margin:0;font-size:13px;color:var(--mut);font-weight:600}
-.pile .nc{width:190px}
-.pile .empty{flex-basis:100%;color:#065f46;font-weight:600;padding:8px 0}
-.done{right:12px;bottom:10px;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:206px}
-.done b{font-size:15px;text-align:center}
-.frame.phone .pile{right:12px;bottom:70px;max-height:112px}
-.frame.phone .pile .nc{width:calc(50% - 4px)}
-.frame.phone .done{left:12px;width:auto;flex-direction:row;align-items:center;bottom:10px;justify-content:space-between}
+.ov{position:absolute;background:#fff;border:1px solid var(--sline);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004;z-index:6}
+.spile{left:12px;right:230px;bottom:10px;max-height:136px;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;transition:background .1s}
+.spile.over{background:#eff6ff}
+.spile h4{flex-basis:100%;margin:0;font-size:13px;color:var(--smut);font-weight:600}
+.spile .nc{width:190px}
+.spile .empty{flex-basis:100%;color:#065f46;font-weight:600;padding:8px 0}
+.sdone{right:12px;bottom:10px;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:206px}
+.sdone b{font-size:15px;text-align:center}
+.frame.phone .spile{right:12px;bottom:70px;max-height:112px}
+.frame.phone .spile .nc{width:calc(50% - 4px)}
+.frame.phone .sdone{left:12px;width:auto;flex-direction:row;align-items:center;bottom:10px;justify-content:space-between}
 .locked .lockable{opacity:.45;pointer-events:none}
-.lockmsg{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:13;background:#92400e;color:#fff;border-radius:12px;padding:8px 16px;font-size:18px;box-shadow:0 4px 14px #0004;white-space:nowrap}
-.frame.phone .lockmsg{font-size:14px;top:100px}
-.sideinfo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
-.sideinfo .card{font-size:14px}
-.sideinfo b{display:block;margin-bottom:4px}
+.lockmsg{position:absolute;top:104px;left:50%;transform:translateX(-50%);z-index:13;background:#92400e;color:#fff;border-radius:12px;padding:8px 16px;font-size:18px;box-shadow:0 4px 14px #0004;white-space:nowrap}
+.frame.phone .lockmsg{font-size:14px;top:122px}
+.sidebar-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px max(16px,env(safe-area-inset-left,0px)) 12px;max-width:1212px;margin:0 auto}
+.sideinfo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:1212px;margin:12px auto 0;padding:0 max(16px,env(safe-area-inset-left,0px)) 24px}
+.sideinfo div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;font-size:15px}
+.sideinfo b{display:block;margin-bottom:4px;font-family:var(--disp);font-size:17px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<main>
- <div class="tabs" role="tablist">
-  <button class="btn on" id="t1" role="tab" aria-selected="true">Teacher: question editor</button>
-  <button class="btn alt" id="t2" role="tab" aria-selected="false">Student: sort screen</button>
-  <span class="mut">Mockup. The two tabs share one question, so edits in the editor show up on the student screen.</span>
+<div class="tabs" role="tablist">
+ <button class="b pri" id="t1" role="tab" aria-selected="true">Teacher: set editor</button>
+ <button class="b" id="t2" role="tab" aria-selected="false">Student: sort screen</button>
+ <span class="mut">Mockup. Both tabs share one question, so edits in the editor show up on the student screen.</span>
+</div>
+
+<!-- ================= TAB 1: TEACHER SET EDITOR ================= -->
+<section id="p1">
+ <div class="tb">
+  <div class="grp">
+   <button class="b dk"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>3rd Hour</button>
+   <div style="font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rocks and the Rock Cycle</div>
+  </div>
+  <div class="grp"><button class="b dk">Share link</button><button class="b dk">Manage set ▾</button></div>
  </div>
-
- <!-- ================= TAB 1: TEACHER ================= -->
- <section id="p1">
-  <div class="card">
-   <div class="row" style="justify-content:space-between">
-    <div class="row">
-     <select class="btn alt" aria-label="Class period"><option>Period 3</option><option>Period 5</option></select>
-     <span class="mut">Code</span><span class="code-pill">K7QM</span>
-     <span class="mut">24 students joined</span>
-     <span class="mut"><span class="dot ok"></span>Connected</span>
-    </div>
-    <div class="row">
-     <button class="btn alt">Quick mode: off</button>
-     <button class="btn alt on">Names hidden on projector</button>
-     <button class="btn alt">Open projector view</button>
-     <button class="btn alt">Save session (PNG)</button>
-    </div>
+ <div class="wrap">
+  <section class="col list">
+   <div><div class="lbl">Rocks and the Rock Cycle · 5 questions</div><h2 style="font-size:24px;margin-top:2px">Questions</h2></div>
+   <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="q"><div class="t"><div class="n">1</div><div class="x">Draw and label the three layers of Earth’s interior.</div></div><div class="meta"><span class="chip">Graph paper</span><span style="flex:1"></span><button class="b sm sq">↑</button><button class="b sm sq">↓</button><button class="b sm sq danger">✕</button></div></div>
+    <div class="q on"><div class="t"><div class="n">2</div><div class="x" id="listq"></div></div><div class="meta"><span class="chip kind">Sort</span><span class="chip" id="listmeta"></span><span style="flex:1"></span><button class="b sm sq">↑</button><button class="b sm sq">↓</button><button class="b sm sq danger">✕</button></div></div>
+    <div class="q"><div class="t"><div class="n">3</div><div class="x">Draw the rock cycle. Show how igneous rock becomes sedimentary rock.</div></div><div class="meta"><span class="chip">Blank</span><span style="flex:1"></span><button class="b sm sq">↑</button><button class="b sm sq">↓</button><button class="b sm sq danger">✕</button></div></div>
+    <div class="q"><div class="t"><div class="n">4</div><div class="x">Match each rock to the way it formed.</div></div><div class="meta"><span class="chip kind">Match</span><span style="flex:1"></span><button class="b sm sq">↑</button><button class="b sm sq">↓</button><button class="b sm sq danger">✕</button></div></div>
+    <div class="q"><div class="t"><div class="n">5</div><div class="x">Explain in your own words how marble forms from limestone.</div></div><div class="meta"><span class="chip">Lined</span><span style="flex:1"></span><button class="b sm sq">↑</button><button class="b sm sq">↓</button><button class="b sm sq danger">✕</button></div></div>
    </div>
-  </div>
+   <button class="b">+ Add question</button>
+  </section>
 
-  <div class="layout">
-   <aside id="side" class="card">
-    <div class="row" style="background:#111827;color:#fff;border-radius:12px;padding:8px 10px;justify-content:space-between;margin-bottom:10px">
-     <button class="btn alt sm" aria-label="Previous question">◀</button><b style="text-align:center">Question 2 of 5</b><button class="btn sm" aria-label="Next question">▶</button>
+  <section class="col edit" id="editcol">
+   <div><div class="lbl">Rocks and the Rock Cycle</div><h2 style="font-size:28px;margin-top:2px">Edit question 2</h2></div>
+
+   <div><div class="fl">Question type</div>
+    <div class="seg" role="group" aria-label="Question type"><button disabled title="The type you have today">Draw</button><button class="on">Sort</button><button disabled title="Not built yet">Match</button></div></div>
+
+   <div>
+    <div class="fl">Question</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+     <button class="b sq fmt" data-cmd="bold" aria-label="Bold"><b>B</b></button>
+     <button class="b sq fmt" data-cmd="italic" aria-label="Italic"><i>I</i></button>
+     <button class="b sq fmt" data-cmd="underline" aria-label="Underline"><u>U</u></button>
     </div>
-    <details open><summary><b style="color:var(--ink)">Question set</b></summary>
-     <div class="row" style="margin-top:8px">
-      <select class="btn alt sm" style="flex:1;min-width:0" aria-label="Choose a saved set"><option>Rocks and the Rock Cycle (5)</option></select>
-      <button class="btn alt sm">+ Add</button>
-     </div>
-     <ol id="list">
-      <li><div class="top"><span class="tx">Draw and label the three layers of Earth’s interior.</span></div><div class="row"><button class="btn alt sm">Send</button><button class="btn alt sm">↑</button><button class="btn alt sm">↓</button><button class="btn alt sm">Edit</button><button class="btn alt sm">✕</button></div></li>
-      <li class="cur"><div class="top"><span class="tx" id="listq"></span><span class="kind">Sort</span></div><div class="row"><button class="btn alt sm">Send</button><button class="btn alt sm">↑</button><button class="btn alt sm">↓</button><button class="btn alt sm">Edit</button><button class="btn alt sm">✕</button></div></li>
-      <li><div class="top"><span class="tx">Draw the rock cycle. Show how igneous rock becomes sedimentary rock.</span></div><div class="row"><button class="btn alt sm">Send</button><button class="btn alt sm">↑</button><button class="btn alt sm">↓</button><button class="btn alt sm">Edit</button><button class="btn alt sm">✕</button></div></li>
-     </ol>
+    <div id="qin" contenteditable="true" role="textbox" aria-label="Question">Sort each card into the type of rock it describes.</div>
+   </div>
 
-     <div id="editor">
-      <div class="lbl" style="margin-top:0">Question type</div>
-      <div class="seg" role="group" aria-label="Question type">
-       <button disabled title="Today's question type">Draw</button><button class="on">Sort</button><button disabled title="Not built yet">Match</button>
-      </div>
+   <div><div class="fl">Lanes <span>the boxes students drop cards into</span></div>
+    <div id="laneList"></div><button class="b sm" id="addLane">+ Add lane</button></div>
 
-      <div class="lbl">Question</div>
-      <div class="row" style="margin-bottom:6px">
-       <button class="btn alt sm fmt" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-       <button class="btn alt sm fmt" data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-       <button class="btn alt sm fmt" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
-      </div>
-      <div id="qin" contenteditable="true" role="textbox" aria-label="Question">Sort each card into the type of rock it describes.</div>
+   <div><div class="fl">Cards <span>the sticky notes</span></div>
+    <div id="cardList"></div><button class="b sm" id="addCard">+ Add card</button></div>
 
-      <div class="lbl">Lanes <span>the boxes students drop cards into</span></div>
-      <div id="laneList"></div>
-      <button class="btn alt sm" id="addLane">+ Add lane</button>
+   <div><div class="fl">Ideas <span>tag cards so results show what to reteach</span></div>
+    <div id="ideaList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div class="item" style="margin-top:8px"><input class="inp" id="newIdea" maxlength="30" placeholder="New idea, like “Vocabulary”" aria-label="New idea name"><button class="b sm" id="addIdea">Add</button></div></div>
 
-      <div class="lbl">Cards <span>the sticky notes. Tag each with an idea.</span></div>
-      <div id="cardList"></div>
-      <button class="btn alt sm" id="addCard">+ Add card</button>
+   <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="fl" style="margin-bottom:0">Options</div>
+    <button class="tog on" id="shuf" aria-pressed="true"><span>Shuffle the cards for each student</span><i></i></button>
+    <div><div class="mut" style="font-size:14px;margin-bottom:4px">Show students if they’re right</div>
+     <select class="inp" id="fb" aria-label="When students see right or wrong"><option value="never">Never. I’ll look at the results.</option><option value="reveal">When I press Reveal answers</option><option value="now">Right away, as they place each card</option></select></div>
+   </div>
 
-      <div class="lbl">Ideas <span>used for the results heat map</span></div>
-      <div class="row" id="ideaList" style="gap:6px"></div>
-      <div class="item" style="margin-top:8px"><input class="fld" id="newIdea" maxlength="30" placeholder="New idea, like “Vocabulary”" aria-label="New idea name"><button class="btn alt sm" id="addIdea">Add</button></div>
+   <div id="vmsg" style="display:flex;flex-direction:column;gap:6px"></div>
+   <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="b pri big" id="save">Save question</button>
+    <div style="display:flex;gap:10px"><button class="b" id="cancel" style="flex:1">Cancel</button><button class="b" id="sendnow" style="flex:2" title="Students see it now. It is not added to your set.">Send now, don't save</button></div>
+   </div>
+   <div class="mut" style="font-size:14px">The answer key stays on the server. It is never sent to student devices.</div>
+  </section>
 
-      <div class="lbl">Options</div>
-      <label class="chk" for="shuf"><input type="checkbox" id="shuf" checked> Shuffle the cards for each student</label>
-      <div class="row"><span style="font-size:15px">Show students if they’re right</span>
-       <select class="btn alt sm" id="fb" aria-label="When students see right or wrong"><option value="never">Never</option><option value="reveal">When I reveal answers</option><option value="now">Right away</option></select></div>
-
-      <div id="vmsg"></div>
-      <div class="row" style="margin-top:10px">
-       <button class="btn alt sm" id="cancel">Cancel</button>
-       <button class="btn alt sm" id="sendnow">Send now (don't save)</button>
-       <button class="btn sm" id="save">Save question</button>
-      </div>
-      <div class="mut" id="smsg" role="status" style="margin-top:6px"></div>
-      <div class="mut" style="margin-top:6px">The answer key stays on the server. It is never sent to student devices.</div>
-     </div>
-    </details>
-   </aside>
-
-   <section>
-    <div class="qbar" id="cur"><small>Students will answer</small><span id="curq"></span></div>
-    <div class="card">
-     <div class="head2"><h2>Answer key</h2><span class="mut">Drag each card into the lane where it belongs. Students never see this.</span></div>
-     <div class="zone tray" id="tray" data-zone="none"></div>
-     <div class="board" id="board"></div>
+  <section class="col rcol">
+   <div class="rhead">
+    <div class="lbl">Answer key and student view</div>
+    <div class="seg" role="group" aria-label="Right panel view"><button class="on" id="v1">Answer key</button><button id="v2">Student view</button></div>
+   </div>
+   <div id="keyview">
+    <div class="mut" style="margin-bottom:10px;font-size:15px">Drag each sticky note into the lane where it belongs. Students never see this.</div>
+    <div class="zone tray" id="tray" data-zone="none" style="margin-bottom:12px"></div>
+    <div class="board" id="board"></div>
+   </div>
+   <div id="stuview" hidden>
+    <div class="dev">
+     <div class="qb" id="pq"></div>
+     <div class="lanes" id="planes"></div>
+     <div class="pile" id="ppile"></div>
+     <div class="dock"><span class="mut">0 of <span id="pn"></span> placed</span><span class="mut">Cards are shuffled for each student</span></div>
     </div>
-   </section>
-  </div>
- </section>
+    <div class="mut" style="font-size:15px;margin-top:10px">Nothing is sent to students from this screen unless you press Send now.</div>
+   </div>
+  </section>
+ </div>
+</section>
 
- <!-- ================= TAB 2: STUDENT ================= -->
- <section id="p2" hidden>
-  <div class="row" style="margin-bottom:12px">
-   <span class="mut">Show it on a</span>
-   <div class="seg" role="group" aria-label="Device"><button class="on" id="dev1">Chromebook</button><button id="dev2">Phone</button></div>
-   <button class="btn alt sm" id="reset">Start over</button>
-   <span class="mut">Drag a sticky note into a lane. Drag it back to the pile to undo.</span>
-  </div>
-  <div class="frame" id="frame">
-   <div class="qbox" id="qbox"><span id="sq"></span><button class="qt" id="qt" aria-label="Show or hide the question">Hide ▲</button></div>
-   <div class="lockmsg" id="lockmsg" hidden>Answer sent. Hold on for your teacher…</div>
-   <div class="stage lockable" id="stage"></div>
-   <div class="ov pile lockable" id="pile" data-zone="pile"></div>
-   <div class="ov done" id="done"></div>
-  </div>
-  <div class="sideinfo">
-   <div class="card"><b>What the student sees</b>Only the lanes and the cards, in their own order. The key and the idea tags are not on their device.</div>
-   <div class="card"><b>What gets saved</b>Just “card → lane” for each card. That is a few bytes, and it works on any screen size, unlike a drawn position.</div>
-   <div class="card"><b>Feedback</b><span id="fbnote"></span></div>
-  </div>
- </section>
-</main>
+<!-- ================= TAB 2: STUDENT ================= -->
+<section id="p2" hidden class="sw">
+ <div class="sidebar-row">
+  <span style="color:var(--smut)">Show it on a</span>
+  <div class="seg2" role="group" aria-label="Device"><button class="on" id="dev1">Chromebook</button><button id="dev2">Phone</button></div>
+  <button class="sbtn alt" id="reset" style="min-height:40px;padding:6px 14px">Start over</button>
+  <span style="color:var(--smut);font-size:14px">Drag a sticky note into a lane. Drag it back to the pile to undo.</span>
+ </div>
+ <div class="frame" id="frame">
+  <div class="qbox" id="qbox"><div class="in"><div id="tm">JD · 🪨 Granite · 3 pts</div><span class="sqt" id="sq"></span></div><button class="qt" id="qt" aria-label="Show or hide the question">Hide ▲</button></div>
+  <div class="lockmsg" id="lockmsg" hidden>Answer sent. Hold on for your teacher…</div>
+  <div class="stage lockable" id="stage"></div>
+  <div class="ov spile lockable" id="pile" data-zone="pile"></div>
+  <div class="ov sdone" id="done"></div>
+ </div>
+ <div class="sideinfo">
+  <div><b>What the student sees</b>Only the lanes and the cards, in their own order. The key and the idea tags are not on their device. The team badge stays in the question box, as it does now.</div>
+  <div><b>What gets saved</b>Just “card → lane” for each card. That is a few bytes, and it works on any screen size, unlike a drawn position.</div>
+  <div><b>Feedback</b><span id="fbnote"></span></div>
+ </div>
+</section>
+<div id="toast" hidden></div>
 
 <script>
 (function(){
   var $=function(s){return document.querySelector(s)};
   var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-
-  /* ---------- shared state: the question the teacher is editing ---------- */
   var nid=100;
   var ST={
     lanes:[{id:'L1',name:'Igneous'},{id:'L2',name:'Sedimentary'},{id:'L3',name:'Metamorphic'}],
@@ -260,117 +276,117 @@ h2{font-size:18px;margin:0}
     ],
     shuffle:true, fb:'never'
   };
-  var SP={};          // student placements: cardId -> laneId
-  var done=false, order=[];
+  var SP={}, done=false, order=[], view=1;
+  var laneOf=function(id){return ST.lanes.filter(function(l){return l.id===id})[0]};
+  var cardById=function(id){return ST.cards.filter(function(c){return c.id===id})[0]};
+  var tt;function toast(t){var e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(tt);tt=setTimeout(function(){e.hidden=true},3500)}
 
-  /* ---------- generic pointer drag (works with mouse and touch) ---------- */
+  /* pointer drag, works with mouse and touch */
   function drag(root,onDrop){
     root.addEventListener('pointerdown',function(e){
       var el=e.target.closest('.nc[data-card]');
       if(!el||!root.contains(el)||e.button>0)return;
       e.preventDefault();
       var r=el.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
-      var g=el.cloneNode(true);g.classList.add('ghost');g.style.width=r.width+'px';
-      g.style.left=r.left+'px';g.style.top=r.top+'px';document.body.appendChild(g);
+      var g=el.cloneNode(true);g.classList.add('ghost');g.style.width=r.width+'px';g.style.left=r.left+'px';g.style.top=r.top+'px';document.body.appendChild(g);
       el.classList.add('drag-src');
-      var lastZone=null;
+      var last=null;
       function zoneAt(x,y){g.hidden=true;var t=document.elementFromPoint(x,y);g.hidden=false;return t&&t.closest('[data-zone]')}
-      function mv(ev){
-        g.style.left=(ev.clientX-dx)+'px';g.style.top=(ev.clientY-dy)+'px';
-        var z=zoneAt(ev.clientX,ev.clientY);
-        if(z!==lastZone){if(lastZone)lastZone.classList.remove('over');if(z)z.classList.add('over');lastZone=z}
-      }
+      function mv(ev){g.style.left=(ev.clientX-dx)+'px';g.style.top=(ev.clientY-dy)+'px';var z=zoneAt(ev.clientX,ev.clientY);if(z!==last){if(last)last.classList.remove('over');if(z)z.classList.add('over');last=z}}
       function up(ev){
         document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);
-        var z=zoneAt(ev.clientX,ev.clientY);
-        if(lastZone)lastZone.classList.remove('over');
-        g.remove();el.classList.remove('drag-src');
+        var z=zoneAt(ev.clientX,ev.clientY);if(last)last.classList.remove('over');g.remove();el.classList.remove('drag-src');
         if(z&&ev.type!=='pointercancel')onDrop(+el.dataset.card,z.dataset.zone);
       }
       document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
     });
   }
 
-  /* ---------- question text (keeps only b/i/u/br, like the real editor) ---------- */
+  /* question text: only b/i/u/br, like clean() in the real editor */
   function clean(html){
     var walk=function(n){var o='';n.childNodes.forEach(function(c){
       if(c.nodeType===3)o+=esc(c.textContent);
       else if(c.nodeType===1){var t=c.tagName,i=walk(c);
         if(t==='B'||t==='STRONG')o+='<b>'+i+'</b>';else if(t==='I'||t==='EM')o+='<i>'+i+'</i>';else if(t==='U')o+='<u>'+i+'</u>';
         else if(t==='BR')o+='<br>';else o+=i}});return o};
-    return walk(new DOMParser().parseFromString(html,'text/html').body)
+    return walk(new DOMParser().parseFromString(html,'text/html').body);
   }
-  function qHtml(){return clean($('#qin').innerHTML)||'(type a question)'}
   function syncQ(){
-    var h=qHtml();$('#curq').innerHTML=h;$('#sq').innerHTML=h;
+    var h=clean($('#qin').innerHTML)||'<span style="opacity:.6">Your question appears here…</span>';
+    $('#pq').innerHTML=h;$('#sq').innerHTML=h;
     $('#listq').textContent=$('#qin').textContent.trim()||'(no text yet)';
+    $('#listmeta').textContent=ST.cards.length+' cards';
   }
-  document.querySelectorAll('[data-cmd]').forEach(function(b){b.onmousedown=function(e){e.preventDefault()};b.onclick=function(){document.execCommand(b.dataset.cmd)}});
+  document.querySelectorAll('[data-cmd]').forEach(function(b){b.onmousedown=function(e){e.preventDefault()};b.onclick=function(){document.execCommand(b.dataset.cmd);syncQ()}});
   $('#qin').addEventListener('input',syncQ);
   $('#qin').addEventListener('paste',function(e){e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'))});
 
-  /* ---------- editor: lanes, cards, ideas ---------- */
-  var laneOf=function(id){return ST.lanes.filter(function(l){return l.id===id})[0]};
+  /* editor lists */
   function renderEditor(){
     $('#laneList').innerHTML=ST.lanes.map(function(l,i){
-      return '<div class="item"><input class="fld" data-lane-i="'+i+'" maxlength="24" value="'+esc(l.name)+'" aria-label="Lane '+(i+1)+' name"><button class="btn alt sm" data-rm-lane="'+i+'" aria-label="Remove lane">✕</button></div>';
+      return '<div class="item"><input class="inp" data-lane-i="'+i+'" maxlength="24" value="'+esc(l.name)+'" aria-label="Lane '+(i+1)+' name"><button class="b sq danger" data-rm-lane="'+i+'" aria-label="Remove lane">✕</button></div>';
     }).join('');
     $('#cardList').innerHTML=ST.cards.map(function(c,i){
-      return '<div class="item"><input class="fld" data-card-i="'+i+'" maxlength="60" value="'+esc(c.text)+'" aria-label="Card '+(i+1)+' text">'+
-        '<select class="fld" data-card-idea="'+i+'" aria-label="Idea for card '+(i+1)+'"><option value="">No idea</option>'+ST.ideas.map(function(d){return '<option'+(d===c.idea?' selected':'')+'>'+esc(d)+'</option>'}).join('')+'</select>'+
-        '<button class="btn alt sm" data-rm-card="'+i+'" aria-label="Remove card">✕</button></div>';
+      return '<div class="item"><input class="inp" data-card-i="'+i+'" maxlength="60" value="'+esc(c.text)+'" aria-label="Card '+(i+1)+' text">'+
+        '<select class="inp" data-card-idea="'+i+'" aria-label="Idea for card '+(i+1)+'"><option value="">No idea</option>'+ST.ideas.map(function(d){return '<option'+(d===c.idea?' selected':'')+'>'+esc(d)+'</option>'}).join('')+'</select>'+
+        '<button class="b sq danger" data-rm-card="'+i+'" aria-label="Remove card">✕</button></div>';
     }).join('');
     $('#ideaList').innerHTML=ST.ideas.map(function(d,i){return '<span class="idea-chip">'+esc(d)+'<button data-rm-idea="'+i+'" aria-label="Remove idea '+esc(d)+'">✕</button></span>'}).join('')||'<span class="mut">None yet</span>';
   }
-  $('#side').addEventListener('input',function(e){
+  var ec=$('#editcol');
+  ec.addEventListener('input',function(e){
     var t=e.target;
-    if(t.dataset.laneI!==undefined){ST.lanes[+t.dataset.laneI].name=t.value;renderKey();renderStudent();validate()}
-    else if(t.dataset.cardI!==undefined){ST.cards[+t.dataset.cardI].text=t.value;renderKey();renderStudent();validate()}
+    if(t.dataset.laneI!==undefined){ST.lanes[+t.dataset.laneI].name=t.value;refresh(true)}
+    else if(t.dataset.cardI!==undefined){ST.cards[+t.dataset.cardI].text=t.value;refresh(true)}
   });
-  $('#side').addEventListener('change',function(e){
+  ec.addEventListener('change',function(e){
     var t=e.target;
-    if(t.dataset.cardIdea!==undefined){ST.cards[+t.dataset.cardIdea].idea=t.value;renderKey()}
-    if(t.id==='shuf'){ST.shuffle=t.checked;order=[];renderStudent()}
+    if(t.dataset.cardIdea!==undefined){ST.cards[+t.dataset.cardIdea].idea=t.value;refresh(true)}
     if(t.id==='fb'){ST.fb=t.value;renderStudent()}
   });
-  $('#side').addEventListener('click',function(e){
+  ec.addEventListener('click',function(e){
     var b=e.target.closest('button');if(!b)return;
-    if(b.dataset.rmLane!==undefined){
+    if(b.id==='shuf'){ST.shuffle=!ST.shuffle;b.classList.toggle('on',ST.shuffle);b.setAttribute('aria-pressed',ST.shuffle);order=[];renderStudent()}
+    else if(b.dataset.rmLane!==undefined){
       var l=ST.lanes.splice(+b.dataset.rmLane,1)[0];
       ST.cards.forEach(function(c){if(c.lane===l.id)c.lane=null});
       Object.keys(SP).forEach(function(k){if(SP[k]===l.id)delete SP[k]});
-      renderEditor();renderKey();renderStudent();validate();
+      renderEditor();refresh();
     }else if(b.dataset.rmCard!==undefined){
-      var c=ST.cards.splice(+b.dataset.rmCard,1)[0];delete SP[c.id];order=[];renderEditor();renderKey();renderStudent();validate();
+      var c=ST.cards.splice(+b.dataset.rmCard,1)[0];delete SP[c.id];order=[];renderEditor();refresh();
     }else if(b.dataset.rmIdea!==undefined){
-      var d=ST.ideas.splice(+b.dataset.rmIdea,1)[0];ST.cards.forEach(function(c){if(c.idea===d)c.idea=''});renderEditor();renderKey();
+      var d=ST.ideas.splice(+b.dataset.rmIdea,1)[0];ST.cards.forEach(function(c){if(c.idea===d)c.idea=''});renderEditor();refresh();
     }
   });
-  $('#addLane').onclick=function(){ST.lanes.push({id:'L'+(++nid),name:'Lane '+(ST.lanes.length+1)});renderEditor();renderKey();renderStudent();validate()};
-  $('#addCard').onclick=function(){ST.cards.push({id:++nid,text:'New card',idea:'',lane:null});order=[];renderEditor();renderKey();renderStudent();validate();
-    var f=$('#cardList').querySelector('.item:last-child .fld');if(f){f.focus();f.select()}};
+  $('#addLane').onclick=function(){ST.lanes.push({id:'L'+(++nid),name:'Lane '+(ST.lanes.length+1)});renderEditor();refresh()};
+  $('#addCard').onclick=function(){ST.cards.push({id:++nid,text:'New card',idea:'',lane:null});order=[];renderEditor();refresh();
+    var f=$('#cardList').querySelector('.item:last-child .inp');if(f){f.focus();f.select()}};
+  function addIdea(){var v=$('#newIdea').value.trim();if(!v||ST.ideas.indexOf(v)>=0)return;ST.ideas.push(v);$('#newIdea').value='';renderEditor()}
   $('#addIdea').onclick=addIdea;
   $('#newIdea').addEventListener('keydown',function(e){if(e.key==='Enter')addIdea()});
-  function addIdea(){var v=$('#newIdea').value.trim();if(!v||ST.ideas.indexOf(v)>=0)return;ST.ideas.push(v);$('#newIdea').value='';renderEditor()}
 
-  /* ---------- answer key board (teacher main column) ---------- */
-  function noteHtml(c,withIdea){return '<div class="nc" data-card="'+c.id+'">'+esc(c.text||'(empty card)')+(withIdea&&c.idea?'<small>'+esc(c.idea)+'</small>':'')+'</div>'}
+  /* right column: answer key and student view */
+  function note(c,withIdea,drag){return '<div class="nc'+(drag?'':' still')+'"'+(drag?' data-card="'+c.id+'"':'')+'>'+esc(c.text||'(empty card)')+(withIdea&&c.idea?'<small>'+esc(c.idea)+'</small>':'')+'</div>'}
   function renderKey(){
     var un=ST.cards.filter(function(c){return !c.lane});
     var tray=$('#tray');tray.hidden=!un.length;
-    tray.innerHTML='<h3>Not in the key yet <span>'+un.length+'</span></h3>'+un.map(function(c){return noteHtml(c,true)}).join('');
+    tray.innerHTML='<h3>Not in the key yet <span>'+un.length+'</span></h3>'+un.map(function(c){return note(c,true,true)}).join('');
     var b=$('#board');b.style.gridTemplateColumns='repeat('+Math.max(1,ST.lanes.length)+',minmax(0,1fr))';
     b.innerHTML=ST.lanes.map(function(l){
       var cs=ST.cards.filter(function(c){return c.lane===l.id});
-      return '<div class="zone" data-zone="'+l.id+'"><h3>'+esc(l.name||'(unnamed)')+'<span>'+cs.length+'</span></h3>'+cs.map(function(c){return noteHtml(c,true)}).join('')+'</div>';
-    }).join('')||'<p class="mut">Add a lane in the sidebar.</p>';
+      return '<div class="zone" data-zone="'+l.id+'"><h3>'+esc(l.name||'(unnamed)')+'<span>'+cs.length+'</span></h3>'+cs.map(function(c){return note(c,true,true)}).join('')+'</div>';
+    }).join('')||'<p class="mut">Add a lane on the left.</p>';
   }
-  drag($('#p1 section:last-child'),function(id,zone){
-    var c=ST.cards.filter(function(x){return x.id===id})[0];if(!c)return;
-    c.lane=zone==='none'?null:zone;renderKey();validate();
-  });
+  function renderPreview(){
+    var p=$('#planes');p.style.gridTemplateColumns='repeat('+Math.max(1,ST.lanes.length)+',minmax(0,1fr))';
+    p.innerHTML=ST.lanes.map(function(l){return '<div class="lane"><h3>'+esc(l.name)+'</h3></div>'}).join('');
+    $('#ppile').innerHTML=shuffled().map(cardById).filter(Boolean).map(function(c){return note(c,false,false)}).join('');
+    $('#pn').textContent=ST.cards.length;
+  }
+  drag($('#keyview'),function(id,zone){var c=cardById(id);if(!c)return;c.lane=zone==='none'?null:zone;renderKey();validate()});
+  $('#v1').onclick=function(){view=1;$('#v1').classList.add('on');$('#v2').classList.remove('on');$('#keyview').hidden=false;$('#stuview').hidden=true};
+  $('#v2').onclick=function(){view=2;$('#v2').classList.add('on');$('#v1').classList.remove('on');$('#keyview').hidden=true;$('#stuview').hidden=false;renderPreview()};
 
-  /* ---------- validation ---------- */
   function validate(){
     var errs=[];
     if(ST.lanes.length<2)errs.push('Add at least 2 lanes.');
@@ -378,41 +394,39 @@ h2{font-size:18px;margin:0}
     if(ST.cards.some(function(c){return !c.text.trim()}))errs.push('A card is empty.');
     if(ST.lanes.some(function(l){return !l.name.trim()}))errs.push('A lane has no name.');
     var un=ST.cards.filter(function(c){return !c.lane}).length;
-    if(un)errs.push(un+(un===1?' card is':' cards are')+' not in the key yet. Drag '+(un===1?'it':'them')+' into a lane.');
+    if(un)errs.push(un+(un===1?' card is':' cards are')+' not in the key yet. Drag '+(un===1?'it':'them')+' into a lane on the right.');
     $('#vmsg').innerHTML=errs.length?errs.map(function(e){return '<div class="warn">'+esc(e)+'</div>'}).join(''):'<div class="okmsg">Ready. '+ST.cards.length+' cards, '+ST.lanes.length+' lanes, all in the key.</div>';
     $('#save').disabled=!!errs.length;$('#sendnow').disabled=!!errs.length;
-    return !errs.length;
   }
-  var smt;function say(t){$('#smsg').textContent=t;clearTimeout(smt);smt=setTimeout(function(){$('#smsg').textContent=''},3500)}
-  $('#save').onclick=function(){say('Mockup: this would save the question into the set.')};
-  $('#sendnow').onclick=function(){say('Mockup: this would send it to the 24 students now.')};
-  $('#cancel').onclick=function(){say('Mockup: this would close the editor.')};
+  function refresh(keepEditor){syncQ();renderKey();validate();renderStudent();if(view===2)renderPreview()}
+  $('#save').onclick=function(){toast('Mockup: this would save the question into the set.')};
+  $('#sendnow').onclick=function(){toast('Mockup: this would send it to the 24 students now.')};
+  $('#cancel').onclick=function(){toast('Mockup: this would discard your changes.')};
 
-  /* ---------- student screen ---------- */
+  /* student screen */
   function shuffled(){
-    if(order.length===ST.cards.length&&order.every(function(id){return ST.cards.some(function(c){return c.id===id})}))return order;
+    if(order.length===ST.cards.length&&order.every(cardById))return order;
     var ids=ST.cards.map(function(c){return c.id});
-    if(ST.shuffle){for(var i=ids.length-1;i>0;i--){var j=(i*7+3)%(i+1);var t=ids[i];ids[i]=ids[j];ids[j]=t}}
+    if(ST.shuffle)for(var i=ids.length-1;i>0;i--){var j=(i*7+3)%(i+1),t=ids[i];ids[i]=ids[j];ids[j]=t}
     return (order=ids);
   }
-  var cardById=function(id){return ST.cards.filter(function(c){return c.id===id})[0]};
   function renderStudent(){
-    var ord=shuffled().filter(function(id){return cardById(id)});
+    Object.keys(SP).forEach(function(k){if(!cardById(+k)||!laneOf(SP[k]))delete SP[k]});
+    var ord=shuffled().filter(cardById);
     var st=$('#stage');st.style.gridTemplateColumns='repeat('+Math.max(1,ST.lanes.length)+',minmax(0,1fr))';
     st.innerHTML=ST.lanes.map(function(l){
       var cs=ord.filter(function(id){return SP[id]===l.id}).map(cardById);
-      return '<div class="lane" data-zone="'+l.id+'"><h3>'+esc(l.name)+'</h3>'+cs.map(function(c){
+      return '<div class="lane2" data-zone="'+l.id+'"><h3>'+esc(l.name)+'</h3>'+cs.map(function(c){
         var cls=ST.fb==='now'?(c.lane===l.id?' right':' wrong'):'';
         return '<div class="nc'+cls+'" data-card="'+c.id+'">'+esc(c.text)+'</div>';
       }).join('')+'</div>';
     }).join('');
-    var un=ord.filter(function(id){return !SP[id]||!laneOf(SP[id])}).map(cardById);
-    Object.keys(SP).forEach(function(k){if(!laneOf(SP[k]))delete SP[k]});
+    var un=ord.filter(function(id){return !SP[id]}).map(cardById);
     $('#pile').innerHTML='<h4>Cards to sort ('+un.length+')</h4>'+(un.length?un.map(function(c){return '<div class="nc" data-card="'+c.id+'">'+esc(c.text)+'</div>'}).join(''):'<div class="empty">✓ Every card is placed. Check your work, then press “I’m done”.</div>');
     var placed=ST.cards.length-un.length;
-    $('#done').innerHTML='<b>'+placed+' of '+ST.cards.length+' placed</b><button class="btn" id="doneBtn"'+(placed<ST.cards.length||done?' disabled':'')+'>I’m done</button>';
+    $('#done').innerHTML='<b>'+placed+' of '+ST.cards.length+' placed</b><button class="sbtn" id="doneBtn"'+(placed<ST.cards.length||done?' disabled':'')+'>I’m done</button>';
     $('#doneBtn').onclick=function(){done=true;$('#frame').classList.add('locked');$('#lockmsg').hidden=false;$('#doneBtn').disabled=true};
-    $('#fbnote').textContent=ST.fb==='never'?'Right now: none. Students see no right or wrong. You see results on your heat map.':ST.fb==='now'?'Right now: green and red outlines appear as soon as a card is placed. Try dropping one in the wrong lane.':'Right now: nothing until you press “Reveal answers” on your results screen.';
+    $('#fbnote').textContent=ST.fb==='never'?'Right now: none. Students see no right or wrong. You see results on your class screen.':ST.fb==='now'?'Right now: green and red outlines appear as soon as a card is placed. Try dropping one in the wrong lane.':'Right now: nothing until you press “Reveal answers to students” on your class screen.';
   }
   drag($('#frame'),function(id,zone){
     if(done)return;
@@ -424,15 +438,13 @@ h2{font-size:18px;margin:0}
   $('#dev1').onclick=function(){$('#frame').classList.remove('phone');$('#dev1').classList.add('on');$('#dev2').classList.remove('on')};
   $('#dev2').onclick=function(){$('#frame').classList.add('phone');$('#dev2').classList.add('on');$('#dev1').classList.remove('on')};
 
-  /* ---------- tabs ---------- */
   function tab(n){
     $('#p1').hidden=n!==1;$('#p2').hidden=n!==2;
-    $('#t1').className='btn '+(n===1?'on':'alt');$('#t2').className='btn '+(n===2?'on':'alt');
+    $('#t1').className='b'+(n===1?' pri':'');$('#t2').className='b'+(n===2?' pri':'');
     $('#t1').setAttribute('aria-selected',n===1);$('#t2').setAttribute('aria-selected',n===2);
     if(n===2)renderStudent();
   }
   $('#t1').onclick=function(){tab(1)};$('#t2').onclick=function(){tab(2)};
-
-  syncQ();renderEditor();renderKey();validate();renderStudent();
+  renderEditor();refresh();
 })();
 </script>
