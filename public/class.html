@@ -48,11 +48,34 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .stu .ok.on{background:var(--good);color:#fff;border-color:var(--good)}
 .empty{grid-column:1/-1;text-align:center;color:var(--mut);padding:40px 12px;font-size:18px}
 
-/* bottom team bar */
-.bar{height:76px;flex:none;background:#fff;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:20px;overflow-x:auto}
-.bar .teams{display:flex;align-items:center;gap:10px}
-.tchip{display:flex;align-items:center;gap:8px;height:52px;padding:0 8px 0 14px;border-radius:12px;background:#F3F5F7;border-left:8px solid var(--tc);flex:none}
-.tchip .pt{font-family:var(--disp);font-weight:800;font-size:24px;min-width:26px;text-align:center}
+/* team scores panel: a column on a laptop, a slide-over on a small screen */
+#scores{width:308px;flex:none;background:#fff;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+body.scores-off #scores{display:none}
+.sh{height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 14px;border-bottom:1px solid var(--line)}
+.sh h2{font-size:18px}
+.ssum{padding:10px 14px 2px;font-size:14px;font-weight:600;color:var(--mut);line-height:1.35}
+.slist{flex:1;min-height:0;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.srow{border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:12px;padding:8px 10px;background:#fff;display:flex;flex-direction:column;gap:6px}
+.srow .r1{display:flex;align-items:center;gap:8px;min-width:0}
+.srow .rk{flex:none;width:24px;height:24px;border-radius:50%;background:#E8EDF2;color:#394551;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.srow.lead .rk{background:#FDF0CE;color:#7A5200;font-size:13px}
+.srow .em{font-size:18px;line-height:1}
+.srow .nm{flex:1;min-width:0;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .pt{font-family:var(--disp);font-weight:800;font-size:26px;min-width:34px;text-align:right}
+.sbar{height:6px;border-radius:99px;background:#EDF1F5;overflow:hidden}
+.sbar i{display:block;height:100%;border-radius:99px;background:var(--tc)}
+.srow .r2{display:flex;gap:6px}
+.srow .r2 .b{flex:1;min-height:36px;font-size:18px;font-weight:800}
+.srow .r2 .dots{flex:0 0 40px;font-size:18px;color:var(--mut)}
+.sfoot{flex:none;border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.sfoot .b{width:100%}
+.sfoot .tog{width:100%;justify-content:space-between;font-size:14px;padding:0 10px}
+#scoreback{display:none}
+@media(max-width:1100px){
+ #scores{position:fixed;top:68px;right:0;bottom:0;width:min(340px,88vw);z-index:30;box-shadow:-18px 0 40px rgba(23,33,43,.22)}
+ body:not(.scores-on) #scores{display:none}
+ body.scores-on #scoreback{display:block;position:fixed;inset:68px 0 0 0;background:rgba(23,33,43,.35);z-index:29}
+}
 
 /* teams sheet */
 #tdlg{max-width:1120px}
@@ -61,6 +84,10 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .trow{display:flex;align-items:center;gap:10px;min-height:60px;padding:6px 10px;border-radius:12px;background:#F3F5F7;border-left:8px solid var(--tc)}
 .trow .em{width:40px;height:40px;border-radius:10px;background:#fff;border:1px solid #D5DEE6;font-size:20px;padding:0}
 .trow .pt{font-family:var(--disp);font-weight:800;font-size:24px;min-width:30px;text-align:center}
+.trow .rk{flex:none;width:26px;height:26px;border-radius:50%;background:#E8EDF2;color:#394551;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.trow .rk.top{background:#FDF0CE;color:#7A5200}
+.tbar{height:5px;border-radius:99px;background:#E4EBF2;overflow:hidden;margin-top:6px}
+.tbar i{display:block;height:100%;border-radius:99px;background:var(--tc)}
 .rt{border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:0;display:flex;flex-direction:column}
 .rr{display:grid;grid-template-columns:minmax(0,1fr) 92px 160px 40px;gap:8px;align-items:center;padding:6px 12px;border-top:1px solid #EEF1F4}
 .rr.h{background:#F3F5F7;border-top:0;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
@@ -72,7 +99,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 /* phone layout (D1 and D2) */
 #phone{display:none}
 @media(max-width:700px){
- .tb,.body,.bar{display:none!important}
+ .tb,.body,#scores,#scoreback{display:none!important}
  #phone{display:flex;flex-direction:column;flex:1;min-height:0}
 }
 .ph-h{height:60px;flex:none;background:var(--dark);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;gap:8px}
@@ -104,6 +131,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
   <div class="grp">
    <span class="chip" id="qtag" hidden style="background:#FFE9B8;color:#5E4300">Quick mode on</span>
    <button class="b dk" id="join">Join <span class="code" id="code"></span></button>
+   <button class="b dk" id="stoggle" aria-expanded="true" title="Show or hide team scores">Scores</button>
    <button class="b sky" id="proj">Open projector</button>
    <button class="b dk" id="more">More ▾</button>
   </div>
@@ -140,14 +168,22 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
    <div class="grid" id="grid"></div>
    <div id="sres" hidden></div>
   </main>
- </div>
 
- <div class="bar">
-  <div class="teams"><span class="lbl" style="margin-right:4px">Team points</span><span id="chips" class="teams"></span></div>
-  <div class="teams">
-   <button class="tog" id="lbproj"><span>Leaderboard on projector</span><i></i></button>
-   <button class="b" id="tedit">Edit teams &amp; class list</button>
-  </div>
+  <!-- team scores: a column on a laptop, a slide-over on a smaller screen -->
+  <aside id="scores" aria-label="Team scores">
+   <div class="sh">
+    <h2>Team scores</h2>
+    <button class="b sm" id="sclose" title="Hide team scores" aria-label="Hide team scores">✕</button>
+   </div>
+   <div class="ssum" id="ssum"></div>
+   <div class="slist" id="slist"></div>
+   <div class="sfoot">
+    <button class="tog" id="lbproj"><span>Leaderboard on projector</span><i></i></button>
+    <a class="b" id="sadmin" href="/teacher?tab=teams" target="_blank" rel="noopener" style="text-decoration:none">Rename teams &amp; icons</a>
+    <button class="b" id="tedit">Class list &amp; teams</button>
+   </div>
+  </aside>
+  <div id="scoreback"></div>
  </div>
 
  <!-- phone layout -->
@@ -171,6 +207,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
  <div class="sheet" id="sheet">
   <section style="width:440px;flex:none;border-right:1px solid var(--line)">
    <h3 style="font-size:21px">Teams</h3>
+   <div class="mut" style="font-size:14px;margin-top:-6px">Names, icons and order are on the <a id="tadmin" href="/teacher?tab=teams" target="_blank" rel="noopener">Teams tab of Today</a>. Points and the class list are here.</div>
    <div id="trows" style="display:flex;flex-direction:column;gap:8px"></div>
    <div style="display:flex;gap:8px"><select class="inp" id="tn" aria-label="How many teams"></select><button class="b" id="mkteams" style="flex:1">Create teams</button><button class="b" id="addteam" style="flex:1">+ Team</button></div>
    <button class="tog" id="cap" style="justify-content:space-between"><span>One point per team, per question</span><i></i></button>
@@ -300,7 +337,8 @@ function onmsg(m) {
     case 'err':
       $('#cnt').textContent = m.m;
       if (/in use/.test(m.m)) { // another teacher already has this class code: take a new one and keep this class's data
-        const old = code; per().code = rnd(); const nc = per().code; try { if (store[TKEY(old)]) store[TKEY(nc)] = store[TKEY(old)]; } catch {}
+        const p = per(); if (!p) break;
+        const old = code; p.code = rnd(); const nc = p.code; try { if (store[TKEY(old)]) store[TKEY(nc)] = store[TKEY(old)]; } catch {}
         store.do_tcode = nc; savePeriods(); location.replace('/class?code=' + nc);
       }
       break;
@@ -315,7 +353,11 @@ function onmsg(m) {
       if (DEMO) startBots();
       ui(); break;
     }
-    case 'score': if (editing()) { TM.scores = m.scores; save(); } else adopt(m); ui(); sheetUI(); break;
+    case 'score': // team names/icons are always adopted (a rename must show here too); scores wait while the sheet is open
+      TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap;
+      if (editing()) TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
+      else TM.scores = m.scores;
+      save(); ui(); sheetUI(); break;
     case 'setup': if (!editing()) adopt({ roster: m.roster }); m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); sheetUI(); break;
     case 'gone': if (s) { s.el.remove(); S.stu.delete(m.id); ui(); } break;
     case 'board': S.board = m.on; ui(); break;
@@ -339,7 +381,6 @@ function award(s) {
 }
 function setTeam(s, team) { ws.send({ t: 'team', id: s.id, team }); } // the server updates the class list entry too, then tells everyone
 const teamNm = id => { const t = teamOf(id); return t ? t.name : ''; };
-const teamLabel = t => (t.emoji ? t.emoji + ' ' : '') + t.name;
 
 // ---- rendering ----
 function ui() {
@@ -371,17 +412,37 @@ function ui() {
   });
   const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
   if (sp) { ab.textContent = sp.aw ? '✓ Point given (undo)' : '✓ Give ' + (teamNm(sp.team) || 'a team') + ' a point'; ab.onclick = () => award(sp); }
-  renderBar(); renderRailHead(); if (ph.matches) renderPhone(); else if (isSort) SR.update();
+  renderScores(); renderRailHead(); if (ph.matches) renderPhone(); else if (isSort) SR.update();
 }
-function renderBar() {
-  const box = $('#chips'); box.innerHTML = '';
-  TM.teams.forEach(t => {
-    const c = el('div', { className: 'tchip' }); c.style.setProperty('--tc', t.color);
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b sm', textContent: l, onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
-    c.append(el('span', { textContent: teamLabel(t), style: 'font-weight:700;font-size:15px' }), adj('−', -1, 'Take a point from'), el('span', { className: 'pt', textContent: TM.scores[t.id] || 0 }), adj('+', 1, 'Give a point to'));
-    box.append(c);
+// Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
+function renderScores() {
+  const box = $('#slist'), ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
+  box.innerHTML = '';
+  const total = ranked.reduce((a, x) => a + x.score, 0);
+  $('#ssum').textContent = !TM.teams.length ? 'No teams yet. Use "Class list & teams" below to make them.'
+    : ranked.length + (ranked.length === 1 ? ' team' : ' teams') + ' · ' + total + ' pt' + (total === 1 ? '' : 's')
+      + (ranked[0] && ranked[0].score && ranked[0].leader ? ' · ' + ranked[0].team.name + ' leads' : ' · no points yet');
+  ranked.forEach(x => {
+    const t = x.team;
+    const r = el('div', { className: 'srow' + (x.leader ? ' lead' : '') }); r.style.setProperty('--tc', t.color);
+    const adj = (l, d, lab) => { const b = el('button', { className: 'b', textContent: l, onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const bar = el('div', { className: 'sbar' }, el('i', {})); bar.firstChild.style.width = Math.max(3, Math.round(x.score / max * 100)) + '%';
+    const more = el('button', { className: 'b dots', textContent: '⋯', title: 'More for ' + t.name });
+    more.onclick = e => {
+      e.stopPropagation();
+      openMenu(more, [
+        { t: '+5 points', f: () => ws.send({ t: 'adj', team: t.id, d: 5 }) },
+        { t: '−5 points', f: () => ws.send({ t: 'adj', team: t.id, d: -5 }) },
+        '-',
+        { t: 'Rename or change the icon', f: () => window.open(teamAdminHref(code), '_blank') },
+      ], 'top:40px;right:0;min-width:230px');
+    };
+    r.append(el('div', { className: 'r1' }, el('span', { className: 'rk', textContent: x.leader ? '🏆' : x.rank }),
+      el('span', { className: 'em', textContent: cleanIcon(t.emoji) }), el('span', { className: 'nm', textContent: t.name }),
+      el('span', { className: 'pt', textContent: x.score })), bar,
+      el('div', { className: 'r2' }, adj('−', -1, 'Take a point from'), adj('+', 1, 'Give a point to'), more));
+    box.append(r);
   });
-  if (!TM.teams.length) box.append(el('span', { className: 'mut', textContent: 'No teams yet. Use "Edit teams & class list" to make some.' }));
 }
 
 // ---- question rail ----
@@ -463,6 +524,8 @@ $('#more').onclick = e => {
     { t: 'Back up everything', f: () => doBackup() },
     { t: 'Restore a backup', f: () => $('#restore').click() },
     '-',
+    { t: 'Teams & class list', sub: 'Points, class list, how many teams', f: () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); } },
+    { t: 'Rename teams & icons', sub: 'Opens the Teams tab on Today', f: () => window.open(teamAdminHref(code), '_blank') },
     { t: 'Rename this class', f: renameClass },
     { t: 'Clear class (send students back to join)', danger: true, f: () => { if (confirm('Send all students in "' + per().name + '" back to the join screen? Teams, the class list and scores are kept. Save the PNG first if you want their drawings.')) ws.send({ t: 'reset' }); } },
     { t: 'Remove this class', danger: true, f: () => { if (!confirm('Remove "' + per().name + '"? Its teams, class list and scores on this computer will be deleted, and students are sent back to the join screen.')) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
@@ -519,7 +582,34 @@ const sheet = $('#tdlg');
 let rosterT = 0;
 const syncRoster = () => { save(); pendingSync = true; clearTimeout(rosterT); rosterT = setTimeout(() => { sendSetup(); pendingSync = false; ui(); }, 350); };
 const teamsChanged = () => { save(); sendSetup(); ui(); sheetUI(); };
-$('#tedit').onclick = () => { sheetUI(); $('#tcls').textContent = per().name; sheet.showModal(); };
+// The Teams tab on Today can rename teams while this class is running; keep this copy and the tiles in step.
+onTeamsSaved(d => {
+  if (!d || d.code !== code) return;
+  TM.teams = d.teams.map(t => ({ ...t }));
+  const ids = new Set(TM.teams.map(t => t.id));
+  TM.roster.forEach(e => { if (!ids.has(e.team)) e.team = null; });
+  TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
+  save(); ui(); sheetUI();
+});
+$('#tedit').onclick = () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); };
+// ---- team scores panel: a column on a laptop, a slide-over on a small screen ----
+const wideScr = matchMedia('(min-width:1101px)');
+let scoresOpen = wideScr.matches ? store.do_scores !== '0' : false;
+function setScoresOpen(on, remember = true) {
+  scoresOpen = on;
+  document.body.classList.toggle('scores-off', !on);
+  document.body.classList.toggle('scores-on', on && !wideScr.matches);
+  $('#stoggle').classList.toggle('on', on);
+  $('#stoggle').setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (remember) store.do_scores = on ? '1' : '0';
+}
+$('#stoggle').onclick = () => { setScoresOpen(!scoresOpen); if (scoresOpen) renderScores(); };
+$('#sclose').onclick = () => setScoresOpen(false);
+$('#scoreback').onclick = () => setScoresOpen(false);
+wideScr.addEventListener('change', () => setScoresOpen(wideScr.matches ? store.do_scores !== '0' : false, false));
+$('#sadmin').href = teamAdminHref(code);
+$('#tadmin').href = teamAdminHref(code);
+setScoresOpen(scoresOpen, false);
 $('#tdone').onclick = () => sheet.close();
 sheet.addEventListener('close', () => {
   const ch = dedupeInitials(TM.roster); // two teammates can't share initials: a number is added
@@ -530,14 +620,19 @@ $('#tn').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' 
 function sheetUI() {
   if (!sheet.open) return;
   const box = $('#trows'); box.innerHTML = '';
-  TM.teams.forEach(t => {
+  const ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
+  ranked.forEach(x => {
+    const t = x.team;
     const r = el('div', { className: 'trow' }); r.style.setProperty('--tc', t.color);
     const n = TM.roster.length ? TM.roster.filter(e => e.team === t.id).length : [...S.stu.values()].filter(s => s.team === t.id).length;
-    const em = el('button', { className: 'em', textContent: t.emoji || '＋', title: 'Change the emoji', onclick: () => { t.emoji = EMO[(EMO.indexOf(t.emoji) + 1) % EMO.length]; teamsChanged(); } });
-    const nm = el('div', { style: 'flex:1;min-width:0' }, el('button', { className: 'link', textContent: t.name, title: 'Rename', style: 'color:var(--ink);text-decoration:none;font-weight:700;font-size:17px;padding:0;min-height:28px;text-align:left', onclick: () => { const v = (prompt('Team name:', t.name) || '').trim().slice(0, 20); if (v) { t.name = v; teamsChanged(); } } }), el('div', { className: 'mut', textContent: n + ' student' + (n === 1 ? '' : 's'), style: 'font-size:13px' }));
+    const bar = el('div', { className: 'tbar' }, el('i', {})); bar.firstChild.style.width = Math.max(4, Math.round(x.score / max * 100)) + '%';
+    const nm = el('div', { style: 'flex:1;min-width:0' },
+      el('div', { style: 'font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, teamLabel(t)),
+      el('div', { className: 'mut', textContent: n + ' student' + (n === 1 ? '' : 's'), style: 'font-size:13px' }), bar);
     const adj = (l, d, lab) => { const b = el('button', { className: 'b sm', textContent: l, onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
-    const x = el('button', { className: 'b sm danger', textContent: '✕', title: 'Remove team', style: 'border-color:transparent;background:transparent', onclick: () => { if (confirm('Remove team "' + t.name + '"? Its students become unassigned and its points are lost.')) { TM.teams = TM.teams.filter(y => y !== t); TM.roster.forEach(e => { if (e.team === t.id) e.team = null; }); delete TM.scores[t.id]; teamsChanged(); } } });
-    r.append(em, nm, adj('−', -1, 'Take a point from'), el('div', { className: 'pt', textContent: TM.scores[t.id] || 0 }), adj('+', 1, 'Give a point to'), x); box.append(r);
+    r.append(el('span', { className: 'rk' + (x.leader ? ' top' : ''), textContent: x.leader ? '🏆' : x.rank }), nm,
+      adj('−', -1, 'Take a point from'), el('div', { className: 'pt', textContent: x.score }), adj('+', 1, 'Give a point to'));
+    box.append(r);
   });
   if (!TM.teams.length) box.append(el('div', { className: 'mut', textContent: 'No teams yet. Choose how many and press Create teams.' }));
   $('#cap').classList.toggle('on', !!TM.cap);
@@ -666,10 +761,19 @@ function phoneQuestions(box) {
 function phoneTeams(box) {
   const pad = el('div', { className: 'ph-pad' });
   if (!TM.teams.length) pad.append(el('div', { className: 'mut', textContent: 'No teams yet. Set up teams on a computer, or use the demo to see how points work.', style: 'font-size:17px' }));
-  [...TM.teams].sort((a, b) => (TM.scores[b.id] || 0) - (TM.scores[a.id] || 0)).forEach(t => {
-    const r = el('div', { className: 'ph-row', style: 'border-left:8px solid ' + t.color + ';min-height:72px' });
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b sq', textContent: l, style: 'min-width:48px;min-height:48px;font-size:22px', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
-    r.append(el('div', { textContent: teamLabel(t), style: 'flex:1;min-width:0;font-weight:700;font-size:18px' }), adj('−', -1, 'Take a point from'), el('div', { textContent: TM.scores[t.id] || 0, style: 'font-family:var(--disp);font-weight:800;font-size:30px;min-width:36px;text-align:center' }), adj('+', 1, 'Give a point to')); pad.append(r);
+  const ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
+  ranked.forEach(x => {
+    const t = x.team;
+    const r = el('div', { className: 'ph-row', style: 'border-left:8px solid ' + t.color + ';min-height:84px;flex-direction:column;align-items:stretch;gap:8px' });
+    const adj = (l, d, lab) => { const b = el('button', { className: 'b sq', textContent: l, style: 'flex:1;min-height:52px;font-size:24px;font-weight:800', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const bar = el('div', { style: 'height:6px;border-radius:99px;background:#E4EBF2;overflow:hidden;margin-top:6px' }, el('i', {}));
+    bar.firstChild.style.cssText = 'display:block;height:100%;border-radius:99px;background:' + t.color + ';width:' + Math.max(4, Math.round(x.score / max * 100)) + '%';
+    const rk = el('span', { textContent: x.leader ? '🏆' : x.rank, style: 'flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:' + (x.leader ? '#FDF0CE' : '#E8EDF2') + ';color:' + (x.leader ? '#7A5200' : '#394551') });
+    const top = el('div', { style: 'display:flex;align-items:center;gap:10px;min-width:0' }, rk,
+      el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: teamLabel(t), style: 'font-weight:700;font-size:18px' }), bar),
+      el('div', { textContent: x.score, style: 'font-family:var(--disp);font-weight:800;font-size:32px;min-width:40px;text-align:center' }));
+    r.append(top, el('div', { style: 'display:flex;gap:8px' }, adj('−', -1, 'Take a point from'), adj('+', 1, 'Give a point to')));
+    pad.append(r);
   });
   box.append(pad);
 }

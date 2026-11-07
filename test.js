@@ -158,7 +158,6 @@ await test('host can move a class-list student to another team without replacing
   assert.equal(h.last('setup').roster.length, 3);
 });
 
-
 // ---- sort questions ----
 const SORT = {
   t: 'q', kind: 'sort', question: 'Sort the rocks',
@@ -258,6 +257,59 @@ await test('class-wide summary for the projector has percentages, no names and n
 await test('students cannot reveal, reopen or read results', async () => {
   sh.clear(); sa.send({ t: 'reveal', on: true }); sa.send({ t: 'sres', on: false }); sa.send({ t: 'reopen', id: sbJ.id }); await sleep(80);
   assert.equal(sh.last('reveal'), undefined); assert.equal(sh.last('sres'), undefined); assert.equal(sh.last('sort'), undefined);
+});
+
+// ---- team names and icons (Today → Teams) ----
+let rh, rj;
+await test('teams: a rename and new icon reach the class and keep the points', async () => {
+  rh = client(); await rh.ready;
+  rh.send({ t: 'host', code: 'RENAME', key: KEY, setup: { teams, roster, scores: { ta: 4, tb: 2 }, cap: false } });
+  await rh.wait('state');
+  rj = client(); await rj.ready; rj.send({ t: 'join', code: 'RENAME', rid: 'r0001', bw: 800, bh: 500 });
+  await rj.wait('joined'); rh.clear(); rj.clear();
+  rh.send({ t: 'teams', teams: [{ id: 'ta', name: 'Granite Crew', color: '#0E7C4A', emoji: '🚀' }, teams[1]] }); await sleep(90);
+  const sc = rh.last('score');
+  assert.equal(sc.teams[0].name, 'Granite Crew'); assert.equal(sc.teams[0].emoji, '🚀'); assert.equal(sc.teams[0].color, '#0E7C4A');
+  assert.equal(sc.scores.ta, 4, 'points survive a rename');
+  assert.equal(rj.last('score').teams[0].name, 'Granite Crew');
+  rh.send({ t: 'adj', team: 'ta', d: 1 }); await sleep(60);
+  assert.equal(rh.last('score').scores.ta, 5);
+});
+
+await test('teams: removing a team drops its points and unassigns its students', async () => {
+  rh.send({ t: 'teams', teams: [teams[1]] }); await sleep(90);
+  const sc = rh.last('score');
+  assert.equal(sc.teams.length, 1); assert.deepEqual(sc.scores, { tb: 2 });
+  assert.equal(rh.last('setup').roster.find(e => e.rid === 'r0001').team, null);
+  assert.equal(rj.last('myteam').team, null);
+});
+
+await test('teams: only a host can change team names', async () => {
+  rj.clear();
+  rj.send({ t: 'teams', teams: [{ id: 'tb', name: 'Hacked' }] }); await sleep(100);
+  assert.equal(rj.last('score'), undefined);
+  rh.clear(); rh.send({ t: 'status', code: 'RENAME', key: KEY }); await sleep(80);
+  assert.equal(rh.last('status').teams[0].name, teams[1].name);
+});
+
+await test('status: team names and scores come back only with the host key', async () => {
+  const c = client(); await c.ready;
+  c.send({ t: 'status', code: 'RENAME' }); const a = await c.wait('status');
+  assert.equal(a.teams, undefined); assert.equal(a.scores, undefined);
+  c.clear(); c.send({ t: 'status', code: 'RENAME', key: 'not-the-key-1' }); const b = await c.wait('status');
+  assert.equal(b.scores, undefined);
+  c.clear(); c.send({ t: 'status', code: 'RENAME', key: KEY }); const d = await c.wait('status');
+  assert.deepEqual(d.scores, { tb: 2 }); assert.equal(d.teams[0].name, 'Basalt');
+});
+
+await test('teams: long names and multi-part emoji are cut cleanly, never mid-character', async () => {
+  const h = client(); await h.ready;
+  h.send({ t: 'host', code: 'CLEAN', key: KEY, setup: { teams: [{ id: 'ta', name: 'Granite Granite Granite', color: 'nope', emoji: '🏳️‍🌈' }], roster: [] } });
+  const s = await h.wait('state');
+  assert.equal(Array.from(s.teams[0].name).length, 20);
+  assert.equal(s.teams[0].emoji, '🏳️‍🌈');
+  assert.equal(s.teams[0].color, '#2563eb');
+  assert.equal(s.teams[0].name, 'Granite Granite Gran');
 });
 
 console.log(pass + ' passed'); srv.kill();

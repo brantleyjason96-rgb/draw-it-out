@@ -39,10 +39,16 @@ const saveTM = (c, t) => { try { store[TKEY(c)] = JSON.stringify(t); } catch {} 
 const pubRoster = t => t.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
 const PRE = [['Granite', '🪨', '#475569'], ['Basalt', '🌋', '#b91c1c'], ['Quartz', '💎', '#0284c7'], ['Magma', '🔥', '#ea580c'], ['Glacier', '🧊', '#0891b2'], ['Fossil', '🦴', '#854d0e'], ['Geyser', '💧', '#1d4ed8'], ['Canyon', '🏜️', '#b45309']];
 const EMO = ['🪨', '🌋', '💎', '🔥', '🧊', '🦴', '💧', '🏜️', '🌊', '⛰️', '🌍', '⭐'];
-const newTeam = (list, name) => { const i = list.length, p = PRE[i % PRE.length]; return { id: uid4(), name: (name || p[0] + (i >= PRE.length ? ' ' + (Math.floor(i / PRE.length) + 1) : '')).slice(0, 20), color: p[2], emoji: p[1] }; };
+// The icon picker on the Teams tab. Any pasted emoji is accepted too; these are just the quick picks.
+const TEAM_ICONS = [...EMO, '🚀', '🧲', '⚡', '🌈', '🍀', '🦊', '🐙', '🦉', '🐝', '🦈', '🌵', '🌻', '🍎', '🍕', '🎈', '🎯', '🎨', '🎸', '⚽', '🏀', '🏆', '🥇', '🧩', '🔭', '🧪', '🧬', '📚', '✏️', '🛠️', '🧭', '🌙', '☀️', '🌪️', '🐉', '👾', '🤖'];
+const TEAM_COLORS = ['#475569', '#b91c1c', '#ea580c', '#b45309', '#854d0e', '#0E7C4A', '#0891b2', '#0284c7', '#1d4ed8', '#7c3aed', '#be185d', '#17212B'];
+const newTeam = (list, name) => {
+  const i = list.length, p = PRE[i % PRE.length];
+  return { id: uid4(), name: Array.from(name || p[0] + (i >= PRE.length ? ' ' + (Math.floor(i / PRE.length) + 1) : '')).slice(0, 20).join(''), color: p[2], emoji: p[1] };
+};
 const cleanTM = t => {
-  const str = (v, n) => String(v == null ? '' : v).slice(0, n), ids = new Set();
-  const teams = (Array.isArray(t.teams) ? t.teams : []).slice(0, 12).filter(x => x && /^[a-z0-9]{1,8}$/.test(x.id)).map(x => (ids.add(x.id), { id: x.id, name: str(x.name, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(x.color) ? x.color : '#2563eb', emoji: str(x.emoji, 4) }));
+  const str = (v, n) => Array.from(String(v == null ? '' : v)).slice(0, n).join(''), ids = new Set();
+  const teams = (Array.isArray(t.teams) ? t.teams : []).slice(0, 12).filter(x => x && /^[a-z0-9]{1,8}$/.test(x.id)).map(x => (ids.add(x.id), { id: x.id, name: str(x.name, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(x.color) ? x.color : '#2563eb', emoji: str(x.emoji, 8) }));
   const roster = (Array.isArray(t.roster) ? t.roster : []).slice(0, 100).filter(x => x && /^[a-z0-9]{4,12}$/.test(x.rid)).map(x => ({ rid: x.rid, first: str(x.first, 40), last: str(x.last, 40), ini: str(x.ini, 6), team: ids.has(x.team) ? x.team : null }));
   const scores = {}; teams.forEach(x => (scores[x.id] = Number.isInteger(t.scores && t.scores[x.id]) ? Math.max(0, Math.min(9999, t.scores[x.id])) : 0));
   return { teams, roster, cap: !!t.cap, scores };
@@ -58,6 +64,45 @@ function dedupeInitials(roster) {
   return changed;
 }
 const iniOf = nm => { const p = nm.trim().split(/\s+/).filter(Boolean); return ((p.length ? Array.from(p[0])[0] : '') + (p.length > 1 ? Array.from(p[p.length - 1])[0] : '')).toUpperCase(); };
+
+// ---- editing teams (Today → Teams): saved in this browser, pushed to a class that is running ----
+// A class may be open on the classroom computer, so the Teams tab never writes the class list or the scores.
+const teamChannel = !DEMO && 'BroadcastChannel' in window ? new BroadcastChannel('draw-it-out-teams') : null;
+const liveInfo = new Map(); // code -> last { live, here, teams, scores, cap } the server reported
+const markLive = (code, info) => liveInfo.set(code, info);
+const isLive = code => !!(liveInfo.get(code) || {}).live;
+const teamsFor = code => { const li = liveInfo.get(code); return li && li.teams && li.teams.length ? li.teams : loadTM(code).teams; };
+const scoresFor = code => { const li = liveInfo.get(code); return (li && li.scores) || loadTM(code).scores || {}; };
+const teamAdminHref = code => '/teacher?tab=teams&class=' + code;
+// Keep teams, scores and class-list assignments in step after a rename, reorder, add or remove.
+function saveTeams(code, teams, opts = {}) {
+  const tm = loadTM(code);
+  const next = cleanTM({ ...tm, teams }).teams;
+  const ids = new Set(next.map(t => t.id));
+  tm.teams = next;
+  tm.roster.forEach(e => { if (!ids.has(e.team)) e.team = null; });
+  tm.scores = Object.fromEntries(next.map(t => [t.id, tm.scores[t.id] || 0]));
+  saveTM(code, tm);
+  if (!opts.quiet && teamChannel) teamChannel.postMessage({ code, teams: next });
+  return tm;
+}
+// Another tab (the class screen, or a second home tab) applies the same edit without a reload.
+const onTeamsSaved = fn => { if (teamChannel) teamChannel.onmessage = e => fn(e.data); };
+// Identity-only changes: names, icons, colours and order. Never the class list, never the scores.
+function pushTeams(code, teams) {
+  if (!isLive(code)) return;
+  const key = store['do_key_' + code] || hostKey();
+  const w = connect(m => { if (m.t === 'state') { w.send({ t: 'teams', teams }); setTimeout(() => w.close(), 450); } },
+    () => w.send({ t: 'host', code, key }));
+  setTimeout(() => w.close(), 5000);
+}
+// A one-off host connection for a command that must not resend (and so overwrite) the class list.
+function hostDo(code, msgs) {
+  const key = store['do_key_' + code] || hostKey();
+  const w = connect(m => { if (m.t === 'state') { msgs.forEach(x => w.send(x)); setTimeout(() => w.close(), 500); } },
+    () => w.send({ t: 'host', code, key }));
+  setTimeout(() => w.close(), 5000);
+}
 
 // ---- question sets (IndexedDB) ----
 let sets = [];

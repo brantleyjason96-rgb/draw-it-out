@@ -32,6 +32,62 @@ h1{font-size:38px;letter-spacing:-.01em}
 .bk.stale .t{color:var(--amber-d)}
 .shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .shelf>div{display:flex;align-items:center;gap:12px}
+
+/* Classes / Teams tabs */
+.seg.tabs{align-self:flex-start;background:#fff}
+.seg.tabs button{min-height:52px;padding:0 30px;font-size:17px}
+.ta-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 18px}
+.ta-top h2{font-size:24px}
+.ta-top .pick{display:flex;align-items:center;gap:10px}
+.ta-top select{width:auto;min-width:200px;font-weight:700}
+.ta-cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.ta-cols>.card{padding:16px 18px}
+.ta-main{flex:1 1 520px;min-width:0}
+.ta-side{flex:0 1 340px;display:flex;flex-direction:column;gap:14px}
+.ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:14px;padding:10px 12px;background:#fff}
+.tcard-ic{width:56px;height:56px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
+.tcard-nm{font-weight:700;font-size:17px;min-height:42px}
+.tcard-sub{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}
+.swrow{display:flex;gap:4px;flex-wrap:wrap}
+.swbtn{width:22px;height:22px;border-radius:6px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
+.swbtn.on{box-shadow:0 0 0 3px var(--ink)}
+.tcard-score{display:flex;align-items:center;gap:8px;min-width:76px;justify-content:flex-end}
+.tcard-score b{font-family:var(--disp);font-weight:800;font-size:28px;min-width:34px;text-align:right}
+.tcard-score .rk{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#E8EDF2;color:#394551;font-weight:800;font-size:14px}
+.tcard-score .rk.top{background:#FDF0CE;color:#7A5200}
+.tcard-move{display:flex;gap:4px}
+.tcard-move .b{min-width:36px;min-height:36px;padding:0}
+.ta-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ta-empty{padding:20px 4px;color:var(--mut);font-size:16px}
+.pv{display:flex;flex-direction:column;gap:12px}
+.pv-lbl{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:14px;background:#fff;padding:10px 14px;font-size:18px;font-weight:600;max-width:220px}
+.pvtile .em{font-size:30px;line-height:1}
+.pvboard{display:grid;grid-template-columns:34px minmax(0,1fr) 44px;align-items:center;gap:10px}
+.pvboard .rk{font-size:20px;font-weight:800;text-align:center;color:var(--mut)}
+.pvboard .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvboard .bar{height:12px;border-radius:99px;background:var(--tc);min-width:8px;margin-top:4px}
+.pvboard .pt{font-family:var(--disp);font-weight:800;font-size:24px;text-align:right}
+.ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:16px 24px}
+.ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:12px;background:#fff;font-size:26px;line-height:1}
+.ic-grid button.on{border:3px solid var(--pri);background:var(--pri-l)}
+.ic-custom{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:0 24px 22px}
+.ic-custom .f{display:flex;flex-direction:column;gap:6px;flex:0 1 220px}
+.stand{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.stand-r{display:grid;grid-template-columns:22px 24px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:15px}
+.stand-rk{font-weight:800;font-size:13px;color:var(--mut);text-align:center}
+.stand-em{font-size:17px;text-align:center}
+.stand-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stand-pt{font-weight:800}
+.stand-more{align-self:flex-start;background:none;border:0;padding:0;min-height:28px;color:var(--pri-d);font-weight:700;font-size:14px;text-decoration:underline}
+@media(max-width:760px){
+ .tcard{grid-template-columns:48px minmax(0,1fr) auto}
+ .tcard-score{grid-column:2;justify-content:flex-start;min-width:0}
+ .tcard-move{grid-column:3;grid-row:2}
+ .tcard-ic{width:48px;height:48px;font-size:22px}
+ .ta-side{flex:1 1 100%}
+}
 @media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:30px}.tb{padding:0 12px}}
 </style>
 </head>
@@ -43,40 +99,104 @@ h1{font-size:38px;letter-spacing:-.01em}
 <main>
  <div>
   <h1>Today</h1>
-  <div class="mut" style="margin-top:4px;font-size:18px">Pick a class to start. Students join with the class code.</div>
+  <div class="mut" style="margin-top:4px;font-size:18px">Pick a class to start, or set up team names and icons.</div>
  </div>
 
- <section class="sec">
-  <div class="lbl">Your classes</div>
-  <div class="grid" id="classes"></div>
-  <div class="mut" id="conn" style="font-size:14px"></div>
- </section>
+ <div class="seg tabs" role="tablist" aria-label="Today sections">
+  <button role="tab" data-tab="classes" aria-selected="true">Classes</button>
+  <button role="tab" data-tab="teams" aria-selected="false">Teams</button>
+ </div>
 
- <section class="sec">
-  <div class="sech">
-   <div class="lbl">Your question sets</div>
-   <div style="display:flex;gap:8px">
-    <button class="b" id="imp">Import a file</button>
-    <input type="file" id="impfile" accept=".json,application/json" hidden>
-    <button class="b" id="newset">+ New set</button>
+ <!-- Classes: everything that is on Today today -->
+ <div id="tab-classes" style="display:flex;flex-direction:column;gap:26px">
+  <section class="sec">
+   <div class="lbl">Your classes</div>
+   <div class="grid" id="classes"></div>
+   <div class="mut" id="conn" style="font-size:14px"></div>
+  </section>
+
+  <section class="sec">
+   <div class="sech">
+    <div class="lbl">Your question sets</div>
+    <div style="display:flex;gap:8px">
+     <button class="b" id="imp">Import a file</button>
+     <input type="file" id="impfile" accept=".json,application/json" hidden>
+     <button class="b" id="newset">+ New set</button>
+    </div>
    </div>
-  </div>
-  <div class="grid" id="sets"></div>
- </section>
+   <div class="grid" id="sets"></div>
+  </section>
 
- <section class="two">
-  <div class="card">
-   <div class="sech" style="margin-bottom:12px"><h3 style="font-size:20px">Starter sets</h3><button class="b" id="allst">See all</button></div>
-   <div class="shelf" id="shelf"></div>
+  <section class="two">
+   <div class="card">
+    <div class="sech" style="margin-bottom:12px"><h3 style="font-size:20px">Starter sets</h3><button class="b" id="allst">See all</button></div>
+    <div class="shelf" id="shelf"></div>
+   </div>
+   <div class="card bk" id="bk">
+    <div class="t" style="font-weight:800;font-size:17px" id="bkt"></div>
+    <div class="mut" style="margin:6px 0 10px;font-size:15px" id="bkd"></div>
+    <div style="display:flex;gap:8px"><button class="b pri" id="bkup" style="flex:1">Back up now</button><button class="b" id="rst" style="flex:1">Restore</button></div>
+    <input type="file" id="restore" accept=".json,application/json" hidden>
+   </div>
+  </section>
+ </div>
+
+ <!-- Teams: rename teams, pick an icon and a colour, reorder. Nothing about the class list lives here. -->
+ <div id="tab-teams" hidden style="display:flex;flex-direction:column;gap:16px">
+  <section class="card ta-top">
+   <div>
+    <div class="lbl">Team names &amp; icons</div>
+    <h2 id="taname">Teams</h2>
+    <div class="mut" id="tameta" style="margin-top:4px;font-size:15px"></div>
+   </div>
+   <div class="pick">
+    <label class="lbl" for="taclass">Class</label>
+    <select class="inp" id="taclass"></select>
+    <a class="b" id="taopen" href="/class" style="text-decoration:none">Open class</a>
+   </div>
+  </section>
+
+  <div class="ta-cols">
+   <section class="card ta-main">
+    <div class="sech"><h3 style="font-size:21px">Teams</h3><span class="mut" id="tacount" style="font-weight:600"></span></div>
+    <div class="ta-list" id="talist"></div>
+    <div class="ta-foot">
+     <button class="b" id="taadd">+ Add team</button>
+     <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select class="inp" id="tasize" aria-label="How many teams to create" style="width:auto;min-width:120px"></select>
+      <button class="b" id="tacreate">Create teams</button>
+     </span>
+     <button class="b danger" id="tareset">Reset all scores</button>
+    </div>
+   </section>
+
+   <aside class="ta-side">
+    <section class="card">
+     <div class="lbl">What students and the projector see</div>
+     <div class="pv" style="margin-top:12px">
+      <div><div class="pv-lbl">Join screen</div><div id="pvtile" style="margin-top:6px"></div></div>
+      <div><div class="pv-lbl">Leaderboard</div><div id="pvboard" style="margin-top:6px"></div></div>
+     </div>
+    </section>
+    <section class="card">
+     <div class="lbl">Good to know</div>
+     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here.</div>
+    </section>
+   </aside>
   </div>
-  <div class="card bk" id="bk">
-   <div class="t" style="font-weight:800;font-size:17px" id="bkt"></div>
-   <div class="mut" style="margin:6px 0 10px;font-size:15px" id="bkd"></div>
-   <div style="display:flex;gap:8px"><button class="b pri" id="bkup" style="flex:1">Back up now</button><button class="b" id="rst" style="flex:1">Restore</button></div>
-   <input type="file" id="restore" accept=".json,application/json" hidden>
-  </div>
- </section>
+ </div>
 </main>
+
+<dialog id="icondlg" style="max-width:640px">
+ <div class="dh"><div><div class="lbl" id="icteam"></div><h2>Pick an icon</h2></div><button class="b pri" id="icdone">Done</button></div>
+ <div class="ic-grid" id="icgrid"></div>
+ <div class="ic-custom">
+  <div class="f"><label class="lbl" for="ictext">Or paste any emoji</label><input class="inp" id="ictext" maxlength="16" placeholder="🪨"></div>
+  <button class="b" id="icset">Use this icon</button>
+  <button class="link" id="icnone">Remove icon</button>
+ </div>
+</dialog>
+
 <div id="toast" hidden></div>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
@@ -104,7 +224,20 @@ function renderClasses() {
     const l2 = st.live ? st.here + ' here now' + (lastSet(p.code) ? ' · ' + lastSet(p.code) : '') : (lastSet(p.code) ? 'Last: ' + lastSet(p.code) : 'Code ' + p.code);
     const ln = el('div', { className: 'ln' }); ln.append(document.createTextNode(l1), document.createElement('br'), document.createTextNode(l2));
     const go = el('button', { className: 'b go ' + (st.live ? 'good' : p === next ? 'pri' : ''), textContent: st.live ? 'Go back to class' : 'Start class', onclick: () => (location.href = '/class?code=' + p.code) });
-    c.append(top, ln, go); box.append(c);
+    c.append(top, ln);
+    // Standings: the top three by points, so a class card answers "who is winning?" at a glance.
+    const ranked = rankTeams(teamsFor(p.code), scoresFor(p.code));
+    if (ranked.length) {
+      const s = el('div', { className: 'stand' });
+      ranked.slice(0, 3).forEach(x => s.append(el('div', { className: 'stand-r' },
+        el('span', { className: 'stand-rk', textContent: x.rank }),
+        el('span', { className: 'stand-em', textContent: cleanIcon(x.team.emoji) }),
+        el('span', { className: 'stand-nm', textContent: x.team.name }),
+        el('span', { className: 'stand-pt', textContent: x.score }))));
+      s.append(el('button', { className: 'stand-more', textContent: ranked.length > 3 ? 'All ' + ranked.length + ' teams' : 'Edit teams', onclick: e => { e.stopPropagation(); goTeams(p.code); } }));
+      c.append(s);
+    }
+    c.append(go); box.append(c);
   });
   box.append(el('button', { className: 'newc', onclick: addClass }, el('span', { textContent: '+', style: 'font-size:28px;line-height:1' }), document.createTextNode('New class')));
 }
@@ -112,6 +245,7 @@ function classMenu(p, card, e) {
   e.stopPropagation(); const had = menu; closeMenu(); if (had && had.dataset.code === p.code) return;
   menu = el('div', { className: 'menu' }); menu.dataset.code = p.code; menu.style.cssText = 'top:52px;right:12px;min-width:220px';
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
+  add('Team names & icons', () => goTeams(p.code));
   add('Rename', () => { const v = (prompt('Rename this class:', p.name) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
   add('Remove class', () => {
     if (!confirm('Remove "' + p.name + '"? Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''))) return;
@@ -163,14 +297,181 @@ $('#bkup').onclick = () => { doBackup(); renderBackup(); };
 $('#rst').onclick = () => $('#restore').click();
 $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doRestore(f, () => { renderClasses(); renderSets(); renderBackup(); }); };
 
+// ---- Teams tab: names, icons, colours and order, one class at a time ----
+// Points and class lists are not edited here; the tab only changes how a team is shown.
+const startTab = new URLSearchParams(location.search);
+let tab = startTab.get('tab') === 'teams' ? 'teams' : 'classes';
+let taCode = periodOf((startTab.get('class') || '').toUpperCase()) ? startTab.get('class').toUpperCase() : currentCode();
+let working = []; // the team list being edited for taCode, saved on every change
+let iconTarget = null, editT = 0;
+
+function setTab(t) {
+  tab = t;
+  $$('.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); });
+  $('#tab-classes').hidden = t !== 'classes';
+  $('#tab-teams').hidden = t !== 'teams';
+  const u = new URL(location.href);
+  u.searchParams.set('tab', t);
+  if (t === 'teams') u.searchParams.set('class', taCode); else u.searchParams.delete('class');
+  history.replaceState(null, '', u);
+  if (t === 'teams') { loadWorking(); renderTeamsTab(); ask(); }
+}
+function goTeams(code) {
+  if (code && periodOf(code)) taCode = code;
+  setTab('teams');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function loadWorking() { working = teamsFor(taCode).map(t => ({ ...t })); }
+// Save at once in this browser, then tell a running class (and any other tab) once typing pauses.
+function editTeams() {
+  saveTeams(taCode, working, { quiet: true });
+  clearTimeout(editT);
+  editT = setTimeout(() => { saveTeams(taCode, working); pushTeams(taCode, working); }, 450);
+  renderPreview();
+}
+function removeTeam(t) {
+  if (!confirm('Remove team "' + t.name + '"? Its students become unassigned and its points are lost.')) return;
+  working = working.filter(x => x.id !== t.id);
+  editTeams(); renderTeamsTab();
+}
+function renderTeamsTab() {
+  const sel = $('#taclass'), sig = periods.map(p => p.code + ':' + p.name).join('|');
+  if (sel.dataset.sig !== sig) {
+    sel.innerHTML = '';
+    periods.forEach(p => sel.append(el('option', { value: p.code, textContent: p.name })));
+    sel.dataset.sig = sig;
+  }
+  sel.value = taCode;
+  const p = periodOf(taCode) || periods[0], li = liveInfo.get(taCode) || {};
+  const bits = [li.live ? 'Live now' : 'Not running'];
+  if (li.live && li.here) bits.push(li.here + ' here');
+  bits.push('Code ' + taCode);
+  $('#taname').textContent = 'Teams in ' + p.name;
+  $('#tameta').textContent = bits.join(' · ');
+  $('#taopen').href = '/class?code=' + taCode;
+  $('#tacount').textContent = working.length + (working.length === 1 ? ' team' : ' teams');
+  const ranked = rankTeams(working, scoresFor(taCode)), rankOf = new Map(ranked.map(x => [x.team.id, x]));
+  const roster = loadTM(taCode).roster, box = $('#talist');
+  box.innerHTML = '';
+  if (!working.length) box.append(el('div', { className: 'ta-empty', textContent: 'No teams yet. Use Create teams to start with four, or add them one at a time.' }));
+  working.forEach((t, i) => {
+    const r = rankOf.get(t.id) || { rank: i + 1, score: 0, leader: false };
+    const members = roster.filter(e => e.team === t.id).length;
+    const c = el('div', { className: 'tcard' }); c.style.setProperty('--tc', t.color);
+    const ic = el('button', { className: 'tcard-ic', textContent: cleanIcon(t.emoji) || '＋', title: 'Change this team’s icon', onclick: () => openIcons(t) });
+    ic.setAttribute('aria-label', 'Change the icon for ' + t.name);
+    const nm = el('input', { className: 'inp tcard-nm', value: t.name, maxLength: 20 });
+    nm.setAttribute('aria-label', 'Team name');
+    nm.oninput = () => { t.name = nm.value; editTeams(); };
+    nm.onchange = () => { if (!nm.value.trim()) { t.name = 'Team'; nm.value = 'Team'; editTeams(); } };
+    const sub = el('div', { className: 'tcard-sub' }, el('span', { className: 'mut', textContent: members ? members + ' student' + (members === 1 ? '' : 's') : 'No students', style: 'font-size:14px' }));
+    const sw = el('div', { className: 'swrow' });
+    TEAM_COLORS.forEach(col => {
+      const b = el('button', { className: 'swbtn' + (col.toLowerCase() === t.color.toLowerCase() ? ' on' : ''), title: 'Use this colour', onclick: () => { t.color = col; editTeams(); renderTeamsTab(); } });
+      b.style.background = col; b.setAttribute('aria-label', 'Colour ' + col); sw.append(b);
+    });
+    sub.append(sw);
+    const score = el('div', { className: 'tcard-score' },
+      el('span', { className: 'rk' + (r.leader ? ' top' : ''), textContent: r.leader ? '🏆' : r.rank }),
+      el('b', { textContent: r.score }));
+    const move = (d, label, glyph, dis) => {
+      const b = el('button', { className: 'b', textContent: glyph, title: label, disabled: dis, onclick: () => { [working[i], working[i + d]] = [working[i + d], working[i]]; editTeams(); renderTeamsTab(); } });
+      b.setAttribute('aria-label', label + ' ' + t.name); return b;
+    };
+    const mv = el('div', { className: 'tcard-move' }, move(-1, 'Move up', '↑', i === 0), move(1, 'Move down', '↓', i === working.length - 1),
+      el('button', { className: 'b danger', textContent: '✕', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }));
+    c.append(ic, el('div', {}, nm, sub), score, mv); box.append(c);
+  });
+  renderPreview();
+}
+
+function renderPreview() {
+  const ranked = rankTeams(working, scoresFor(taCode)), max = scoreMax(ranked);
+  const tile = $('#pvtile'), top = ranked[0] && ranked[0].team;
+  tile.innerHTML = '';
+  if (top) {
+    const d = el('div', { className: 'pvtile' }); d.style.setProperty('--tc', top.color);
+    d.append(el('span', { className: 'em', textContent: cleanIcon(top.emoji) || '＋' }), el('span', { textContent: top.name }));
+    tile.append(d);
+  } else tile.append(el('div', { className: 'mut', textContent: 'Team tiles appear here once you add a team.' }));
+  const board = $('#pvboard'); board.innerHTML = '';
+  if (!ranked.length) { board.append(el('div', { className: 'mut', textContent: 'The leaderboard fills in as teams score.' })); return; }
+  ranked.slice(0, 4).forEach(x => {
+    const r = el('div', { className: 'pvboard' }); r.style.setProperty('--tc', x.team.color);
+    const bar = el('div', { className: 'bar' }); bar.style.width = Math.max(4, Math.round(x.score / max * 100)) + '%';
+    r.append(el('div', { className: 'rk', textContent: x.leader ? '🏆' : x.rank }),
+      el('div', {}, el('div', { className: 'nm', textContent: teamLabel(x.team) }), bar),
+      el('div', { className: 'pt', textContent: x.score }));
+    board.append(r);
+  });
+  if (ranked.length > 4) board.append(el('div', { className: 'mut', style: 'font-size:14px', textContent: '+' + (ranked.length - 4) + ' more on the projector' }));
+}
+function openIcons(t) {
+  iconTarget = t; $('#icteam').textContent = t.name; $('#ictext').value = cleanIcon(t.emoji);
+  const g = $('#icgrid'); g.innerHTML = '';
+  TEAM_ICONS.forEach(ic => {
+    const b = el('button', { textContent: ic, className: cleanIcon(t.emoji) === ic ? 'on' : '', onclick: () => applyIcon(ic) });
+    b.setAttribute('aria-label', 'Icon ' + ic); g.append(b);
+  });
+  $('#icondlg').showModal();
+}
+function applyIcon(ic) {
+  if (!iconTarget) return;
+  iconTarget.emoji = cleanIcon(ic);
+  editTeams(); renderTeamsTab();
+  if ($('#icondlg').open) $('#icondlg').close();
+}
+$$('.tabs button').forEach(b => (b.onclick = () => setTab(b.dataset.tab)));
+$('#taclass').onchange = e => { taCode = e.target.value; setTab('teams'); };
+$('#icdone').onclick = () => $('#icondlg').close();
+$('#icset').onclick = () => applyIcon($('#ictext').value);
+$('#icnone').onclick = () => applyIcon('');
+$('#taadd').onclick = () => {
+  if (working.length >= 12) return toast('12 teams is the most.');
+  working.push(newTeam(working)); editTeams(); renderTeamsTab();
+};
+$('#tasize').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + ' teams</option>').join('');
+$('#tacreate').onclick = () => {
+  if (working.length && !confirm('Replace your ' + working.length + ' teams? Their points will be lost.')) return;
+  const n = +$('#tasize').value;
+  working = []; for (let i = 0; i < n; i++) working.push(newTeam(working));
+  editTeams(); renderTeamsTab();
+};
+$('#tareset').onclick = () => {
+  if (!confirm('Set every team in "' + (periodOf(taCode) || {}).name + '" back to 0 points?')) return;
+  const zeros = Object.fromEntries(working.map(t => [t.id, 0]));
+  const tm = loadTM(taCode); tm.scores = zeros; saveTM(taCode, tm);
+  const li = liveInfo.get(taCode); if (li) markLive(taCode, { ...li, scores: zeros });
+  if (isLive(taCode)) hostDo(taCode, [{ t: 'resetscores' }]);
+  toast('Scores reset.'); renderTeamsTab();
+};
+// a second tab (class screen or another Today) keeps in step with an edit made here
+onTeamsSaved(d => { if (d && d.code === taCode) { loadWorking(); if (tab === 'teams') renderTeamsTab(); renderClasses(); } });
+
+
+
 // ask the server which classes are running (and how many students are in each)
-const ask = () => periods.forEach(p => ws.send({ t: 'status', code: p.code }));
-const ws = connect(m => { if (m.t === 'status') { live[m.code] = m; renderClasses(); } },
+// With this browser's host key the answer also carries the live team names and points.
+function ask() { periods.forEach(p => ws.send({ t: 'status', code: p.code, key: store['do_key_' + p.code] || hostKey() })); }
+const ws = connect(m => {
+  if (m.t !== 'status') return;
+  live[m.code] = m; markLive(m.code, m);
+  renderClasses();
+  // Don't rebuild the Teams list under the caret (or the icon picker); the preview still updates.
+  if (tab === 'teams' && m.code === taCode) {
+    const busy = $('#talist').contains(document.activeElement) || $('#icondlg').open;
+    if (busy) renderPreview(); else { loadWorking(); renderTeamsTab(); }
+  }
+},
   () => { $('#conn').textContent = ''; ask(); },
   ok => { if (!ok) $('#conn').textContent = 'Connecting to the class server… it may be waking up, which can take up to a minute.'; });
 setInterval(ask, 15000);
+// coming back to this tab should show the current standings, not the ones from a minute ago
+window.addEventListener('focus', ask);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) ask(); });
 
 renderClasses(); renderBackup();
+setTab(tab);
 loadSets().then(() => { renderSets(); renderShelf(); checkShared(() => { renderSets(); renderShelf(); }); });
 </script>
 </body>

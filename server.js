@@ -135,12 +135,13 @@ function pushSummary(r) { // at most twice a second, and only while the teacher 
 // ---- teams and roster ----
 // The roster only ever holds initials and a team. Real names stay in the teacher's browser and are never sent here.
 const MAX_TEAMS = 12, MAX_ROSTER = 100;
+const trunc = (s, n) => Array.from(String(s == null ? '' : s)).slice(0, n).join(''); // by code point, so an emoji is never cut in half
 function cleanTeams(a) {
   const seen = new Set();
   return (Array.isArray(a) ? a : []).slice(0, MAX_TEAMS).map(t => {
     if (!t || typeof t.id !== 'string' || !/^[a-z0-9]{1,8}$/.test(t.id) || seen.has(t.id)) return null;
     seen.add(t.id);
-    return { id: t.id, name: String(t.name || '').replace(/\s+/g, ' ').trim().slice(0, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#2563eb', emoji: Array.from(String(t.emoji || '')).slice(0, 2).join('') };
+    return { id: t.id, name: trunc(String(t.name || '').replace(/\s+/g, ' ').trim(), 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#2563eb', emoji: trunc(t.emoji, 8) };
   }).filter(Boolean);
 }
 const cleanIni = s => Array.from(String(s || '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()).slice(0, 6).join('');
@@ -181,6 +182,21 @@ function applySetup(r, m) {
   r.students.forEach(s => { if (s.rid && !entryOf(r, s.rid)) release(r, s, 'Your teacher updated the class list. Join again.'); });
   r.students.forEach(s => { s.team = s.rid ? entryOf(r, s.rid).team : (r.teams.some(t => t.id === s.team) ? s.team : null); });
   fixAwards(r);
+}
+// Rename, re-icon, recolour or reorder teams. Identity only: the class list and the points are not replaced.
+// A removed team takes its points with it, and its students and class-list entries become "no team".
+function setTeams(r, list) {
+  r.teams = cleanTeams(list);
+  const ids = new Set(r.teams.map(t => t.id));
+  r.scores = cleanScores(r.scores, r.teams);
+  r.roster.forEach(e => { if (!ids.has(e.team)) e.team = null; });
+  r.students.forEach(s => {
+    const e = s.rid && entryOf(r, s.rid);
+    if (e) s.team = e.team;
+    else if (!ids.has(s.team)) s.team = null;
+  });
+  fixAwards(r);
+  pushScores(r);
 }
 // tell everyone what changed: scores to all, team/award flags to the teacher and projector
 function pushScores(r) {
@@ -228,8 +244,12 @@ wss.on('connection', ws => {
     }
 
     if (m.t === 'status') { // the teacher's home page asks whether each class is live and how many students are in it
-      const r = rooms.get(cleanCode(m.code));
-      return tx(ws, { t: 'status', code: cleanCode(m.code), live: !!r, here: r ? [...r.students.values()].filter(live).length : 0 });
+      const code = cleanCode(m.code), r = rooms.get(code);
+      const o = { t: 'status', code, live: !!r, here: r ? [...r.students.values()].filter(live).length : 0 };
+      // Scores and team names come back only to a device that holds this class's host key, so the Teams tab and
+      // the class cards can show true live standings without exposing them to anyone who guesses a code.
+      if (r && typeof m.key === 'string' && m.key === r.key) { o.teams = r.teams; o.scores = r.scores; o.cap = r.cap; }
+      return tx(ws, o);
     }
 
     if (m.t === 'peek') { // student asks which teams / initials are on offer; initials are only revealed one team at a time
@@ -329,6 +349,8 @@ wss.on('connection', ws => {
         broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
         applySetup(room, m); pushScores(room);
+      } else if (m.t === 'teams') { // rename / re-icon / recolour / reorder / add / remove, without touching the class list
+        setTeams(room, m.teams);
       } else if (m.t === 'team') { // no class list loaded: put a nickname-joined student on a team (with a class list, the list decides)
         const s = room.students.get(m.id);
         if (s) {

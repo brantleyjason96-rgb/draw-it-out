@@ -8,7 +8,9 @@ Two kinds of question:
 
 - Students: `/` (join with a class code)
 - Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
-  - `/class?code=…` is the teaching screen (also a phone layout under 700px wide)
+  - **Classes** tab: pick a class to start; each card shows the top three teams by points.
+  - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
+  - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle, a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px
   - `/sets?id=…` is the question editor (its own screen)
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
   - `/classic` is the previous single-page teacher screen, kept as a fallback

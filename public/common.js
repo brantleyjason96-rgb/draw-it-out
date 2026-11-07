@@ -95,6 +95,26 @@ function loadImg(src, cb) {
   const i = new Image(); i.onload = cb; i.src = src; return i;
 }
 
+// ---- team labels and standings (shared by student, teacher and projector pages) ----
+// A team's icon can be a multi-part emoji (flag, family), so it is trimmed by code point, never by UTF-16 unit.
+const cleanIcon = s => Array.from(String(s || '')).slice(0, 8).join('');
+const teamLabel = t => { const i = cleanIcon(t && t.emoji); return (i ? i + ' ' : '') + ((t && t.name) || 'Team'); };
+// Standard competition ranking: scores 12, 9, 9, 4 rank 1, 2, 2, 4. The lead is shared when teams tie on top.
+function rankTeams(teams, scores = {}) {
+  const list = (teams || []).map(t => ({ team: t, score: Math.max(0, +scores[t.id] || 0) }))
+    .sort((a, b) => b.score - a.score);
+  const top = list.length ? list[0].score : 0;
+  let rank = 0, last = null;
+  return list.map((x, i) => {
+    // With no points on the board, show plain positions (1, 2, 3) rather than a row of tied firsts.
+    if (top === 0) return { ...x, rank: i + 1, leader: false };
+    if (x.score !== last) { rank = i + 1; last = x.score; }
+    return { ...x, rank, leader: x.score === top };
+  });
+}
+// the widest bar in a score list, never below 1, so 0-point teams still get a visible sliver
+const scoreMax = list => Math.max(1, ...list.map(x => x.score));
+
 // WebSocket with automatic reconnect. onopen runs on every (re)connect so pages can re-handshake.
 function connect(onmsg, onopen, onstatus) {
   let ws, delay = 500, closed = false;

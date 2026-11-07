@@ -85,18 +85,20 @@ function onmsg(m) {
 // leaderboard: one persistent row per team so bars slide and rows reorder smoothly
 const rows = new Map(); let prev = {};
 function board() {
-  const box = $('#lb'), max = Math.max(1, ...S.teams.map(t => S.scores[t.id] || 0)), order = [...S.teams].sort((a, b) => (S.scores[b.id] || 0) - (S.scores[a.id] || 0));
-  rows.forEach((r, id) => { if (!S.teams.some(t => t.id === id)) { r.el.remove(); rows.delete(id); } });
-  S.teams.forEach(t => {
+  const box = $('#lb'), ranked = rankTeams(S.teams, S.scores), max = scoreMax(ranked);
+  const here = new Set(ranked.map(x => x.team.id));
+  rows.forEach((r, id) => { if (!here.has(id)) { r.el.remove(); rows.delete(id); } });
+  ranked.forEach((x, i) => {
+    const t = x.team;
     let r = rows.get(t.id);
     if (!r) { const el = document.createElement('div'); el.className = 'lr'; el.innerHTML = '<div class="rk"></div><div><div class="nm"></div><div class="bar"></div></div><div class="pt"></div>'; box.append(el); r = { el }; rows.set(t.id, r); }
-    const sc = S.scores[t.id] || 0, i = order.indexOf(t);
-    r.el.style.order = i; r.el.querySelector('.rk').textContent = i === 0 && sc > 0 ? '🏆' : i + 1;
-    r.el.querySelector('.nm').textContent = (t.emoji ? t.emoji + ' ' : '') + t.name;
-    const bar = r.el.querySelector('.bar'); bar.style.background = t.color; bar.style.width = Math.max(2, sc / max * 100) + '%';
-    r.el.querySelector('.pt').textContent = sc;
-    if (prev[t.id] !== undefined && sc > prev[t.id]) { r.el.classList.remove('pop'); void r.el.offsetWidth; r.el.classList.add('pop'); }
-    prev[t.id] = sc;
+    r.el.style.order = i;
+    r.el.querySelector('.rk').textContent = x.leader ? '🏆' : x.rank;
+    r.el.querySelector('.nm').textContent = teamLabel(t);
+    const bar = r.el.querySelector('.bar'); bar.style.background = t.color; bar.style.width = Math.max(2, x.score / max * 100) + '%';
+    r.el.querySelector('.pt').textContent = x.score;
+    if (prev[t.id] !== undefined && x.score > prev[t.id]) { r.el.classList.remove('pop'); void r.el.offsetWidth; r.el.classList.add('pop'); }
+    prev[t.id] = x.score;
   });
 }
 // one student's sort: their lanes with their sticky notes (the projector never gets the answer key, so no right or wrong here)
