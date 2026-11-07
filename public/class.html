@@ -617,6 +617,7 @@ function renderPhone() {
   box.scrollTop = keepScroll;
 }
 function phoneReview(box) {
+  if (S.q.kind === 'sort') { const q = el('div', { className: 'ph-q' }); const qt = el('div', {}); qt.innerHTML = S.q.question; q.append(el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' }), qt); box.append(q); return SR.phone(box, { ...sortCtx(), revealed: S.revealed, reveal: () => ws.send({ t: 'reveal', on: !S.revealed }) }); }
   const list = phoneList(); if (pi >= list.length) pi = Math.max(0, list.length - 1);
   const q = el('div', { className: 'ph-q' }); const lab = el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' });
   const qt = el('div', {}); qt.innerHTML = S.q.question || 'Nothing sent yet. Open the Questions tab.'; q.append(lab, qt); box.append(q);
@@ -643,11 +644,11 @@ function phoneReview(box) {
 }
 function phoneQuestions(box) {
   const pad = el('div', { className: 'ph-pad' }); const n = qs().length;
-  const drawn = [...S.stu.values()].filter(s => s.objs && s.objs.length).length, tot = S.stu.size;
+  const srt = S.q.kind === 'sort', drawn = [...S.stu.values()].filter(s => srt ? s.done : s.objs && s.objs.length).length, tot = S.stu.size;
   const now = el('div', { className: 'card', style: 'padding:14px 16px;border:2px solid var(--pri);display:flex;flex-direction:column;gap:8px' });
   now.append(el('div', { className: 'lbl', textContent: cur >= 0 ? 'On students\' screens' : 'Nothing sent yet', style: 'color:var(--pri-d)' }));
   const t = el('div', { style: 'font-family:var(--disp);font-weight:600;font-size:20px;line-height:1.25' }); t.innerHTML = S.q.question || 'Pick a question to send.'; now.append(t);
-  if (tot) now.append(el('div', { style: 'display:flex;align-items:center;gap:12px' }, el('div', { style: 'flex:1;height:10px;border-radius:99px;background:#E4EBF2;overflow:hidden' }, el('div', { style: 'height:100%;border-radius:99px;background:var(--pri);width:' + Math.round(drawn / tot * 100) + '%' })), el('span', { textContent: drawn + ' of ' + tot + ' drawing', style: 'font-weight:700;font-size:14px' })));
+  if (tot) now.append(el('div', { style: 'display:flex;align-items:center;gap:12px' }, el('div', { style: 'flex:1;height:10px;border-radius:99px;background:#E4EBF2;overflow:hidden' }, el('div', { style: 'height:100%;border-radius:99px;background:var(--pri);width:' + Math.round(drawn / tot * 100) + '%' })), el('span', { textContent: drawn + ' of ' + tot + (srt ? ' handed in' : ' drawing'), style: 'font-weight:700;font-size:14px' })));
   pad.append(now);
   if (cur + 1 < n) {
     const nx = qs()[cur + 1], c = el('div', { className: 'card', style: 'padding:14px 16px;display:flex;flex-direction:column;gap:12px' });
@@ -690,9 +691,21 @@ function bot(nm, i) {
     steps.push(() => put({ k: 'stroke', pen: 'pen', c: COL[i % 5], lw: 4, pts: Array.from({ length: 24 }, (_, j) => [cx - 200 + j * 12, 430 + Math.sin(j / 2 + i) * 16]) }));
     (function run(j) { if (j < steps.length) { steps[j](); timer = setTimeout(() => run(j + 1), 700 + Math.random() * 900); } })(0);
   };
+  // a sort question: the practice student uses the teacher's copy of the key, so each one is right about half to nine times in ten
+  const sortIt = q => {
+    clearTimeout(timer); if (!S.sk) return;
+    const ab = .5 + (i % 5) * .1, lanes = q.sort.lanes.map(l => l.id), ids = q.sort.cards.map(c => c.id), cur = {};
+    (function step(j) {
+      if (j < ids.length) {
+        const right = S.sk.lane[ids[j]], wrong = lanes.filter(x => x !== right);
+        cur[ids[j]] = Math.random() < ab ? right : wrong[Math.random() * wrong.length | 0];
+        b.send({ t: 'sort', p: { ...cur } }); timer = setTimeout(() => step(j + 1), 500 + Math.random() * 1100);
+      } else b.send({ t: 'sort', p: cur, done: Math.random() < .75 });
+    })(0);
+  };
   const b = connect(m => {
-    if (m.t === 'joined') { id = m.id; if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
-    else if (m.t === 'q') setTimeout(scene, 1500 + Math.random() * 3500);
+    if (m.t === 'joined') { id = m.id; if (m.q.kind === 'sort') setTimeout(() => sortIt(m.q), 1500); else if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
+    else if (m.t === 'q') setTimeout(() => (m.q.kind === 'sort' ? sortIt(m.q) : scene()), 1500 + Math.random() * 3500);
   }, () => b.send({ t: 'join', code, name: nm, team: TM.teams.length ? TM.teams[i % TM.teams.length].id : null, id, bw: W0, bh: H0 }));
 }
 

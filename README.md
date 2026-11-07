@@ -2,6 +2,10 @@
 
 Teachers ask a question, every student draws the answer live, the teacher sees all drawings, puts one on the projector, and awards team points.
 
+Two kinds of question:
+- **Draw**: students draw the answer.
+- **Sort**: students drop sticky-note cards into lanes (rock types, parts of speech, branches of government, rational or irrational). The teacher builds the lanes and cards in the question editor and drags each card into its correct lane to make the answer key. Cards can carry an *idea* tag, so the class results show which ideas to reteach, not just who is behind.
+
 - Students: `/` (join with a class code)
 - Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
   - `/class?code=…` is the teaching screen (also a phone layout under 700px wide)
@@ -10,6 +14,15 @@ Teachers ask a question, every student draws the answer live, the teacher sees a
   - `/classic` is the previous single-page teacher screen, kept as a fallback
 - Landing page: `/start`
 - Projector: opened from the teaching screen
+
+### Sort questions: how they work
+- The **answer key stays on the server** and goes to teachers only. Students and the projector get lane names and card text, never which lane is right.
+- A student's whole answer is one small map of card to lane. It is saved on the server, so a refresh loses nothing, and it works on any screen size.
+- Right and wrong reaches a student only when the teacher presses **Reveal answers**, or when the question is set to show it right away. A handed-in answer is locked until the teacher chooses *Let them change it*.
+- The class screen shows a heat map (students by cards), results by idea and by team, a list of who missed each card for a quick small group, and **Save results (CSV)**.
+- The projector can show one student's lanes, or class-wide percentages (no names, no key).
+- Sets with sort questions export, import, back up and share by link like any other. A few ready-made sort questions are in the starter set **Sort It!**
+- Code: `public/sortkit.js` (shared), `sortedit.js` (editor), `sortstu.js` (student), `sortres.js` (class results); server rules are in the "sort questions" section of `server.js`.
 
 ## Run locally
 ```

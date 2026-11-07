@@ -234,5 +234,331 @@
     "bg": "blank"
    }
   ]
+ },
+ {
+  "id": "sort-it",
+  "name": "Sort It! Cards into lanes",
+  "subject": "Sort cards (any subject)",
+  "grade": "6-8",
+  "questions": [
+   {
+    "question": "Sort each card into the <b>type of rock</b> it describes.",
+    "bg": "blank",
+    "kind": "sort",
+    "sort": {
+     "lanes": [
+      {
+       "id": "l1",
+       "name": "Igneous"
+      },
+      {
+       "id": "l2",
+       "name": "Sedimentary"
+      },
+      {
+       "id": "l3",
+       "name": "Metamorphic"
+      }
+     ],
+     "cards": [
+      {
+       "id": 1,
+       "text": "Cooled from magma or lava",
+       "lane": "l1",
+       "idea": "How it forms"
+      },
+      {
+       "id": 2,
+       "text": "Squeezed and heated underground",
+       "lane": "l3",
+       "idea": "How it forms"
+      },
+      {
+       "id": 3,
+       "text": "Compacted layers of sediment",
+       "lane": "l2",
+       "idea": "How it forms"
+      },
+      {
+       "id": 4,
+       "text": "Has fossils inside",
+       "lane": "l2",
+       "idea": "Clues you can see"
+      },
+      {
+       "id": 5,
+       "text": "Bands of mineral crystals",
+       "lane": "l3",
+       "idea": "Clues you can see"
+      },
+      {
+       "id": 6,
+       "text": "Glassy, no crystals",
+       "lane": "l1",
+       "idea": "Clues you can see"
+      },
+      {
+       "id": 7,
+       "text": "Granite",
+       "lane": "l1",
+       "idea": "Example rocks"
+      },
+      {
+       "id": 8,
+       "text": "Marble",
+       "lane": "l3",
+       "idea": "Example rocks"
+      },
+      {
+       "id": 9,
+       "text": "Limestone",
+       "lane": "l2",
+       "idea": "Example rocks"
+      },
+      {
+       "id": 10,
+       "text": "Slate",
+       "lane": "l3",
+       "idea": "Example rocks"
+      }
+     ],
+     "shuffle": true,
+     "fb": "reveal"
+    }
+   },
+   {
+    "question": "Sort each word by its <b>part of speech</b>.",
+    "bg": "blank",
+    "kind": "sort",
+    "sort": {
+     "lanes": [
+      {
+       "id": "l1",
+       "name": "Noun"
+      },
+      {
+       "id": "l2",
+       "name": "Verb"
+      },
+      {
+       "id": "l3",
+       "name": "Adjective"
+      }
+     ],
+     "cards": [
+      {
+       "id": 1,
+       "text": "table",
+       "lane": "l1",
+       "idea": "Everyday words"
+      },
+      {
+       "id": 2,
+       "text": "whisper",
+       "lane": "l2",
+       "idea": "Everyday words"
+      },
+      {
+       "id": 3,
+       "text": "bright",
+       "lane": "l3",
+       "idea": "Everyday words"
+      },
+      {
+       "id": 4,
+       "text": "freedom",
+       "lane": "l1",
+       "idea": "Tricky words"
+      },
+      {
+       "id": 5,
+       "text": "dance",
+       "lane": "l2",
+       "idea": "Everyday words"
+      },
+      {
+       "id": 6,
+       "text": "enormous",
+       "lane": "l3",
+       "idea": "Tricky words"
+      },
+      {
+       "id": 7,
+       "text": "justice",
+       "lane": "l1",
+       "idea": "Tricky words"
+      },
+      {
+       "id": 8,
+       "text": "sprint",
+       "lane": "l2",
+       "idea": "Everyday words"
+      },
+      {
+       "id": 9,
+       "text": "fragile",
+       "lane": "l3",
+       "idea": "Tricky words"
+      }
+     ],
+     "shuffle": true,
+     "fb": "reveal"
+    }
+   },
+   {
+    "question": "Which <b>branch of government</b> does each card belong to?",
+    "bg": "blank",
+    "kind": "sort",
+    "sort": {
+     "lanes": [
+      {
+       "id": "l1",
+       "name": "Legislative"
+      },
+      {
+       "id": "l2",
+       "name": "Executive"
+      },
+      {
+       "id": "l3",
+       "name": "Judicial"
+      }
+     ],
+     "cards": [
+      {
+       "id": 1,
+       "text": "Writes laws",
+       "lane": "l1",
+       "idea": "What it does"
+      },
+      {
+       "id": 2,
+       "text": "Signs bills into law",
+       "lane": "l2",
+       "idea": "What it does"
+      },
+      {
+       "id": 3,
+       "text": "Decides if a law follows the Constitution",
+       "lane": "l3",
+       "idea": "What it does"
+      },
+      {
+       "id": 4,
+       "text": "Declares war",
+       "lane": "l1",
+       "idea": "What it does"
+      },
+      {
+       "id": 5,
+       "text": "Commands the military",
+       "lane": "l2",
+       "idea": "What it does"
+      },
+      {
+       "id": 6,
+       "text": "Hears court cases",
+       "lane": "l3",
+       "idea": "What it does"
+      },
+      {
+       "id": 7,
+       "text": "Congress",
+       "lane": "l1",
+       "idea": "Who"
+      },
+      {
+       "id": 8,
+       "text": "The President",
+       "lane": "l2",
+       "idea": "Who"
+      },
+      {
+       "id": 9,
+       "text": "The Supreme Court",
+       "lane": "l3",
+       "idea": "Who"
+      }
+     ],
+     "shuffle": true,
+     "fb": "reveal"
+    }
+   },
+   {
+    "question": "Is each number <b>rational</b> or <b>irrational</b>?",
+    "bg": "blank",
+    "kind": "sort",
+    "sort": {
+     "lanes": [
+      {
+       "id": "l1",
+       "name": "Rational"
+      },
+      {
+       "id": "l2",
+       "name": "Irrational"
+      }
+     ],
+     "cards": [
+      {
+       "id": 1,
+       "text": "0.75",
+       "lane": "l1",
+       "idea": "Decimals"
+      },
+      {
+       "id": 2,
+       "text": "0.333… (repeats)",
+       "lane": "l1",
+       "idea": "Decimals"
+      },
+      {
+       "id": 3,
+       "text": "π",
+       "lane": "l2",
+       "idea": "Decimals"
+      },
+      {
+       "id": 4,
+       "text": "√2",
+       "lane": "l2",
+       "idea": "Roots"
+      },
+      {
+       "id": 5,
+       "text": "√16",
+       "lane": "l1",
+       "idea": "Roots"
+      },
+      {
+       "id": 6,
+       "text": "√10",
+       "lane": "l2",
+       "idea": "Roots"
+      },
+      {
+       "id": 7,
+       "text": "1/3",
+       "lane": "l1",
+       "idea": "Fractions"
+      },
+      {
+       "id": 8,
+       "text": "−3",
+       "lane": "l1",
+       "idea": "Fractions"
+      },
+      {
+       "id": 9,
+       "text": "2.5",
+       "lane": "l1",
+       "idea": "Decimals"
+      }
+     ],
+     "shuffle": true,
+     "fb": "reveal"
+    }
+   }
+  ]
  }
 ]

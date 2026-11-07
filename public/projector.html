@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Draw It Out – Projector</title>
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/sortkit.css">
 <style>
 body{background:#0b1220;color:#fff}
 .qbar{background:transparent;font-size:34px;text-align:center}
@@ -21,6 +22,17 @@ canvas{border:0}
 .lr .pt{font-size:56px;font-weight:800;text-align:right}
 .lr.pop .pt{animation:pop .9s}
 @keyframes pop{30%{transform:scale(1.5);color:#fde047}}
+/* sort questions: one student's lanes, or the whole class's results */
+#sb{display:grid;gap:14px;margin-top:10px}
+#sb .slane{background:#fff;color:#111827;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:300px}
+#sb .slane h3{margin:0;font-size:30px;text-align:center}
+#sb .nc{font-size:26px;padding:12px 14px;cursor:default}
+#sm{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+#sm h2{margin:10px 0 0;font-size:26px;color:#93c5fd}
+.sr{display:grid;grid-template-columns:minmax(0,1fr) 110px;align-items:center;gap:6px 16px}
+.sr .nm{font-size:28px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr .bar{grid-column:1;height:30px;border-radius:10px;min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.sr .pt{grid-column:2;grid-row:1/3;font-size:44px;font-weight:800;text-align:right}
 #corner{position:fixed;top:12px;right:18px;font-size:22px;color:#93c5fd}
 #corner b{letter-spacing:.15em;color:#fff}
 </style>
@@ -30,17 +42,20 @@ canvas{border:0}
 <main>
  <div class="qbar" id="q"></div>
  <div id="lb" hidden></div>
+ <div id="sb" hidden></div>
+ <div id="sm" hidden></div>
  <canvas id="cv" width="1280" height="800" hidden></canvas>
  <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:260px;height:260px;margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
  <div id="who"></div>
 </main>
 <script src="/qrcode.js"></script>
 <script src="/common.js"></script>
+<script src="/sortkit.js"></script>
 <script>
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
 try { $('#qr').innerHTML = qrSvg(location.origin + '/?code=' + code); } catch (e) { $('#qr').hidden = true; }
-const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, board: false, teams: [], scores: {}, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, board: false, teams: [], scores: {}, sres: false, sum: null, stu: new Map() };
 $('#ccode').textContent = code;
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });
 
@@ -50,13 +65,16 @@ function onmsg(m) {
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
     case 'state': S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; setQ(m.q);
-      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh })); break;
-    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh }); break;
+      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {} })); S.sres = !!m.sres; S.sum = null; break;
+    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {} }); break;
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) o.pts.push(...m.p); } break;
     case 'del': if (s) s.objs = s.objs.filter(o => o.id !== m.oid); break;
     case 'all': if (s) s.objs = m.objs; break;
-    case 'q': setQ(m.q); S.stu.forEach(x => { x.objs = []; }); break;
+    case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; }); break;
+    case 'sort': if (s) s.sort = m.p; break;
+    case 'sres': S.sres = m.on; break;
+    case 'sum': S.sum = m; break;
     case 'spot': S.spot = m.spot; S.hide = m.hide; break;
     case 'score': S.teams = m.teams; S.scores = m.scores; break;
     case 'board': S.board = m.on; break;
@@ -81,17 +99,47 @@ function board() {
     prev[t.id] = sc;
   });
 }
+// one student's sort: their lanes with their sticky notes (the projector never gets the answer key, so no right or wrong here)
+function sortBoard(s) {
+  const sq = S.q.sort, box = $('#sb'); box.textContent = ''; box.style.gridTemplateColumns = 'repeat(' + sq.lanes.length + ',minmax(0,1fr))';
+  sq.lanes.forEach(l => {
+    const d = document.createElement('div'); d.className = 'slane'; const h = document.createElement('h3'); h.textContent = l.name; d.append(h);
+    sq.cards.filter(c => s.sort[c.id] === l.id).forEach(c => d.append(SK.note(c)));
+    box.append(d);
+  });
+  const left = sq.cards.filter(c => !s.sort[c.id]).length;
+  return left ? left + ' card' + (left === 1 ? '' : 's') + ' still to place' : '';
+}
+// the whole class: how each idea and the hardest cards went
+function sortSummary() {
+  const box = $('#sm'), m = S.sum; box.textContent = '';
+  const h = t => { const e = document.createElement('h2'); e.textContent = t; return e; };
+  const row = (name, pct) => {
+    const r = document.createElement('div'); r.className = 'sr'; const n = document.createElement('div'); n.className = 'nm'; n.textContent = name;
+    const b = document.createElement('div'); b.className = 'bar'; b.style.width = Math.max(2, pct) + '%'; b.style.background = { good: '#34d399', mid: '#fbbf24', bad: '#f87171' }[SK.tier(pct)];
+    const p = document.createElement('div'); p.className = 'pt'; p.textContent = pct + '%'; r.append(n, b, p); return r;
+  };
+  box.append(h('Class results · ' + m.n + ' student' + (m.n === 1 ? '' : 's')));
+  if (m.ideas.length) { box.append(h('Ideas')); m.ideas.forEach(i => box.append(row(i.name, i.pct))); }
+  box.append(h('Hardest cards')); m.cards.slice().sort((a, b) => a.pct - b.pct).slice(0, 3).forEach(c => box.append(row(c.text, c.pct)));
+}
 let raf = 0;
 function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
 function paint() {
   raf = 0;
   $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
   const s = S.stu.get(S.spot);
-  const lb = !s && S.board && S.teams.length;
-  $('#cv').hidden = !s; $('#join').hidden = !!s || !!lb; $('#lb').hidden = !lb; $('#corner').hidden = !lb;
+  const sort = S.q.kind === 'sort', sum = !s && sort && S.sres && S.sum && S.sum.n > 0;
+  const lb = !s && !sum && S.board && S.teams.length;
+  $('#cv').hidden = !s || sort; $('#sb').hidden = !(s && sort); $('#sm').hidden = !sum;
+  $('#join').hidden = !!s || !!lb || !!sum; $('#lb').hidden = !lb; $('#corner').hidden = !(lb || sum);
   if (lb) board();
-  if (s) { paintBoard($('#cv'), s.objs, S.q.bg, S.im, s.bw, s.bh); $('#who').textContent = S.hide ? 'A student’s work' : s.name + '’s work'; }
-  else $('#who').textContent = '';
+  if (sum) sortSummary();
+  if (s) {
+    const who = S.hide ? 'A student’s work' : s.name + '’s work';
+    if (sort) { const left = sortBoard(s); $('#who').textContent = who + (left ? ' · ' + left : ''); }
+    else { paintBoard($('#cv'), s.objs, S.q.bg, S.im, s.bw, s.bh); $('#who').textContent = who; }
+  } else $('#who').textContent = '';
 }
 </script>
 </body>

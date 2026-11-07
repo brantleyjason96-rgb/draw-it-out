@@ -3,7 +3,7 @@
 //   get() -> { q, sk, students:[{id,name,team:{id,name,emoji,color}|null,sort:{cardId:laneId},done,aw}], award(s), spot(s), reopen(s), spotId, projSum, setProjSum(on), toast(m) }
 // sk is the answer key the server sends to teachers only: { lane:{cardId:laneId}, idea:{cardId:ideaName} }.
 const SR = (() => {
-  const ST = { stu: 'need', card: 'hard', idea: null, sel: null };
+  const ST = { stu: 'need', card: 'hard', idea: null, sel: null, open: new Set() };
   let box = null, get = null, timer = 0;
   const T = (tag, cls, text) => el(tag, { className: cls || '', textContent: text == null ? '' : text });
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
@@ -175,8 +175,39 @@ const SR = (() => {
     c.toast('Saved. Student names are in this file, so keep it private.');
   }
 
+  // phone layout (Review tab): the numbers a teacher needs while walking the room
+  function phone(wrap, c) {
+    if (!c.sk) return wrap.append(T('div', 'mut', 'The answer key for this question is not on this device. Send the question again.'));
+    const D = compute(c), n = D.cards.length, pad = el('div', { className: 'ph-pad' });
+    const avg = D.started.length ? D.started.reduce((a, s) => a + s.g.right, 0) / D.started.length : 0;
+    pad.append(el('div', { className: 'card', style: 'padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px' },
+      el('div', {}, T('div', 'lbl', 'Class average'), T('div', '', D.started.length ? avg.toFixed(1) + ' / ' + n : '–')),
+      el('div', { style: 'text-align:right' }, T('div', 'lbl', 'Handed in'), T('div', '', D.finished + ' of ' + D.all.length))));
+    pad.lastChild.querySelectorAll('div > div:last-child').forEach(d => { d.style.cssText = 'font-family:var(--disp);font-weight:800;font-size:28px'; });
+    const rv = el('button', { className: 'b big' + (c.revealed ? ' good' : ' line2'), textContent: c.revealed ? '✓ Answers revealed (hide)' : 'Reveal answers to students', style: 'min-height:60px', onclick: c.reveal });
+    pad.append(rv);
+    if (D.ideas.length) {
+      pad.append(T('div', 'lbl', 'Ideas'));
+      D.ideas.forEach(d => { const t = d.pct == null ? 'mid' : SK.tier(d.pct), bar = T('span', 'bar1'); bar.append(el('i', { className: 'f-' + t, style: 'width:' + (d.pct || 0) + '%' })); pad.append(el('div', { className: 'ph-row', style: 'flex-direction:column;align-items:stretch;gap:6px' }, el('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, T('b', '', d.name), T('span', 'band b-' + t, d.pct == null ? '–' : d.pct + '% · ' + SK.tierWord(d.pct))), bar)); });
+    }
+    pad.append(T('div', 'lbl', 'Cards to reteach first'));
+    orderCards(D).slice(0, 5).forEach(k => {
+      const missed = D.started.filter(s => s.sort[k.id] && s.sort[k.id] !== k.lane), t = k.pct == null ? 'mid' : SK.tier(k.pct);
+      const d = el('details', { className: 'ph-row', style: 'display:block;padding:10px 12px' });
+      d.open = ST.open.has(k.id); d.ontoggle = () => { d.open ? ST.open.add(k.id) : ST.open.delete(k.id); };
+      d.append(el('summary', { style: 'display:flex;gap:10px;align-items:center;cursor:pointer' }, T('span', 'band b-' + t, k.pct == null ? '–' : k.pct + '%'), T('span', '', k.text), T('span', 'mut', k.n ? '· ' + missed.length + ' missed' : '')));
+      d.append(T('div', 'mut', 'Belongs in ' + D.laneName(k.lane) + '.'));
+      d.append(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px' }, ...missed.map(s => T('span', 'pill bad', s.name + ' → ' + D.laneName(s.sort[k.id])))));
+      pad.append(d);
+    });
+    const low = D.started.filter(s => s.g.right <= Math.floor(n / 2)).sort((a, b) => a.g.right - b.g.right);
+    if (low.length) { pad.append(T('div', 'lbl', 'Need a small group')); pad.append(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, ...low.map(s => T('span', 'pill bad', s.name + ' ' + s.g.right + '/' + n)))); }
+    wrap.append(pad);
+  }
+
   return {
     mount(b, g) { box = b; get = g; },
+    phone,
     // many answers can arrive at once; redraw at most every 250ms
     update() { if (!box || timer) return; timer = setTimeout(() => { timer = 0; render(); }, 250); },
     now() { clearTimeout(timer); timer = 0; render(); },
