@@ -69,6 +69,8 @@ button{cursor:pointer}
 #dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:40px;padding:0 12px}
 #dhead button.on{background:var(--pri)}
 #dbody{display:flex;gap:10px;padding:10px;overflow:auto;flex:1;align-items:flex-start}
+#dfoot{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px}
+#dfoot button{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#b91c1c;font-weight:600;font-size:15px}
 #opts{flex:1;min-width:0}
 #toolsbtn{position:fixed;left:12px;bottom:10px;z-index:12;height:52px;padding:0 18px;border-radius:14px;border:0;background:#111827;color:#fff;display:flex;align-items:center;gap:10px;font-weight:600;box-shadow:0 4px 14px #0005}
 #toolsbtn b{font-size:22px;font-weight:400}#toolsbtn i{width:18px;height:18px;border-radius:50%;border:2px solid #fff}
@@ -123,6 +125,38 @@ button{cursor:pointer}
 @media(max-width:760px){#ur{left:12px;transform:none;bottom:72px}#zoom{bottom:72px}#mini{bottom:134px}}
 @media(max-width:560px){#zoom input{display:none}}
 @media(max-width:520px){#drawer{width:100%}#qbox{font-size:17px}#zoom input{width:70px}}
+
+/* confidence pulse: red / amber / green, down the left edge so it never fights the pen controls */
+#pulse{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:12;display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 4px 14px #0003}
+body.playing:not(.sorting) #pulse{display:flex}
+#pulse .plb{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);text-align:center;max-width:118px;line-height:1.2}
+#pulse .pb{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:15px}
+#pulse .pb i{font-style:normal;font-size:20px;line-height:1}
+#pulse .pb[data-p=r]{--pc:#C62828;--ps:#FDECEC}
+#pulse .pb[data-p=y]{--pc:#B26A00;--ps:#FFF4DC}
+#pulse .pb[data-p=g]{--pc:#0E7C4A;--ps:#E6F4EC}
+#pulse .pb.on{border-color:var(--pc);background:var(--ps);box-shadow:0 0 0 3px var(--pc)}
+#pulse .pb.on:after{content:'✓';font-weight:800;color:var(--pc);margin-left:auto}
+@media(max-width:620px){#pulse .pb span{display:none}#pulse .pb{padding:0 10px;min-height:50px;min-width:50px;justify-content:center}#pulse .plb{display:none}#pulse{top:auto;bottom:132px;left:10px;transform:none;flex-direction:row;gap:6px;padding:6px}}
+
+/* frozen: the whole class's attention, with a bit of frost */
+#frz{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;
+ background:radial-gradient(120% 110% at 50% -10%,#dceeff 0%,#e8f3ff 45%,#f4faff 100%)}
+body.frozen #frz{display:flex}
+body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,body.frozen #drawer,body.frozen #ur,body.frozen #zoom,body.frozen #mini,body.frozen #pulse,body.frozen #selbar,body.frozen #sortview{filter:blur(2px) saturate(.55);pointer-events:none}
+#frz:before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 100% at 50% 50%,transparent 52%,#ffffffdd 100%);animation:frost .9s ease-out both}
+#frzflakes{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#frzflakes i{position:absolute;top:-10vh;font-style:normal;color:#9ec8ee;opacity:.8;animation:snofall linear infinite}
+#frzcard{position:relative;z-index:2;background:#fff;border-radius:26px;padding:26px 34px;box-shadow:0 24px 70px rgba(15,45,90,.35);max-width:min(560px,88vw);animation:fzin .5s cubic-bezier(.2,.9,.3,1.25) both}
+#frzcard .fi{display:block;font-size:54px;line-height:1;animation:fzwave 2.6s ease-in-out infinite}
+#frzcard b{display:block;font-size:34px;margin-top:6px}
+#frzcard p{margin:4px 0 0;font-size:18px;color:var(--mut)}
+@keyframes fzin{from{transform:scale(.86) translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fzwave{0%,68%,100%{transform:rotate(0)}76%{transform:rotate(13deg)}84%{transform:rotate(-9deg)}}
+@keyframes frost{from{opacity:0}to{opacity:1}}
+@keyframes snofall{to{transform:translateY(120vh) rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#frzcard,#frz:before,#frzcard .fi{animation:none}#frzflakes{display:none}}
+
 </style>
 </head>
 <body>
@@ -154,6 +188,12 @@ button{cursor:pointer}
   </div>
   <div id="smsg" hidden>Answer sent. Hold on for your teacher…</div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
+  <div id="pulse" class="lockable" role="group" aria-label="How are you going with your drawing?">
+   <span class="plb">How's it going?</span>
+   <button class="pb" type="button" data-p="r" aria-label="Stuck — I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>Stuck</span></button>
+   <button class="pb" type="button" data-p="y" aria-label="Getting there" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Getting there</span></button>
+   <button class="pb" type="button" data-p="g" aria-label="Got it" aria-pressed="false"><i aria-hidden="true">💡</i><span>Got it</span></button>
+  </div>
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
   <div class="ov lockable" id="ur"><button id="undo">↶ Undo</button><button id="redo">↷ Redo</button></div>
@@ -171,7 +211,13 @@ button{cursor:pointer}
     </div>
     <div class="card lockable" id="opts"></div>
    </div>
+   <div id="dfoot"><button id="leave" type="button">🚪 Leave this class</button></div>
   </aside>
+ </div>
+
+ <div id="frz" role="alertdialog" aria-label="Class frozen">
+  <div id="frzflakes" aria-hidden="true"></div>
+  <div id="frzcard"><span class="fi" aria-hidden="true">✋</span><b>Frozen</b><p>Eyes up here. Your work is saved — you can carry on when your teacher says.</p></div>
  </div>
 </main>
 <script src="/common.js"></script>
@@ -189,7 +235,7 @@ const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textCo
   $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
 });
 SS.init(o => ws.send(o));
-function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, bw: target.bw, bh: target.bh }); }
+function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
 
 // Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
 const pageSize = () => ({ bw: Math.min(3000, Math.max(300, Math.round(innerWidth - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - 140))) }); // the page is the size of this screen
@@ -216,7 +262,9 @@ function renderPick(m) {
   } else { // initials for one team
     pickTeam = m.team; jshow('ini');
     m.list.forEach(e => box.append(pickBtn(['', e.ini], e.taken ? 'in use' : '', null, () => {
-      target = { code: target0, rid: e.rid, ...pageSize() }; localStorage.do_code = target0; id = sessionStorage['do_id_' + target0] || null; $('#err').textContent = ''; sendJoin();
+      target = { code: target0, rid: e.rid, ...pageSize() }; localStorage.do_code = target0; id = sessionStorage['do_id_' + target0] || null;
+      sessionStorage['do_rid_' + target0] = e.rid; // so a refresh can rejoin without asking for initials again
+      $('#err').textContent = ''; sendJoin();
     }, e.taken)));
     const bk = pickBtn(['', '← Back to teams'], '', null, () => { $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); }); bk.className = 'back'; box.append(bk);
   }
@@ -227,6 +275,20 @@ function renderQuick() {
   quick.forEach(t => { const b = pickBtn([t.emoji, t.name], '', t.color, () => { qteam = t.id; [...box.children].forEach(x => (x.style.background = '#fff')); b.style.background = '#dbeafe'; $('#err').textContent = ''; }); box.append(b); });
 }
 let target0 = '';
+// A refresh (or the tab being closed and reopened by the browser) must not send a student back through the join steps.
+// This tab remembers the class code, their id on the server, and - with a class list - which roster entry is theirs,
+// so the page rejoins by itself as soon as the socket is open. Nothing leaves this browser that did not already.
+let resuming = false;
+(function resume() {
+  const c = (sp.get('code') || localStorage.do_code || '').toUpperCase();
+  if (!/^[A-Z0-9]{4,10}$/.test(c)) return;
+  const sid = sessionStorage['do_id_' + c] || null, srid = sessionStorage['do_rid_' + c] || null;
+  if (!sid && !srid) return;
+  target0 = c; id = sid;
+  target = { code: c, name: localStorage.do_name || '', rid: srid || undefined, ...pageSize() };
+  resuming = true;
+  $('#jh').textContent = 'Rejoining your class…';
+})();
 $('#jf').onsubmit = e => {
   e.preventDefault(); $('#err').textContent = '';
   if (jstep === 'code') {
@@ -256,6 +318,42 @@ function applyLock(proj) { // work on the projector can't be changed
   document.body.classList.toggle('locked', proj); $('#lockmsg').hidden = !proj; if (proj) openDrawer(false); all();
 }
 
+// ---- confidence pulse: three taps, sent to the teacher and the projector ----
+let myPulse = null;
+function setPulse(c, tell) {
+  myPulse = PULSES[c] ? c : null;
+  document.querySelectorAll('#pulse .pb').forEach(b => {
+    const on = b.dataset.p === myPulse;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  if (tell) ws.send({ t: 'pulse', c: myPulse });
+}
+document.querySelectorAll('#pulse .pb').forEach(b => {
+  b.onclick = e => { e.stopPropagation(); if (frozen) return; setPulse(myPulse === b.dataset.p ? null : b.dataset.p, true); };
+});
+
+// ---- frozen: the teacher has the floor. Nothing here can be touched until it lifts. ----
+const FLAKES = '❄✳❅✻❆';
+function makeFlakes() {
+  const box = $('#frzflakes'); if (box.childElementCount) return;
+  for (let i = 0; i < 26; i++) {
+    const f = document.createElement('i');
+    f.textContent = FLAKES[i % FLAKES.length];
+    f.style.left = Math.random() * 100 + '%';
+    f.style.fontSize = 10 + Math.random() * 22 + 'px';
+    f.style.animationDuration = 6 + Math.random() * 8 + 's';
+    f.style.animationDelay = -Math.random() * 8 + 's';
+    f.style.opacity = .35 + Math.random() * .5;
+    box.append(f);
+  }
+}
+function applyFreeze(on) {
+  frozen = !!on;
+  document.body.classList.toggle('frozen', frozen);
+  $('#frz').setAttribute('aria-hidden', frozen ? 'false' : 'true');
+  if (frozen) { if (editing) commitEdit(true); sel = null; cur = null; g = null; openDrawer(false); makeFlakes(); all(); }
+}
+
 function onmsg(m) {
   if (SS.msg(m)) return;
   if (m.t === 'peek') {
@@ -263,22 +361,29 @@ function onmsg(m) {
   } else if (m.t === 'score') { tmList = m.teams; tmSc = m.scores; renderTeam();
   } else if (m.t === 'myteam') { tmMy = m.team; renderTeam();
   } else if (m.t === 'err') {
-    if ($('#play').hidden) { $('#err').textContent = m.m; if (m.taken) { target = null; if (pickTeam !== null) ws.send({ t: 'peek', code: target0, team: pickTeam }); } }
-    else if (m.nocls) setTimeout(sendJoin, 3000); // server restarted: keep retrying until the teacher is back
+    if ($('#play').hidden) {
+      $('#err').textContent = m.m;
+      if (m.taken) { target = null; if (pickTeam !== null) ws.send({ t: 'peek', code: target0, team: pickTeam }); }
+      // the automatic rejoin after a refresh did not work (class gone, or that sign-in is taken): show the join steps
+      // with the code still filled in, rather than leaving the student on a page that will never load.
+      if (resuming) { resuming = false; target = null; id = null; jshow('code'); }
+    } else if (m.nocls) setTimeout(sendJoin, 3000); // server restarted: keep retrying until the teacher is back
   } else if (m.t === 'joined') {
-    id = m.id; sessionStorage['do_id_' + target.code] = id; W = m.bw; H = m.bh;
+    id = m.id; if (target) sessionStorage['do_id_' + target.code] = id; W = m.bw; H = m.bh; // (a page refreshed mid-join may not have a target yet)
     $('#join').hidden = true; $('#play').hidden = false; document.body.classList.add('playing');
     if (m.q.question || m.q.img || !$('#q').innerHTML) setQ(m.q);
     if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
     tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
     SS.joined(m);
-    loaded = true; applyLock(!!m.proj); applySimple(!!m.simple);
+    loaded = true; resuming = false; applyLock(!!m.proj); applySimple(!!m.simple); applyFreeze(!!m.frozen); setPulse(m.pulse || null, false);
   } else if (m.t === 'lock') applyLock(!!m.proj);
+  else if (m.t === 'freeze') applyFreeze(!!m.on);
   else if (m.t === 'mode') applySimple(!!m.simple);
   else if (m.t === 'kicked') { // teacher cleared the class
-    sessionStorage.removeItem('do_id_' + target.code); target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false);
+    sessionStorage.removeItem('do_id_' + target.code); sessionStorage.removeItem('do_rid_' + target.code); resuming = false;
+    target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'Class ended. Join again when your teacher says so.' : m.why;
-  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); }
+  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
 }
 
 
@@ -290,7 +395,8 @@ const HF={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5
 let S={erase:'whole',esize:20,pin:false,tool:'select',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]};
 let uid=1;const nid=()=>uid++;
 let objs=[],synced=new Map(),loaded=false;
-let sel=null,editing=null,g=null,cur=null,locked=false,lastTap={id:0,t:0};
+let sel=null,editing=null,g=null,cur=null,locked=false,frozen=false,lastTap={id:0,t:0};
+const cantEdit=()=>locked||frozen;
 let V={z:1,ox:0,oy:0},hist=['[]'],hi=0,q={question:'',bg:'graph',img:null},im=null;
 
 /* ---------- geometry ---------- */
@@ -332,7 +438,7 @@ const bump=()=>{rev++}; // call after changing objs in place
 function draw(){if(!raf)raf=requestAnimationFrame(render)} // many calls in one frame = one repaint
 function world(x,d,k){x.setTransform(k,0,0,k,(PAD.l-V.ox*sc())*d,(PAD.t-V.oy*sc())*d);x.save();x.beginPath();x.rect(0,0,W,H);x.clip()}
 function render(){
- raf=0;if(!cv.clientWidth)return;
+ raf=0;if(!cv.clientWidth||!cv.clientHeight)return; // a canvas with no size cannot be drawn into
  const d=devicePixelRatio||1,k=sc()*d,live=g&&(g.type==='mv'||g.type==='rs')?sel:null;
  const key=[rev,objs.length,V.z,V.ox,V.oy,cv.width,cv.height,PAD.l,q.bg,im&&im.complete,editing&&editing.id,live&&live.id].join();
  if(key!==baseKey){
@@ -343,8 +449,8 @@ function render(){
  cx.setTransform(1,0,0,1,0,0);cx.drawImage(cache,0,0);
  world(cx,d,k);if(live)paint(live);if(cur)paint(cur);cx.restore();
  cx.setTransform(d,0,0,d,0,0);
- if(S.tool==='eraser'&&S.erase==='part'&&ptrCss&&!locked){cx.beginPath();cx.arc(ptrCss[0],ptrCss[1],S.esize,0,7);cx.fillStyle='#ffffff99';cx.fill();cx.lineWidth=2;cx.strokeStyle='#111';cx.stroke()}
- if(sel&&!locked){
+ if(S.tool==='eraser'&&S.erase==='part'&&ptrCss&&!cantEdit()){cx.beginPath();cx.arc(ptrCss[0],ptrCss[1],S.esize,0,7);cx.fillStyle='#ffffff99';cx.fill();cx.lineWidth=2;cx.strokeStyle='#111';cx.stroke()}
+ if(sel&&!cantEdit()){
   const b=bbox(sel),[x,y]=toScr(b.x,b.y);
   cx.strokeStyle='#2563eb';cx.lineWidth=2;cx.setLineDash([6,4]);cx.strokeRect(x-3,y-3,b.w*sc()+6,b.h*sc()+6);cx.setLineDash([]);
   if(!editing)handleList(sel).forEach(h=>{cx.beginPath();cx.arc(h.x,h.y,9,0,7);cx.fillStyle='#fff';cx.fill();cx.lineWidth=3;cx.stroke()});
@@ -381,7 +487,7 @@ ed.onblur=()=>commitEdit();
 /* ---------- pointer handling ---------- */
 const ptrs=new Map();let pinch=null;
 cv.onpointerdown=e=>{
- if(locked)return;commitEdit();try{cv.setPointerCapture(e.pointerId)}catch{}ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+ if(cantEdit())return;commitEdit();try{cv.setPointerCapture(e.pointerId)}catch{}ptrs.set(e.pointerId,[e.clientX,e.clientY]);
  if(ptrs.size===2){const[a,b]=[...ptrs.values()],m=css({clientX:(a[0]+b[0])/2,clientY:(a[1]+b[1])/2});
   if(cur){ws.send({t:'del',oid:cur.id});pend=[]}g=null;cur=null;pinch={d0:Math.hypot(a[0]-b[0],a[1]-b[1]),z0:V.z,w:[(m[0]-PAD.l)/sc()+V.ox,(m[1]-PAD.t)/sc()+V.oy]};return}
  if(ptrs.size>2)return;down(e);
@@ -491,7 +597,7 @@ function up(){
 
 /* ---------- UI ---------- */
 function selBar(){
- const show=sel&&!editing&&!locked&&!(g&&(g.type==='mv'||g.type==='rs'));bar.hidden=!show;if(!show)return;
+ const show=sel&&!editing&&!cantEdit()&&!(g&&(g.type==='mv'||g.type==='rs'));bar.hidden=!show;if(!show)return;
  const b=bbox(sel),[x1,y1]=toScr(b.x,b.y),[x2,y2]=toScr(b.x+b.w,b.y+b.h),bw=bar.offsetWidth||170;
  let top=y1-64;if(top<4)top=Math.min(y2+22,cv.clientHeight-62);
  bar.style.left=clamp((x1+x2)/2-bw/2,4,cv.clientWidth-bw-4)+'px';bar.style.top=top+'px';
@@ -517,7 +623,7 @@ document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>setZoom(b.dataset
 $('#zs').oninput=e=>setZoom(e.target.value/100);
 mini.onpointerdown=e=>{mini.setPointerCapture(e.pointerId);const f=ev=>{const r=mini.getBoundingClientRect();V.ox=(ev.clientX-r.left)/r.width*W-aw()/sc()/2;V.oy=(ev.clientY-r.top)/r.height*H-ah()/sc()/2;clampView();draw();ui()};f(e);mini.onpointermove=ev=>ev.buttons&&f(ev)};
 document.onkeydown=e=>{
- if(/INPUT|TEXTAREA/.test(e.target.tagName)||locked||$('#play').hidden)return;const m=e.ctrlKey||e.metaKey;
+ if(/INPUT|TEXTAREA/.test(e.target.tagName)||cantEdit()||$('#play').hidden)return;const m=e.ctrlKey||e.metaKey;
  if(m&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}
  else if(m&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}
  else if((e.key==='Delete'||e.key==='Backspace')&&sel){e.preventDefault();del()}
@@ -538,7 +644,9 @@ const drawer=$('#drawer');
 function layout(){PAD.l=drawer.classList.contains('open')&&S.pin&&innerWidth>900?352:12;clampView();all(true)}
 function openDrawer(o){drawer.classList.toggle('open',o);$('#toolsbtn').hidden=o;layout()}
 $('#toolsbtn').onclick=()=>openDrawer(true);$('#dclose').onclick=()=>openDrawer(false);
-$('#pin').onclick=()=>{S.pin=!S.pin;$('#pin').classList.toggle('on',S.pin);$('#pin').textContent=S.pin?'📌 Pinned open':'📌 Keep open';layout()};
+$('#pin').onclick=()=>{S.pin=!S.pin;$('#pin').classList.toggle('on',S.pin);$('#pin').textContent=S.pin?'📌 Pinned open':'📌 Keep open';layout()}
+// leaving on purpose: the server takes the student out of the room, so no ghost card is left on the teacher's screen
+$('#leave').onclick=()=>{if(confirm('Leave this class? You can join again with your class code.'))ws.send({t:'bye'})};
 $('#qt').onclick=()=>$('#qbox').classList.toggle('min');
 cv.addEventListener('pointerdown',()=>{if(drawer.classList.contains('open')&&!S.pin)openDrawer(false)},true);
 
@@ -624,7 +732,7 @@ function resetDoc(list){
  synced=new Map(objs.map(o=>[o.id,JSON.stringify(o)]));uid=Math.max(uid,...objs.map(o=>o.id+1),1);V={z:1,ox:0,oy:0};all();
 }
 
-new ResizeObserver(()=>{const d=devicePixelRatio||1;cv.width=cv.clientWidth*d;cv.height=cv.clientHeight*d;clampView();all(true)}).observe(cv);
+new ResizeObserver(()=>{const d=devicePixelRatio||1;if(!cv.clientWidth||!cv.clientHeight)return;cv.width=Math.max(1,cv.clientWidth*d);cv.height=Math.max(1,cv.clientHeight*d);clampView();all(true)}).observe(cv);
 renderOpts();
 </script>
 </body>

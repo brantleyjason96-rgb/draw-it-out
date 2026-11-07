@@ -48,6 +48,43 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .stu .ok.on{background:var(--good);color:#fff;border-color:var(--good)}
 .empty{grid-column:1/-1;text-align:center;color:var(--mut);padding:40px 12px;font-size:18px}
 
+/* confidence pulse: the outline of a student's card, and the class summary above the grid */
+.stu[data-pulse=r]{--pc:#C62828;--pcs:#FDECEC}
+.stu[data-pulse=y]{--pc:#B26A00;--pcs:#FFF4DC}
+.stu[data-pulse=g]{--pc:#0E7C4A;--pcs:#E6F4EC}
+.stu[data-pulse]{outline:3px solid var(--pc);outline-offset:-3px}
+.stu[data-pulse] .nm:after{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pc);margin-left:8px;vertical-align:middle}
+.pchip{font-size:12px;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap;flex:none}
+#pulsesum{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#pulsesum .pb{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:2px solid var(--pc,#CBD3DA);background:var(--pcs,#fff);color:var(--pc,#394551);font-weight:700;font-size:14px}
+#pulsesum .pb.on{background:var(--pc);color:#fff}
+#pstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+#pstrip .pk{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid #BBD8F5;background:var(--pri-l);color:var(--pri-d);font-weight:700;font-size:14px}
+#pstrip .pk span:last-child{opacity:.6}
+
+/* freeze */
+#freeze{min-width:140px}
+#freeze.on{background:#0C4A6E;border-color:#0E5B85;color:#E0F2FE;font-weight:700}
+#frzbar{position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:26;display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#0C4A6E,#0A3B57);color:#E0F2FE;border:1px solid #0E5B85;border-radius:14px;padding:8px 10px 8px 16px;box-shadow:0 12px 30px rgba(12,74,110,.45);font-weight:600;max-width:calc(100% - 32px)}
+#frzbar .b{background:#E0F2FE;border-color:#E0F2FE;color:#0C4A6E;font-weight:700}
+@media(max-width:700px){#frzbar{font-size:14px;gap:8px;padding:6px 8px 6px 12px;top:68px}}
+
+/* the confidence report */
+#rep{max-width:900px}
+.rephead{display:flex;align-items:center;gap:20px;background:var(--pri-l);border:1px solid #CFE3F8;border-radius:16px;padding:16px 20px}
+.rephead .big{font-family:var(--disp);font-weight:800;font-size:52px;line-height:1}
+.rephead .r{font-weight:700;font-size:17px;margin-bottom:2px}
+.repq{display:grid;grid-template-columns:34px minmax(0,1fr) 230px;gap:10px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+@media(max-width:700px){.repq{grid-template-columns:28px minmax(0,1fr)}
+ .repq .stack{grid-column:1/-1;height:14px}
+ .rephead{flex-direction:column;align-items:flex-start;gap:6px;padding:14px 16px}
+ .rephead .big{font-size:44px}}
+.repq .n{width:28px;height:28px;border-radius:50%;background:#E8EDF2;color:#394551;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.repq .qt{font-weight:600;overflow-wrap:anywhere;font-size:15px}
+.repq .meta{font-size:13px;color:var(--mut);font-weight:600}
+.stack{display:flex;height:18px;border-radius:6px;overflow:hidden;background:#EDF1F5;min-width:120px}
+.stack i{display:block;height:100%}
+
 /* team scores panel: a column on a laptop, a slide-over on a small screen */
 #scores{width:308px;flex:none;background:#fff;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 body.scores-off #scores{display:none}
@@ -132,10 +169,12 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
    <span class="chip" id="qtag" hidden style="background:#FFE9B8;color:#5E4300">Quick mode on</span>
    <button class="b dk" id="join">Join <span class="code" id="code"></span></button>
    <button class="b dk" id="stoggle" aria-expanded="true" title="Show or hide team scores">Scores</button>
+   <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go">❄ Freeze</button>
    <button class="b sky" id="proj">Open projector</button>
    <button class="b dk" id="more">More ▾</button>
   </div>
  </div>
+ <div id="frzbar" hidden role="status"><span>❄ Class is frozen — students can’t draw.</span><button class="b sm" id="frzoff">Unfreeze</button></div>
 
  <div class="body">
   <!-- question rail -->
@@ -163,8 +202,10 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div class="mut" id="sub" style="font-size:16px;font-weight:500"></div>
+    <div id="pulsesum" hidden></div>
     <button class="tog blue" id="hide"><span id="hidet">Names hidden on projector</span><i></i></button>
    </div>
+   <div id="pstrip" hidden></div>
    <div class="grid" id="grid"></div>
    <div id="sres" hidden></div>
   </main>
@@ -191,6 +232,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
   <div class="ph-h">
    <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
    <button class="b sky" id="pproj">Projector</button>
+   <button class="b dk" id="pfreeze" aria-pressed="false" title="Freeze the class" style="min-width:44px;padding:0 12px">❄</button>
   </div>
   <div class="ph-body" id="pbody"></div>
   <div class="ph-tabs" id="ptabs">
@@ -248,8 +290,17 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
  <div style="display:flex;gap:10px;justify-content:center;margin-top:8px"><button class="b" id="rcopy">Copy link instead</button><button class="b pri" id="rclose">Done</button></div>
 </dialog>
 
+<dialog id="rep">
+ <div class="dh"><div><div class="lbl" id="replbl"></div><h2>How the class felt</h2></div><button class="b pri big" id="repclose">Done</button></div>
+ <div id="repbody" style="padding:18px 24px;display:flex;flex-direction:column;gap:16px;max-height:calc(100dvh - 230px);overflow:auto"></div>
+ <div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 24px;border-top:1px solid var(--line);flex-wrap:wrap">
+  <button class="b" id="repcopy">Copy summary</button>
+  <button class="b pri" id="repcsv">Save report (CSV)</button>
+ </div>
+</dialog>
+
 <div id="demobar" hidden>
- <span><b>Demo mode.</b> Eight practice students are drawing. Send a question, click a drawing, press ✓, then try the leaderboard. Nothing here is saved.</span>
+ <span><b>Demo mode.</b> Eight practice students are drawing and tapping red, amber or green. Send a question, click a drawing (click up to three to show them side by side), press ✓, try <b>❄ Freeze</b>, then open <b>How the class felt</b> in More. Nothing here is saved.</span>
  <a class="b pri" href="/teacher" style="text-decoration:none">Start my real class</a>
 </div>
 <div id="toast" hidden></div>
@@ -277,7 +328,7 @@ const link = location.origin + '/?code=' + code;
 document.title = (DEMO ? 'Demo' : per().name) + ' – Draw It Out';
 $('#cpick').textContent = per().name + ' ▾'; $('#code').textContent = code; $('#pname').textContent = per().name; $('#pcode').textContent = code;
 
-const S = { q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, hide: true, board: false, stu: new Map(), conn: false };
+const S = { q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, phist: [], stu: new Map(), conn: false };
 let TM = loadTM(code); TM.scores = TM.scores || {};
 const save = () => saveTM(code, TM);
 const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: withScores ? TM.scores : undefined });
@@ -297,7 +348,7 @@ function adopt(m) {
 const teamOf = id => TM.teams.find(t => t.id === id);
 const sortCtx = () => ({ q: S.q, sk: S.sk, spotId: S.spot, projSum: S.projSum, toast,
   students: [...S.stu.values()].map(s => ({ id: s.id, name: disp(s), team: teamOf(s.team) || null, sort: s.sort || {}, done: !!s.done, aw: !!s.aw })),
-  award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide }),
+  award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => pick(s.id),
   reopen: s => ws.send({ t: 'reopen', id: s.id }), setProjSum: on => ws.send({ t: 'sres', on }) });
 $('#revbtn').onclick = () => ws.send({ t: 'reveal', on: !S.revealed });
 const rosterOf = s => s.rid && TM.roster.find(e => e.rid === s.rid);
@@ -318,14 +369,14 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="chip proj" hidden>On projector</span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Give this team a point">✓ +1</button></div>';
-    c.onclick = () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide });
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="chip proj" hidden>On projector</span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Give this team a point">✓ +1</button></div>';
+    c.onclick = () => pick(s.id); // up to 3 drawings side by side on the projector
     c.querySelector('.tsel').onclick = e => e.stopPropagation();
     c.querySelector('.tsel').onchange = e => setTeam(s, e.target.value || null);
     c.querySelector('.ok').onclick = e => { e.stopPropagation(); award(s); };
     $('#grid').append(c); s.el = c; s.cv = c.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, sort: d.sort || {}, done: !!d.done, dirty: true }); ui();
+  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, sort: d.sort || {}, done: !!d.done, pulse: d.pulse || null, dirty: true }); ui();
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
@@ -343,7 +394,7 @@ function onmsg(m) {
       }
       break;
     case 'state': {
-      $('#grid').innerHTML = ''; S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; setQ(m.q);
+      $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
@@ -367,12 +418,18 @@ function onmsg(m) {
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; } break;
-    case 'q': setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.dirty = true; }); ui(); break;
+    case 'q': setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
+      S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.pulse = null; x.dirty = true; });
+      // the server has already taken everyone off the projector; do the same here so no card stays outlined
+      S.picks = []; S.spot = null; S.frozen = false;
+      ui(); break;
     case 'sort': if (s) { s.sort = m.p; s.done = m.done; SR.update(); ui(); } break;
     case 'reveal': S.revealed = m.on; ui(); break;
     case 'sres': S.projSum = m.on; SR.update(); break;
     case 'mode': S.simple = !!m.simple; ui(); break;
-    case 'spot': S.spot = m.spot; S.hide = m.hide; ui(); break;
+    case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
+    case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
+    case 'freeze': S.frozen = m.on; ui(); toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break;
   }
 }
 function award(s) {
@@ -381,6 +438,91 @@ function award(s) {
 }
 function setTeam(s, team) { ws.send({ t: 'team', id: s.id, team }); } // the server updates the class list entry too, then tells everyone
 const teamNm = id => { const t = teamOf(id); return t ? t.name : ''; };
+
+// ---- confidence pulse ----
+// One card per student, outlined in their colour. Colour is never the only signal: the chip spells it out.
+function pulseCard(s) {
+  const p = pulseOf(s.pulse), chip = s.el.querySelector('.pchip');
+  if (p) s.el.dataset.pulse = p.k; else delete s.el.dataset.pulse;
+  chip.hidden = !p;
+  if (p) { chip.textContent = p.e + ' ' + p.n; chip.style.background = p.soft; chip.style.color = p.c; chip.title = 'Said: ' + p.n; }
+  s.el.setAttribute('aria-label', disp(s) + (p ? ' — ' + p.n : ' — no confidence picked yet'));
+}
+let pulseFilter = null;
+function pulseSummary() {
+  const box = $('#pulsesum'), n = S.stu.size, hide = !n || S.q.kind === 'sort';
+  box.hidden = hide; if (hide) return;
+  const c = { r: 0, y: 0, g: 0 }; let none = 0;
+  S.stu.forEach(s => { if (pulseOf(s.pulse)) c[s.pulse]++; else none++; });
+  box.innerHTML = '';
+  PULSE_ORDER.forEach(k => {
+    const p = PULSES[k];
+    const b = el('button', { className: 'pb' + (pulseFilter === k ? ' on' : ''), textContent: p.e + ' ' + c[k] });
+    b.style.setProperty('--pc', p.c); b.style.setProperty('--pcs', p.soft);
+    b.title = c[k] + ' said ' + p.n.toLowerCase() + (pulseFilter === k ? ' — click to show the whole class again' : ' — click to show only these');
+    b.setAttribute('aria-pressed', pulseFilter === k ? 'true' : 'false');
+    b.onclick = () => { pulseFilter = pulseFilter === k ? null : k; applyPulseFilter(); pulseSummary(); };
+    box.append(b);
+  });
+  if (none) box.append(el('span', { className: 'mut', textContent: none + ' no answer', style: 'font-size:14px;font-weight:600' }));
+  box.append(el('button', { className: 'b sm', textContent: '📋 Report', title: 'How the class felt, question by question', onclick: openReport }));
+}
+function applyPulseFilter() {
+  let shown = 0;
+  S.stu.forEach(s => { const off = !!pulseFilter && s.pulse !== pulseFilter; s.el.hidden = off; if (!off) shown++; });
+  const box = $('#grid'), note = box.querySelector('.empty.filtered');
+  if (pulseFilter && !shown) {
+    if (!note) box.append(el('div', { className: 'empty filtered', textContent: 'Nobody picked ' + pulseOf(pulseFilter).n.toLowerCase() + '. Click the colour again to show everyone.' }));
+  } else if (note) note.remove();
+}
+
+// ---- the drawings on the projector: click to add, up to 3 side by side ----
+function pick(id) {
+  if (!S.stu.get(id)) return;
+  let picks = S.picks.filter(x => S.stu.has(x));
+  if (picks.includes(id)) picks = picks.filter(x => x !== id);
+  else {
+    picks.push(id);
+    if (picks.length > 3) { const out = S.stu.get(picks.shift()); toast('3 at a time — ' + (out ? disp(out) : 'that one') + ' came off the projector.'); }
+  }
+  S.picks = picks; // show it straight away; the server's copy comes back a moment later
+  ui();
+  ws.send({ t: 'spot', ids: picks, hide: S.hide });
+}
+function renderPicks() {
+  const box = $('#pstrip'), ids = S.picks.filter(id => S.stu.has(id));
+  box.hidden = !ids.length; box.innerHTML = ''; if (!ids.length) return;
+  box.append(el('span', { className: 'lbl', textContent: 'On projector (' + ids.length + '/3)' }));
+  ids.forEach(id => {
+    const s = S.stu.get(id);
+    const b = el('button', { className: 'pk', title: 'Take ' + disp(s) + ' off the projector' });
+    b.setAttribute('aria-label', 'Take ' + disp(s) + ' off the projector');
+    b.append(el('span', { textContent: disp(s) }), el('span', { textContent: '✕' }));
+    b.onclick = () => pick(id);
+    box.append(b);
+  });
+  box.append(el('button', { className: 'b sm', textContent: 'Clear', onclick: () => ws.send({ t: 'spot', ids: [], hide: S.hide }) }));
+}
+
+// ---- freeze ----
+function freezeMenu(btn) {
+  openMenu(btn, [
+    { t: S.frozen ? 'Unfreeze — back to work' : 'Freeze now', sub: S.frozen ? 'Let the class draw again' : 'Every screen stops until you say so', f: () => ws.send({ t: 'freeze', on: !S.frozen }) },
+    '-',
+    { t: 'Freeze for 30 seconds', f: () => ws.send({ t: 'freeze', on: true, secs: 30 }) },
+    { t: 'Freeze for 1 minute', f: () => ws.send({ t: 'freeze', on: true, secs: 60 }) },
+    { t: 'Freeze for 2 minutes', f: () => ws.send({ t: 'freeze', on: true, secs: 120 }) },
+  ], 'top:52px;right:0;min-width:280px');
+}
+function freezeUI() {
+  const b = $('#freeze'); b.classList.toggle('on', S.frozen); b.setAttribute('aria-pressed', S.frozen ? 'true' : 'false');
+  b.textContent = S.frozen ? '❄ Frozen' : '❄ Freeze';
+  $('#frzbar').hidden = !S.frozen;
+  const p = $('#pfreeze'); if (p) { p.classList.toggle('on', S.frozen); p.textContent = S.frozen ? '❄✕' : '❄'; }
+}
+$('#freeze').onclick = e => { e.stopPropagation(); freezeMenu($('#freeze')); };
+$('#pfreeze').onclick = e => { e.stopPropagation(); freezeMenu($('#pfreeze')); };
+$('#frzoff').onclick = () => ws.send({ t: 'freeze', on: false });
 
 // ---- rendering ----
 function ui() {
@@ -395,7 +537,7 @@ function ui() {
   $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
   $('#hidet').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector'; $('#hide').classList.toggle('on', S.hide);
   $('#lbproj').classList.toggle('on', S.board);
-  const gridEmpty = $('#grid .empty');
+  const gridEmpty = $('#grid .empty:not(.filtered)');
   if (!n && !gridEmpty) $('#grid').append(el('div', { className: 'empty', textContent: 'No students yet. Share the code ' + code + ' or show the QR code.' }));
   if (n && gridEmpty) gridEmpty.remove();
   const want = TM.teams.map(t => t.id + t.name + (t.emoji || '')).join('|');
@@ -407,12 +549,16 @@ function ui() {
     if (sel.dataset.k !== want) { sel.dataset.k = want; sel.innerHTML = ''; [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); }
     sel.value = s.team || '';
     ok.classList.toggle('on', !!s.aw); ok.textContent = s.aw ? '✓ Given' : '✓ +1'; ok.title = s.aw ? 'Click to take the point back' : 'Give this team a point';
-    s.el.querySelector('.chip').hidden = S.spot !== s.id;
-    s.el.classList.toggle('spot', S.spot === s.id);
+    const up = S.picks.includes(s.id);
+    s.el.querySelector('.chip').hidden = !up;
+    s.el.classList.toggle('spot', up);
+    pulseCard(s);
   });
+  applyPulseFilter(); pulseSummary(); renderPicks(); freezeUI();
   const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
   if (sp) { ab.textContent = sp.aw ? '✓ Point given (undo)' : '✓ Give ' + (teamNm(sp.team) || 'a team') + ' a point'; ab.onclick = () => award(sp); }
-  renderScores(); renderRailHead(); if (ph.matches) renderPhone(); else if (isSort) SR.update();
+  renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
+  if (ph.matches) renderPhone(); else if (isSort) SR.update();
 }
 // Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
 function renderScores() {
@@ -517,6 +663,7 @@ $('#more').onclick = e => {
     { t: 'Quick mode', sub: 'Students get just a pen and 4 colors', tog: S.simple, keep: true, f: () => { ws.send({ t: 'mode', simple: !S.simple }); closeMenu(); } },
     '-',
     { t: 'Save all drawings as a picture (PNG)', f: savePng },
+    { t: 'How the class felt (report)', sub: 'Confidence question by question, and who to check in with', f: openReport },
     { t: 'Show QR code to join', f: showQR },
     { t: 'Use my phone as a remote', sub: 'Scan once to control this class from your phone', f: showRemote },
     { t: 'Copy student link', f: copyLink },
@@ -552,7 +699,7 @@ function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Stud
 function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return toast('Could not make a QR code here.'); } $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal(); }
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
 $('#proj').onclick = $('#pproj').onclick = () => window.open('/projector?code=' + code, 'projector');
-$('#hide').onclick = () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide });
+$('#hide').onclick = () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide });
 SR.mount($('#sres'), sortCtx);
 $('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
 function savePng() { // a contact sheet of everyone's work (initials only, as the server knows them)
@@ -566,6 +713,141 @@ function savePng() { // a contact sheet of everyone's work (initials only, as th
   });
   c.toBlob(b => { const a = el('a', { href: URL.createObjectURL(b), download: 'draw-it-out-' + code + '.png' }); a.click(); });
 }
+
+// ---- the confidence report: how the class felt, question by question ----
+const qShort = q => (plain(String(q.question || '')).trim().slice(0, 90) || (q.img ? 'Picture question' : 'Drawing question'));
+// Completed questions come from the server (so a refresh doesn't lose them); the one on screen now is counted live.
+function reportRows() {
+  const rows = (S.phist || []).map(h => ({ n: h.n, q: h.q || 'Drawing question', g: h.g || 0, y: h.y || 0, r: h.r || 0, none: h.none || 0, by: h.by || {} }));
+  if (S.q.kind !== 'sort' && (S.q.question || S.q.img)) {
+    const c = { g: 0, y: 0, r: 0 }, by = {};
+    S.stu.forEach(s => { if (pulseOf(s.pulse)) { c[s.pulse]++; by[s.id] = s.pulse; } });
+    if (c.g + c.y + c.r) rows.push({ n: (S.phist || []).length + 1, q: qShort(S.q), live: true, g: c.g, y: c.y, r: c.r, none: S.stu.size - c.g - c.y - c.r, by });
+  }
+  return rows;
+}
+// green counts 100, amber 50, red 0: one number a teacher can say out loud
+const pulsePct = (g, y, r) => { const t = g + y + r; return t ? Math.round((g * 100 + y * 50) / t) : 0; };
+const readOf = p => (p >= 80 ? 'comfortable' : p >= 60 ? 'mostly comfortable' : p >= 40 ? 'mixed' : p >= 20 ? 'wobbly' : 'struggling');
+const reportTotal = rows => rows.reduce((a, x) => ({ g: a.g + x.g, y: a.y + x.y, r: a.r + x.r, none: a.none + x.none }), { g: 0, y: 0, r: 0, none: 0 });
+function stackBar(x) {
+  const t = x.g + x.y + x.r, box = el('div', { className: 'stack' });
+  if (!t) { box.style.opacity = '.45'; box.title = 'No colours yet'; return box; }
+  [['g', x.g], ['y', x.y], ['r', x.r]].forEach(([k, v]) => {
+    if (!v) return;
+    const i = el('i'); i.style.width = (v / t * 100) + '%'; i.style.background = PULSES[k].c;
+    i.title = v + ' ' + PULSES[k].n; box.append(i);
+  });
+  return box;
+}
+function drawReport() {
+  const box = $('#repbody'); if (!box) return;
+  box.innerHTML = ''; $('#replbl').textContent = per().name + ' · ' + new Date().toLocaleDateString();
+  const rows = reportRows();
+  if (!rows.length) {
+    box.append(el('div', { className: 'mut', style: 'font-size:17px', textContent: 'No colours yet. Students tap red, amber or green while they draw, and this fills in as the lesson goes.' }));
+    return;
+  }
+  const tot = reportTotal(rows), pct = pulsePct(tot.g, tot.y, tot.r);
+  const head = el('div', { className: 'rephead' },
+    el('div', { className: 'big', textContent: pct + '%' }),
+    el('div', { style: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px' },
+      el('div', { className: 'r', textContent: 'The class felt ' + readOf(pct) }),
+      el('div', { className: 'mut', style: 'font-size:14px', textContent: rows.length + (rows.length === 1 ? ' question' : ' questions') + ' · ' + S.stu.size + ' students · ' + tot.g + ' got it, ' + tot.y + ' getting there, ' + tot.r + ' stuck' }),
+      stackBar(tot)));
+  box.append(head);
+  if (rows.length > 1) {
+    const a = pulsePct(rows[0].g, rows[0].y, rows[0].r), b = pulsePct(rows[rows.length - 1].g, rows[rows.length - 1].y, rows[rows.length - 1].r), d = b - a;
+    box.append(el('div', { style: 'font-weight:600;font-size:15px', textContent: d === 0 ? 'Confidence held steady, ' + a + '% from the first question to the last.' : 'Confidence ' + (d > 0 ? 'rose' : 'fell') + ' from ' + a + '% on question 1 to ' + b + '% on question ' + rows.length + '.' }));
+  }
+  const list = el('div', {}, el('div', { className: 'lbl', textContent: 'Question by question', style: 'margin-bottom:4px' }));
+  rows.forEach(r => {
+    const meta = [r.g + ' got it', r.y + ' getting there', r.r + ' stuck'];
+    if (r.none) meta.push(r.none + ' no answer');
+    if (r.live) meta.push('in progress');
+    list.append(el('div', { className: 'repq' },
+      el('div', { className: 'n', textContent: r.n }),
+      el('div', {}, el('div', { className: 'qt', textContent: r.q }), el('div', { className: 'meta', textContent: meta.join(' · ') })),
+      stackBar(r)));
+  });
+  box.append(list);
+  reportPeople(box, rows);
+}
+
+// Who was stuck, and how each team felt: the two things a teacher acts on tomorrow.
+function reportPeople(box, rows) {
+  const tally = new Map();
+  rows.forEach(r => Object.entries(r.by).forEach(([id, c]) => {
+    const t = tally.get(id) || { r: 0, y: 0, g: 0, last: null };
+    t[c]++; t.last = c; tally.set(id, t);
+  }));
+  const nameOf = id => { const s = S.stu.get(id); return s ? disp(s) : 'A student'; };
+  const need = [...tally.entries()].filter(([, t]) => t.last === 'r' || t.r >= 2)
+    .sort((a, b) => b[1].r - a[1].r || b[1].y - a[1].y);
+  if (need.length) {
+    const sec = el('div', {}, el('div', { className: 'lbl', textContent: 'Who to check in with', style: 'margin-bottom:6px' }));
+    need.slice(0, 12).forEach(([id, t]) => {
+      const why = t.last === 'r' && t.r >= 2 ? 'stuck on ' + t.r + ' questions' : t.last === 'r' ? 'stuck on the last question' : 'wobbly on ' + (t.r + t.y);
+      sec.append(el('div', { style: 'display:flex;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line)' },
+        el('span', { className: 'pchip', textContent: PULSES[t.last].e + ' ' + PULSES[t.last].n, style: 'background:' + PULSES[t.last].soft + ';color:' + PULSES[t.last].c }),
+        el('b', { textContent: nameOf(id), style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }),
+        el('span', { className: 'mut', textContent: why, style: 'font-size:14px' })));
+    });
+    box.append(sec);
+  }
+  const teams = TM.teams.map(t => {
+    const agg = { g: 0, y: 0, r: 0 };
+    [...tally.entries()].forEach(([id, v]) => { const s = S.stu.get(id); if (s && s.team === t.id) { agg.g += v.g; agg.y += v.y; agg.r += v.r; } });
+    return { t, agg, pct: pulsePct(agg.g, agg.y, agg.r), n: agg.g + agg.y + agg.r };
+  }).filter(x => x.n);
+  if (teams.length) {
+    teams.sort((a, b) => b.pct - a.pct);
+    const sec = el('div', {}, el('div', { className: 'lbl', textContent: 'By team', style: 'margin-bottom:6px' }));
+    teams.forEach(({ t, pct, agg }) => {
+      sec.append(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) 120px 52px;gap:10px;align-items:center;padding:4px 0' },
+        el('b', { textContent: teamLabel(t), style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px' }),
+        stackBar(agg), el('b', { textContent: pct + '%', style: 'text-align:right' })));
+    });
+    box.append(sec);
+  }
+}
+function reportCSV() {
+  const rows = reportRows(), tot = reportTotal(rows), out = [
+    ['Draw It Out — how the class felt'],
+    ['Class', per().name], ['Code', code], ['Date', new Date().toISOString().slice(0, 16).replace('T', ' ')],
+    ['Questions', rows.length], ['Students', S.stu.size], ['Overall confidence', pulsePct(tot.g, tot.y, tot.r) + '%'],
+    [],
+    ['Question #', 'Question', 'Got it', 'Getting there', 'Stuck', 'No answer', 'Confident %'],
+  ];
+  rows.forEach(r => out.push([r.n, r.q, r.g, r.y, r.r, r.none, pulsePct(r.g, r.y, r.r) + '%']));
+  out.push([], ['Student', 'Team', ...rows.map(r => 'Q' + r.n)]);
+  const ids = new Set(); rows.forEach(r => Object.keys(r.by).forEach(id => ids.add(id)));
+  [...ids].forEach(id => {
+    const s = S.stu.get(id), ini = s ? disp(s) : 'A student', tm = s && teamOf(s.team);
+    out.push([ini, tm ? tm.name : '', ...rows.map(r => { const c = r.by[id]; return c ? PULSES[c].n : '-'; })]);
+  });
+  const a = el('a', { href: URL.createObjectURL(new Blob([SK.csv(out)], { type: 'text/csv' })), download: 'confidence-' + code + '-' + new Date().toISOString().slice(0, 10) + '.csv' });
+  a.click();
+}
+function reportText() {
+  const rows = reportRows(), tot = reportTotal(rows), pct = pulsePct(tot.g, tot.y, tot.r);
+  const lines = ['How the class felt — ' + per().name + ' (' + new Date().toLocaleDateString() + ')', 'Overall: ' + pct + '% (' + readOf(pct) + ') across ' + rows.length + ' question' + (rows.length === 1 ? '' : 's')];
+  rows.forEach(r => lines.push('  Q' + r.n + ': ' + pulsePct(r.g, r.y, r.r) + '% — ' + r.g + ' got it, ' + r.y + ' getting there, ' + r.r + ' stuck' + (r.none ? ', ' + r.none + ' no answer' : '') + ' — ' + r.q));
+  const tally = new Map();
+  rows.forEach(r => Object.entries(r.by).forEach(([id, c]) => { const t = tally.get(id) || { r: 0, last: null }; t.r += c === 'r' ? 1 : 0; t.last = c; tally.set(id, t); }));
+  const need = [...tally.entries()].filter(([, t]) => t.last === 'r' || t.r >= 2).map(([id, t]) => ((S.stu.get(id) ? disp(S.stu.get(id)) : 'A student') + ' (' + t.r + ' red)'));
+  if (need.length) lines.push('Check in with: ' + need.join(', '));
+  return lines.join('\n');
+}
+function openReport() { drawReport(); const d = $('#rep'); if (!d.open) d.showModal(); }
+$('#repclose').onclick = () => $('#rep').close();
+$('#repcsv').onclick = () => { if (!reportRows().length) return toast('No colours to report on yet.'); reportCSV(); };
+$('#repcopy').onclick = () => {
+  if (!reportRows().length) return toast('No colours to report on yet.');
+  const t = reportText();
+  navigator.clipboard.writeText(t).then(() => toast('Summary copied.'), () => prompt('Copy this summary:', t));
+};
+
 
 // ---- thumbnails: refresh at most every 150ms + 15ms per student, 3 per frame, longest-waiting first ----
 (function loop() {
@@ -733,7 +1015,7 @@ function phoneReview(box) {
   if (TM.teams.length) { const sel = el('select', { className: 'inp' }); sel.setAttribute('aria-label', 'Team'); [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); sel.value = s.team || ''; sel.onchange = () => setTeam(s, sel.value || null); row.append(sel); }
   const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), textContent: s.aw ? '✓ Point given (undo)' : '✓ Give ' + (tm ? tm.name : 'a team') + ' a point', style: 'min-height:64px;font-size:20px;border-radius:14px' }); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
   if (!TM.teams.length) { aw.disabled = true; aw.textContent = 'Make teams to give points'; }
-  const acts = el('div', { style: 'display:flex;gap:10px' }, el('button', { className: 'b', textContent: S.spot === s.id ? 'Stop showing' : 'Show on projector', style: 'flex:1;min-height:48px;border-width:2px;font-weight:700', onclick: () => ws.send({ t: 'spot', id: S.spot === s.id ? null : s.id, hide: S.hide }) }), el('button', { className: 'b', textContent: 'Skip', style: 'width:110px;min-height:48px;border-width:2px;font-weight:700', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }));
+  const acts = el('div', { style: 'display:flex;gap:10px' }, el('button', { className: 'b', textContent: S.picks.includes(s.id) ? 'Stop showing' : 'Show on projector', style: 'flex:1;min-height:48px;border-width:2px;font-weight:700', onclick: () => pick(s.id) }), el('button', { className: 'b', textContent: 'Skip', style: 'width:110px;min-height:48px;border-width:2px;font-weight:700', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }));
   rev.append(head, cvw, dots, ...(TM.teams.length ? [row] : []), aw, acts); box.append(rev);
   s.dirty = true;
 }
@@ -754,7 +1036,8 @@ function phoneQuestions(box) {
   const later = qs().slice(cur + 2).map((q, i) => [q, cur + 2 + i]);
   if (later.length) { pad.append(el('div', { className: 'lbl', textContent: 'Later' })); later.slice(0, 6).forEach(([q, i]) => pad.append(el('div', { className: 'ph-row' }, el('div', { className: 'n qi-n', textContent: i + 1, style: 'flex:none;width:30px;height:30px;border-radius:50%;background:#E8EDF2;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px' }), el('div', { textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1;min-width:0;font-size:15px;line-height:1.3;font-weight:500' }), el('button', { className: 'b', textContent: 'Send', style: 'border-width:2px;font-weight:700', onclick: () => go(i) })))); }
   const tg = (label, sub, on, f) => { const b = el('button', { className: 'tog' + (on ? ' on' : ''), style: 'width:100%;justify-content:space-between;min-height:60px;text-align:left', onclick: f }); b.append(el('span', {}, document.createTextNode(label), el('small', { textContent: sub, style: 'display:block;font-weight:500;color:var(--mut)' })), document.createElement('i')); return b; };
-  pad.append(tg('Leaderboard on projector', 'Shows when no drawing is up', S.board, () => ws.send({ t: 'board', on: !S.board })), tg('Names hidden on projector', 'Projector says “A student’s work”', S.hide, () => ws.send({ t: 'spot', id: S.spot, hide: !S.hide })), tg('Quick mode', 'Students get a pen and 4 colors', S.simple, () => ws.send({ t: 'mode', simple: !S.simple })));
+  pad.append(tg('Leaderboard on projector', 'Shows when no drawing is up', S.board, () => ws.send({ t: 'board', on: !S.board })), tg('Names hidden on projector', 'Projector says “A student’s work”', S.hide, () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide })), tg('Quick mode', 'Students get a pen and 4 colors', S.simple, () => ws.send({ t: 'mode', simple: !S.simple })));
+  pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', textContent: '📋 How the class felt (report)', onclick: openReport }));
   pad.append(el('div', { className: 'mut', textContent: 'To write or edit questions, use a computer.', style: 'font-size:14px;text-align:center' }));
   box.append(pad);
 }
@@ -785,7 +1068,9 @@ function startBots() {
   ['Maya', 'Jin', 'Sofia', 'Omar', 'Lena', 'Diego', 'Aisha', 'Noah'].forEach((nm, i) => setTimeout(() => bot(nm, i), 500 * i));
 }
 function bot(nm, i) {
-  let id = null, n = 1, timer = 0; const W0 = 800, H0 = 500, COL = ['#2563eb', '#dc2626', '#059669', '#f97316', '#7c3aed', '#111111'];
+  let id = null, n = 1, timer = 0, pt = 0; const W0 = 800, H0 = 500, COL = ['#2563eb', '#dc2626', '#059669', '#f97316', '#7c3aed', '#111111'];
+  // the practice students tap confidence too, so the demo shows off the outlines and the report
+  const pulseSoon = () => { clearTimeout(pt); pt = setTimeout(() => { b.send({ t: 'pulse', c: ['g', 'g', 'g', 'y', 'y', 'r'][Math.random() * 6 | 0] }); pulseSoon(); }, 2500 + Math.random() * 5000); };
   const put = o => b.send({ t: 'set', o: { id: n++, lw: 3, dash: 'solid', ...o } });
   const scene = () => { // concentric rings with labels, an arrow and a squiggle: reads like a labelled diagram
     clearTimeout(timer); n = 1; const cx = 250 + Math.random() * 300, cy = 220 + Math.random() * 60, k = 3 + (i % 2), steps = [];
@@ -808,8 +1093,8 @@ function bot(nm, i) {
     })(0);
   };
   const b = connect(m => {
-    if (m.t === 'joined') { id = m.id; if (m.q.kind === 'sort') setTimeout(() => sortIt(m.q), 1500); else if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
-    else if (m.t === 'q') setTimeout(() => (m.q.kind === 'sort' ? sortIt(m.q) : scene()), 1500 + Math.random() * 3500);
+    if (m.t === 'joined') { id = m.id; pulseSoon(); if (m.q.kind === 'sort') setTimeout(() => sortIt(m.q), 1500); else if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
+    else if (m.t === 'q') setTimeout(() => (m.q.kind === 'sort' ? sortIt(m.q) : scene()), 1500 + Math.random() * 3500); else if (m.t === 'freeze' && !m.on) pulseSoon();
   }, () => b.send({ t: 'join', code, name: nm, team: TM.teams.length ? TM.teams[i % TM.teams.length].id : null, id, bw: W0, bh: H0 }));
 }
 

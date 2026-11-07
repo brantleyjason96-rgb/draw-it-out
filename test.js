@@ -312,4 +312,207 @@ await test('teams: long names and multi-part emoji are cut cleanly, never mid-ch
   assert.equal(s.teams[0].name, 'Granite Granite Gran');
 });
 
+// ---- confidence pulse, freeze, and up to 3 on the projector ----
+let ph2, pj, pproj, pjId;
+const pjoin = async () => { const c = client(); await c.ready; c.send({ t: 'join', code: 'PULSE', name: 'Pip', bw: 800, bh: 500 }); await c.wait('joined'); return c; };
+await test('pulse: a student colour reaches the teacher and the projector, and survives a reconnect', async () => {
+  ph2 = client(); await ph2.ready; ph2.send({ t: 'host', code: 'PULSE', key: KEY }); await ph2.wait('state');
+  pproj = client(); await pproj.ready; pproj.send({ t: 'watch', code: 'PULSE' }); await pproj.wait('state');
+  pj = await pjoin(); pjId = pj.last('joined').id;
+  ph2.clear(); pproj.clear();
+  pj.send({ t: 'pulse', c: 'y' }); await sleep(80);
+  assert.equal(ph2.last('pulse').c, 'y'); assert.equal(pproj.last('pulse').c, 'y'); assert.equal(ph2.last('pulse').id, pjId);
+  pj.send({ t: 'pulse', c: 'nonsense' }); await sleep(80);
+  assert.equal(ph2.last('pulse').c, null, 'only red, amber and green are accepted');
+  pj.send({ t: 'pulse', c: 'r' }); await sleep(80);
+  const back = client(); await back.ready; back.send({ t: 'host', code: 'PULSE', key: KEY });
+  const st = await back.wait('state');
+  assert.equal(st.students.find(x => x.id === pjId).pulse, 'r');
+  back.ws.close();
+});
+
+await test('freeze: stops drawing on every screen, blocks work, and lets go when told', async () => {
+  ph2.clear(); pj.clear(); pproj.clear();
+  ph2.send({ t: 'freeze', on: true, secs: 60 }); await sleep(90);
+  assert.equal(ph2.last('freeze').on, true); assert.equal(pproj.last('freeze').on, true); assert.equal(pj.last('freeze').on, true);
+  ph2.clear(); pj.clear();
+  pj.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } });
+  pj.send({ t: 'pulse', c: 'g' });
+  await sleep(90);
+  assert.equal(ph2.last('set'), undefined, 'nothing is stored or relayed while frozen');
+  assert.equal(ph2.last('pulse'), undefined);
+  assert.equal(pj.last('freeze').on, true, 'the student is told why');
+  const late = await pjoin(); assert.equal(late.last('joined').frozen, true); late.ws.close();
+  ph2.send({ t: 'freeze', on: false }); await sleep(90);
+  assert.equal(pj.last('freeze').on, false);
+  pj.clear(); ph2.clear();
+  pj.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } });
+  await sleep(80);
+  assert.ok(ph2.last('set'), 'unfrozen students can draw again');
+});
+
+await test('freeze: a timed freeze lets go on its own', async () => {
+  pj.clear();
+  ph2.send({ t: 'freeze', on: true, secs: 5 }); await sleep(60);
+  assert.equal(pj.last('freeze').on, true);
+  await sleep(5400);
+  assert.equal(pj.last('freeze').on, false, 'the server unfreezes after the seconds it was given');
+});
+
+await test('projector: up to three drawings side by side, and no more', async () => {
+  const extra = [await pjoin(), await pjoin(), await pjoin()];
+  const ids = [pjId, ...extra.map(c => c.last('joined').id)];
+  ph2.clear(); pproj.clear();
+  ph2.send({ t: 'spot', ids: ids.slice(0, 3), hide: true }); await sleep(90);
+  let m = pproj.last('spot');
+  assert.deepEqual(m.picks, ids.slice(0, 3)); assert.equal(m.spot, ids[0], 'spot stays the first pick for older screens');
+  ph2.send({ t: 'spot', ids: [...ids, 'nobody'], hide: true }); await sleep(90);
+  m = pproj.last('spot'); assert.equal(m.picks.length, 3); assert.deepEqual(m.picks, ids.slice(0, 3));
+  extra[0].clear(); ph2.clear();
+  extra[0].send({ t: 'set', o: { id: 2, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10]] } });
+  await sleep(80);
+  assert.equal(extra[0].last('lock').proj, true, 'everything on the projector is locked');
+  assert.equal(ph2.last('set'), undefined);
+  extra[2].send({ t: 'set', o: { id: 2, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10]] } });
+  await sleep(80);
+  assert.ok(ph2.last('set'), 'a student who is not up can still draw');
+  pj.clear(); ph2.clear();
+  ph2.send({ t: 'spot', ids: [], hide: true }); await sleep(90);
+  assert.deepEqual(pproj.last('spot').picks, []); assert.equal(pj.last('lock').proj, false);
+});
+
+await test('a new question takes everyone off the projector and unlocks them', async () => {
+  ph2.send({ t: 'spot', ids: [pjId], hide: true }); await sleep(90);
+  assert.equal(pj.last('lock').proj, true, 'on the projector = locked');
+  pj.clear(); ph2.clear();
+  ph2.send({ t: 'q', question: 'Next one', bg: 'blank' }); await sleep(150);
+  assert.deepEqual(ph2.last('spot').picks, [], 'the teaching screen is told the projector is clear');
+  assert.equal(pj.last('lock').proj, false, 'and the student can draw again');
+  pj.clear();
+  pj.send({ t: 'set', o: { id: 3, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [30, 30]] } });
+  await sleep(80);
+  assert.ok(ph2.last('set'), 'their drawing counts on the new question');
+});
+
+await test('the report keeps one pulse snapshot per question, and clears with the class', async () => {
+  pj.clear();
+  pj.send({ t: 'pulse', c: 'g' }); await sleep(70);
+  ph2.send({ t: 'q', question: 'Third', bg: 'blank' }); await sleep(120);
+  const q = ph2.last('q');
+  assert.ok(Array.isArray(q.phist), 'the host gets the history with the new question');
+  assert.equal(q.phist.length, 1, 'the question that just ended is snapshotted');
+  assert.equal(q.phist[0].g, 1); assert.equal(q.phist[0].r, 0);
+  assert.equal(q.phist[0].by[pjId], 'g');
+  assert.equal(q.phist[0].q, 'Next one');
+  const st = client(); await st.ready; st.send({ t: 'host', code: 'PULSE', key: KEY });
+  const s = await st.wait('state');
+  assert.equal(s.phist.length, 1, 'a refresh of the teaching screen keeps the report');
+  st.ws.close();
+  ph2.send({ t: 'reset' }); await sleep(150);
+  const st2 = client(); await st2.ready; st2.send({ t: 'host', code: 'PULSE', key: KEY });
+  const s2 = await st2.wait('state');
+  assert.deepEqual(s2.phist, [], 'clearing the class starts a fresh report');
+  st2.ws.close();
+});
+
+// ---- a refresh in the middle of a lesson must not lose the student ----
+const RES = 'RESUME';
+const resHost = client(); await resHost.ready;
+resHost.send({ t: 'host', code: RES, key: KEY, setup: { teams, roster: [{ rid: 'r0001', ini: 'MA', team: 'ta' }, { rid: 'r0002', ini: 'JI', team: 'tb' }], cap: false, scores: {} } });
+await resHost.wait('state');
+resHost.send({ t: 'q', question: 'Draw a cell', bg: 'graph' }); await sleep(80);
+let resHost2;
+const rjoin = async (msg) => { const c = client(); await c.ready; c.send({ t: 'join', code: RES, bw: 800, bh: 500, ...msg }); await Promise.race([c.wait('joined'), c.wait('err')]); return c; };
+
+await test('refresh: rejoining with only the id remembered keeps the same student, team and drawing', async () => {
+  const a = await rjoin({ rid: 'r0001' });
+  const id = a.last('joined').id;
+  assert.equal(a.last('joined').team, 'ta');
+  a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[20, 20], [90, 90]] } });
+  await sleep(120);
+  a.ws.close(); // the tab is refreshed: the socket goes, the page comes back with what it remembered
+  await sleep(120);
+  const b = await rjoin({ id }); // no rid, no name - just the id this tab kept
+  const j = b.last('joined');
+  b.ws.close();
+  assert.equal(j.id, id, 'the same student, not a new one');
+  assert.equal(j.team, 'ta', 'still on their team');
+  assert.equal(j.ini, 'MA');
+  assert.equal(j.objs.length, 1, 'their drawing comes back from the server');
+  const cards = resHost.got.filter(m => m.t === 'join').map(m => m.s.id);
+  assert.ok(cards.length >= 2, 'the teacher was told the page came back');
+  assert.equal(new Set(cards).size, 1, 'the same card, never a duplicate');
+});
+
+await test('refresh: a stale id falls back to picking initials instead of a dead page', async () => {
+  const c = await rjoin({ id: 'not-a-real-id' });
+  const e = c.last('err');
+  assert.ok(e && /Pick your initials/.test(e.m), 'told to pick their initials again');
+  assert.equal(e.taken, true, 'the page can show the list straight away');
+  c.ws.close();
+});
+
+await test('refresh: someone else already signed in under those initials is still refused', async () => {
+  const a = await rjoin({ rid: 'r0002' });
+  assert.equal(a.last('joined').team, 'tb');
+  const id2 = a.last('joined').id;
+  const b = await rjoin({ rid: 'r0002' }); // a different tab, the first one is still live
+  assert.match(b.last('err').m, /already in use/);
+  assert.ok(!b.last('joined'));
+  a.ws.close(); await sleep(120);
+  const c = await rjoin({ id: id2 }); // and after the tab closes, the id alone gets back in
+  assert.equal(c.last('joined').id, id2);
+  c.ws.close();
+});
+
+await test('refresh: a page with stale work cannot overwrite a drawing that is on the projector', async () => {
+  const a = await rjoin({ rid: 'r0001' });
+  if (!a.last('joined')) console.log('DEBUG', JSON.stringify(a.got));
+  const id = a.last('joined').id;
+  a.send({ t: 'set', o: { id: 7, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[30, 30], [70, 70]] } });
+  await sleep(120);
+  resHost.send({ t: 'spot', ids: [id] }); await sleep(120);
+  a.ws.close(); await sleep(120);
+  // the page reloads with its copy of the drawing (have: true) while the work is on the projector
+  const b = await rjoin({ id, have: true, objs: [{ id: 9, k: 'stroke', pen: 'pen', c: '#ff0000', lw: 3, dash: 'solid', pts: [[10, 10], [20, 20]] }] });
+  const objs = b.last('joined').objs;
+  assert.ok(objs.some(o => o.id === 7), 'the drawing the server already had is still there');
+  assert.ok(!objs.some(o => o.id === 9), 'the stale copy from the reloaded page did not replace it');
+  resHost.send({ t: 'spot', ids: [] }); await sleep(120);
+  b.ws.close();
+});
+
+await test('refresh: a rejoin is refused when no teacher is running that class, and leaves no ghost', async () => {
+  const a = await rjoin({ rid: 'r0002' });
+  const id = a.last('joined').id;
+  assert.equal(a.last('joined').host, true, 'the page is told a teacher is there');
+  a.ws.close(); await sleep(100);
+  resHost.ws.close(); await sleep(150); // the last teacher screen in this class goes away
+  const b = client(); await b.ready; b.send({ t: 'join', code: RES, id, resume: true, bw: 800, bh: 500 });
+  const e = await b.wait('err');
+  assert.match(e.m, /finished/);
+  assert.ok(!b.last('joined'), 'the page is not put into a class nobody is running');
+  // a plain join still works (that is how a student gets in after the teacher is back)
+  const c = await rjoin({ id });
+  assert.equal(c.last('joined').id, id, 'their drawing and team are still there');
+  c.ws.close();
+  resHost2 = client(); await resHost2.ready; resHost2.send({ t: 'host', code: RES, key: KEY }); await resHost2.wait('state');
+});
+
+await test('leaving on purpose removes the student instead of leaving a ghost card', async () => {
+  const a = await rjoin({ rid: 'r0001' });
+  const id = a.last('joined').id;
+  resHost2.clear();
+  a.send({ t: 'bye' });
+  const k = await a.wait('kicked');
+  assert.match(k.why, /left the class/);
+  const gone = await resHost2.wait('gone');
+  assert.equal(gone.id, id, 'the teacher screen is told to drop the card');
+  const st = client(); await st.ready; st.send({ t: 'host', code: RES, key: KEY });
+  const state = await st.wait('state');
+  assert.ok(!state.students.some(s => s.id === id), 'the student is not in the room any more');
+  st.ws.close();
+});
+
 console.log(pass + ' passed'); srv.kill();
+

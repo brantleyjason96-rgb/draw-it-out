@@ -5,7 +5,6 @@
 const DEMO = new URLSearchParams(location.search).has('demo');
 // Demo mode keeps everything in memory so trying it never changes a teacher's real saved data.
 const store = DEMO ? new Proxy({}, { get: (o, k) => (k === 'removeItem' ? x => delete o[x] : o[k]), set: (o, k, v) => ((o[k] = String(v)), true) }) : localStorage;
-if (DEMO) indexedDB.deleteDatabase('doi-demo');
 
 const CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rnd = () => Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).join('');
@@ -106,7 +105,12 @@ function hostDo(code, msgs) {
 
 // ---- question sets (IndexedDB) ----
 let sets = [];
-const db = new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; });
+// A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
+// (the delete has not finished), so wait for the wipe before opening: that is why the question rail used to stay empty in demo.
+const demoWipe = DEMO
+  ? new Promise(ok => { const d = indexedDB.deleteDatabase('doi-demo'); d.onsuccess = d.onerror = d.onblocked = () => ok(); })
+  : Promise.resolve();
+const db = demoWipe.then(() => new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; }));
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
 const persistSets = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(sets, 'sets')).catch(() => alert('Could not save in this browser. Use Back up everything to keep a copy.'));
 function loadSets() {

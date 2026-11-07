@@ -10,12 +10,12 @@ Two kinds of question:
 - Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
   - **Classes** tab: pick a class to start; each card shows the top three teams by points.
   - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
-  - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle, a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px
+  - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle (click up to three to compare them on the projector), a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px. The top bar holds **❄ Freeze**, and each card is outlined in the student's own red/amber/green pulse.
   - `/sets?id=…` is the question editor (its own screen)
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
   - `/classic` is the previous single-page teacher screen, kept as a fallback
 - Landing page: `/start`
-- Projector: opened from the teaching screen
+- Projector: opened from the teaching screen. Shows one student's work, or up to three side by side, or the leaderboard, and the frozen screen while the class is frozen.
 
 ### Sort questions: how they work
 - The **answer key stays on the server** and goes to teachers only. Students and the projector get lane names and card text, never which lane is right.
@@ -26,7 +26,32 @@ Two kinds of question:
 - Sets with sort questions export, import, back up and share by link like any other. A few ready-made sort questions are in the starter set **Sort It!**
 - Code: `public/sortkit.js` (shared), `sortedit.js` (editor), `sortstu.js` (student), `sortres.js` (class results); server rules are in the "sort questions" section of `server.js`.
 
-## Run locally
+## Pulse, Freeze and Compare
+Three things the teacher runs from the teaching screen (`/class`), all of which reach every student and the projector straight away.
+
+**Pulse — how is it going?**
+- On their drawing, a student taps **🙋 Stuck / 🙂 Getting there / 💡 Got it**. Tap again to clear it, or tap another to change it. Their page is not touched: no marks are added, nothing is handed in.
+- The teacher's card for that student gets an **outline in that colour**, plus a chip that spells it out (never colour alone). The row above the grid shows the class at a glance — `🙋 4 · 🙂 2 · 💡 2 · 1 no answer` — and clicking a colour shows only those students, which is the "who do I go and help" button.
+- Pulse is for drawing questions. It clears when a new question is sent, so a colour always describes the drawing on screen.
+
+**Freeze — the whole class's attention**
+- **❄ Freeze** in the top bar (and in the phone header) stops every student's page: the drawing is blurred behind a frosted card — *Frozen. Eyes up here. Your work is saved.* — with a little frost and falling snow. The projector shows a matching **Class frozen** screen.
+- Nothing gets through while frozen: drawing, text, sorting and colours are all held on the server, not just hidden in the browser. Joining still works, so a late arrival lands on the frozen screen instead of an error.
+- From the button's menu: freeze now, or for 30 seconds / 1 minute / 2 minutes. A timed freeze lets go on its own. Sending a new question, or **Clear class**, also unfreezes.
+
+**Compare — up to three drawings side by side**
+- Clicking a drawing in the grid puts it on the projector. Click another and it goes **alongside** it, up to three; clicking a card that is already up takes it down; clicking a fourth drops the one that has been up longest (with a toast saying who). A strip above the grid always shows what is up — `On projector (2/3) · Maya ✕ · Omar ✕ · Clear`.
+- The projector lays 1, 2 or 3 out at the biggest size each drawing's own page shape allows, so nothing is stretched and the drawings stay legible from the back of the room. Side by side is for drawings: a sort question shows the first pick.
+- **A new question clears the projector**, so nobody is left locked out of the next one. (This was a bug before: a student whose work was up stayed locked when the next question went out.)
+
+**How the class felt (report)**
+- **More → How the class felt**, the Report button next to the colours, or the Teams tab on a phone.
+- One number for the lesson — green counts 100, amber 50, red 0 — with a plain reading (*"The class felt mostly comfortable"*), a stacked bar per question, the number who answered nothing, and how confidence moved from the first question to the last.
+- **Who to check in with**: students who ended the last question on red, or were red twice or more, by name. **By team** for the same view against your team points.
+- **Save report (CSV)** writes the per-question table and a student × question grid in one file; **Copy summary** puts the same thing on the clipboard for a doc or an email home.
+- The server keeps the last 40 questions' colours (never names — those are joined in on your computer), so a refresh of the teaching screen doesn't lose the report. **Clear class** starts a fresh one.
+
+
 ```
 npm install
 npm start        # http://localhost:3000

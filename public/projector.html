@@ -12,7 +12,7 @@ body{background:#0b1220;color:#fff}
 #join{text-align:center;margin-top:40px;font-size:30px}
 #join b{font-size:90px;letter-spacing:.2em;display:block;color:#93c5fd}
 #who{text-align:center;font-size:24px;margin-top:10px;color:#93c5fd}
-main{max-width:1000px}
+main{max-width:1000px;display:flex;flex-direction:column;height:100vh;height:100dvh}
 canvas{border:0}
 #lb{display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .lr{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;gap:14px;transition:transform .5s}
@@ -35,6 +35,29 @@ canvas{border:0}
 .sr .pt{grid-column:2;grid-row:1/3;font-size:44px;font-weight:800;text-align:right}
 #corner{position:fixed;top:12px;right:18px;font-size:22px;color:#93c5fd}
 #corner b{letter-spacing:.15em;color:#fff}
+/* one drawing, or two or three side by side */
+#boards{display:grid;gap:18px;margin-top:8px;flex:1;min-height:200px;grid-auto-rows:100%}
+#boards .bp{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+#boards .bph{display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;font-size:24px;color:#93c5fd}
+#boards .bph b{font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#boards .bpc{flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center}
+body:not(.multi) #boards .bpc{align-items:center}
+#boards canvas{display:block;border:0;border-radius:12px;background:#e5e7eb}
+body.multi main{max-width:none;padding:12px 20px}
+body.multi #boards .bph{font-size:20px}
+.pchip{font-size:14px;font-weight:700;border-radius:99px;padding:2px 10px;white-space:nowrap}
+/* frozen: the teacher has the floor */
+#frz{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;background:radial-gradient(120% 110% at 50% -10%,#082f49 0%,#0b3f5e 45%,#0c4a6e 100%);color:#E0F2FE}
+body.frozen #frz{display:flex}
+body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
+#frz .fi{font-size:92px;line-height:1;animation:fzwave 2.6s ease-in-out infinite}
+#frz b{font-size:64px;line-height:1.1;margin:8px 0 4px}
+#frz p{font-size:28px;margin:0;color:#93c5fd}
+#frzflakes{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#frzflakes i{position:absolute;top:-10vh;font-style:normal;color:#bae6fd;opacity:.5;animation:snofall linear infinite}
+@keyframes snofall{to{transform:translateY(120vh) rotate(360deg)}}
+@keyframes fzwave{0%,68%,100%{transform:rotate(0)}76%{transform:rotate(13deg)}84%{transform:rotate(-9deg)}}
+@media(prefers-reduced-motion:reduce){#frz .fi{animation:none}#frzflakes{display:none}}
 </style>
 </head>
 <body>
@@ -44,10 +67,14 @@ canvas{border:0}
  <div id="lb" hidden></div>
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
- <canvas id="cv" width="1280" height="800" hidden></canvas>
+ <div id="boards" hidden></div>
  <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:260px;height:260px;margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
  <div id="who"></div>
 </main>
+<div id="frz" role="alertdialog" aria-label="Class frozen">
+ <div id="frzflakes" aria-hidden="true"></div>
+ <span class="fi" aria-hidden="true">✋</span><b>Class frozen</b><p>Eyes on your teacher.</p>
+</div>
 <script src="/qrcode.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
@@ -55,7 +82,7 @@ canvas{border:0}
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
 try { $('#qr').innerHTML = qrSvg(location.origin + '/?code=' + code); } catch (e) { $('#qr').hidden = true; }
-const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, hide: true, board: false, teams: [], scores: {}, sres: false, sum: null, stu: new Map() };
+const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, teams: [], scores: {}, sres: false, sum: null, stu: new Map() };
 $('#ccode').textContent = code;
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });
 
@@ -64,23 +91,38 @@ function onmsg(m) {
   const s = S.stu.get(m.id);
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
-    case 'state': S.stu.clear(); S.spot = m.spot; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; setQ(m.q);
-      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {} })); S.sres = !!m.sres; S.sum = null; break;
-    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {} }); break;
-    case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); } break;
-    case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) o.pts.push(...m.p); } break;
-    case 'del': if (s) s.objs = s.objs.filter(o => o.id !== m.oid); break;
-    case 'all': if (s) s.objs = m.objs; break;
-    case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; }); break;
+    case 'state': S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; S.frozen = !!m.frozen; setQ(m.q);
+      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {}, pulse: d.pulse || null, d: true })); S.sres = !!m.sres; S.sum = null; if (S.frozen) makeFlakes(); break;
+    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {}, pulse: m.s.pulse || null, d: true }); break;
+    case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.d = true; } break;
+    case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.d = true; } } break;
+    case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.d = true; } break;
+    case 'all': if (s) { s.objs = m.objs; s.d = true; } break;
+    case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; x.d = true; }); break;
     case 'sort': if (s) s.sort = m.p; break;
     case 'sres': S.sres = m.on; break;
     case 'sum': S.sum = m; break;
-    case 'spot': S.spot = m.spot; S.hide = m.hide; break;
+    case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; break;
+    case 'pulse': if (s) s.pulse = m.c; break;
+    case 'freeze': S.frozen = m.on; if (m.on) makeFlakes(); break;
     case 'score': S.teams = m.teams; S.scores = m.scores; break;
     case 'board': S.board = m.on; break;
-    case 'gone': S.stu.delete(m.id); break;
+    case 'gone': S.stu.delete(m.id); S.picks = S.picks.filter(id => id !== m.id); break;
   }
   draw();
+}
+// frost falling on the frozen screen (drawn once, reused)
+const FLAKES = '❄✳❅✻❆';
+function makeFlakes() {
+  const box = $('#frzflakes'); if (box.childElementCount) return;
+  for (let i = 0; i < 30; i++) {
+    const f = document.createElement('i'); f.textContent = FLAKES[i % FLAKES.length];
+    f.style.left = Math.random() * 100 + '%';
+    f.style.fontSize = 12 + Math.random() * 26 + 'px';
+    f.style.animationDuration = 7 + Math.random() * 9 + 's';
+    f.style.animationDelay = -Math.random() * 9 + 's';
+    box.append(f);
+  }
 }
 // leaderboard: one persistent row per team so bars slide and rows reorder smoothly
 const rows = new Map(); let prev = {};
@@ -127,21 +169,76 @@ function sortSummary() {
 }
 let raf = 0;
 function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
+addEventListener('resize', () => { S.stu.forEach(s => (s.d = true)); draw(); }); // panels grow or shrink with the window
 function paint() {
   raf = 0;
   $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
-  const s = S.stu.get(S.spot);
-  const sort = S.q.kind === 'sort', sum = !s && sort && S.sres && S.sum && S.sum.n > 0;
-  const lb = !s && !sum && S.board && S.teams.length;
-  $('#cv').hidden = !s || sort; $('#sb').hidden = !(s && sort); $('#sm').hidden = !sum;
-  $('#join').hidden = !!s || !!lb || !!sum; $('#lb').hidden = !lb; $('#corner').hidden = !(lb || sum);
+  const sort = S.q.kind === 'sort';
+  const picks = S.picks.filter(id => S.stu.get(id));
+  const drawings = sort ? [] : picks; // side by side is for drawings; a sort question shows one student
+  const one = picks[0] ? S.stu.get(picks[0]) : null;
+  const sum = !picks.length && sort && S.sres && S.sum && S.sum.n > 0;
+  const lb = !picks.length && !sum && S.board && S.teams.length;
+  document.body.classList.toggle('frozen', !!S.frozen);
+  $('#boards').hidden = !drawings.length;
+  $('#sb').hidden = !(one && sort);
+  $('#sm').hidden = !sum;
+  $('#join').hidden = !!picks.length || !!lb || !!sum;
+  $('#lb').hidden = !lb; $('#corner').hidden = !(lb || sum) || !!S.frozen;
   if (lb) board();
   if (sum) sortSummary();
-  if (s) {
-    const who = S.hide ? 'A student’s work' : s.name + '’s work';
-    if (sort) { const left = sortBoard(s); $('#who').textContent = who + (left ? ' · ' + left : ''); }
-    else { paintBoard($('#cv'), s.objs, S.q.bg, S.im, s.bw, s.bh); $('#who').textContent = who; }
+  if (drawings.length) paintBoards(drawings);
+  if (one && sort) {
+    const left = sortBoard(one), who = S.hide ? 'A student’s work' : one.name + '’s work';
+    $('#who').textContent = who + (picks.length > 1 ? ' · showing 1 of ' + picks.length + ' (side by side is for drawings)' : '') + (left ? ' · ' + left : '');
   } else $('#who').textContent = '';
+}
+// Each drawing is shown at the biggest size that fits its panel without stretching it: the box takes the shape of that
+// student's own page, so a phone drawing stays tall and a tablet one stays wide (no gray bars, never squashed).
+function fitPanel(b, s) { // true = the canvas was resized (so it must be painted again), null = no layout yet
+  const r = b.wrap.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1);
+  if (r.width < 8 || r.height < 8) return null;
+  const a = (s.bw || 800) / (s.bh || 500);
+  let w = Math.min(r.width, r.height * a), h = w / a;
+  if (h > r.height) { h = r.height; w = h * a; }
+  b.cv.style.width = w + 'px'; b.cv.style.height = h + 'px';
+  const bw = Math.round(w * d), bh = Math.round(h * d);
+  if (b.wrap.dataset.w === String(w) && b.wrap.dataset.h === String(h) && b.cv.width === bw && b.cv.height === bh) return false;
+  b.wrap.dataset.w = w; b.wrap.dataset.h = h;
+  b.cv.width = bw; b.cv.height = bh; // setting a canvas size clears it, so this always needs a repaint
+  return true;
+}
+// up to 3 drawings side by side; each panel is built once and kept, so a redraw does not flicker
+const panels = new Map();
+function paintBoards(ids) {
+  const box = $('#boards'), want = new Set(ids);
+  panels.forEach((b, id) => { if (!want.has(id)) { b.el.remove(); panels.delete(id); } });
+  ids.forEach((id, i) => {
+    let b = panels.get(id);
+    if (!b) {
+      const el = document.createElement('div'); el.className = 'bp';
+      el.innerHTML = '<div class="bph"><b></b><span class="pchip" hidden></span></div><div class="bpc"><canvas></canvas></div>';
+      box.append(el);
+      b = { el, wrap: el.querySelector('.bpc'), cv: el.querySelector('canvas'), nm: el.querySelector('b'), chip: el.querySelector('.pchip') };
+      panels.set(id, b); S.stu.get(id).d = true;
+    }
+    b.el.style.order = i;
+  });
+  // columns first: the canvases are measured against their real width, so a two or three up never looks stretched
+  box.style.gridTemplateColumns = 'repeat(' + ids.length + ',minmax(0,1fr))';
+  document.body.classList.toggle('multi', ids.length > 1);
+  ids.forEach(id => {
+    const s = S.stu.get(id), b = panels.get(id);
+    b.nm.textContent = S.hide ? 'A student’s work' : s.name + '’s work';
+    const p = pulseOf(s.pulse);
+    b.chip.hidden = !p;
+    if (p) { b.chip.textContent = p.e + ' ' + p.n; b.chip.style.background = p.soft; b.chip.style.color = p.c; }
+    const resized = fitPanel(b, s);
+    if (resized === null) { s.d = true; setTimeout(draw, 90); return; } // no layout yet (a panel that is still being shown)
+    if (!s.d && !resized) return;
+    s.d = false;
+    paintBoard(b.cv, s.objs, S.q.bg, S.im, s.bw, s.bh);
+  });
 }
 </script>
 </body>

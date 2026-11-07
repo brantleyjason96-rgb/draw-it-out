@@ -158,8 +158,10 @@ const cleanScores = (o, teams) => Object.fromEntries(teams.map(t => [t.id, o && 
 const live = s => !!(s && s.ws && s.ws.readyState === 1);
 const entryOf = (r, rid) => r.roster.find(e => e.rid === rid);
 const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done });
-const stateMsg = (r, host) => ({ t: 'state', q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, hide: r.hide, board: r.board, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+// pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null });
+// picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
+const stateMsg = (r, host) => ({ t: 'state', q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -170,9 +172,9 @@ function fixAwards(r) {
 }
 function release(r, s, why) {
   if (s.rid) { const e = entryOf(r, s.rid); if (e && e.sid === s.id) e.sid = null; }
-  r.students.delete(s.id); if (r.spot === s.id) r.spot = null;
+  r.students.delete(s.id); r.picks = r.picks.filter(id => id !== s.id); r.spot = r.picks[0] || null;
   tx(s.ws, { t: 'kicked', why }); s.ws = null;
-  toWatchers(r, { t: 'gone', id: s.id }); toWatchers(r, { t: 'spot', spot: r.spot, hide: r.hide });
+  toWatchers(r, { t: 'gone', id: s.id }); toWatchers(r, { t: 'spot', spot: r.spot, picks: [...r.picks], hide: r.hide });
 }
 function applySetup(r, m) {
   r.teams = cleanTeams(m.teams); r.cap = !!m.cap;
@@ -210,7 +212,43 @@ const toPublic = (r, o) => { const str = JSON.stringify(o); r.watchers.forEach(w
 // the host copy of the room state carries the answer key; the projector's copy never does
 const broadcastState = r => r.watchers.forEach(w => w.readyState === 1 && w.send(JSON.stringify(stateMsg(r, w.isHost))));
 // a student can't edit while their work is on the projector
-const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.spot === s.id });
+const lockMsg = (r, s) => tx(s.ws, { t: 'lock', proj: r.picks.includes(s.id) });
+// ---- the drawings on the projector: up to 3 at a time, side by side ----
+const MAX_PICKS = 3;
+// Put up to 3 students' work on the projector. Anyone who comes off is unlocked (told they can draw again).
+function setPicks(r, ids, hide) {
+  const before = new Set(r.picks);
+  r.picks = [...new Set((Array.isArray(ids) ? ids : [ids]).filter(id => typeof id === 'string' && r.students.has(id)))].slice(0, MAX_PICKS);
+  r.spot = r.picks[0] || null;
+  if (hide !== undefined) r.hide = !!hide;
+  toWatchers(r, { t: 'spot', spot: r.spot, picks: [...r.picks], hide: r.hide });
+  const touched = new Set([...before, ...r.picks]);
+  touched.forEach(id => { const s = r.students.get(id); if (s) lockMsg(r, s); });
+}
+// ---- freeze: stop the whole class so the teacher has every eye ----
+const pushFreeze = r => {
+  const o = { t: 'freeze', on: !!r.frozen };
+  toWatchers(r, o); r.students.forEach(s => tx(s.ws, o));
+};
+function setFreeze(r, on, secs) {
+  clearTimeout(r.fz); r.fz = null;
+  r.frozen = !!on;
+  const s = r.frozen && Number.isFinite(secs) ? Math.min(900, Math.max(5, Math.round(secs))) : 0;
+  if (s) r.fz = setTimeout(() => { r.frozen = false; r.fz = null; pushFreeze(r); }, s * 1000); // a timed freeze lets go on its own
+  pushFreeze(r);
+}
+// ---- confidence history, for the report at the end of the lesson ----
+const plainQ = q => (String(q.question || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)
+  || (q.kind === 'sort' ? 'Sort question' : q.img ? 'Picture question' : ''));
+const pulseCount = s => s.pulse === 'g' || s.pulse === 'y' || s.pulse === 'r' ? s.pulse : null;
+// Snapshot the question that is ending, before a new one wipes the colours. Capped so a long day stays small.
+function snapshotPulse(r) {
+  if (!r.qn) return;
+  const c = { g: 0, y: 0, r: 0 }, by = {};
+  r.students.forEach(s => { const p = pulseCount(s); if (p) { by[s.id] = p; c[p]++; } });
+  r.phist.push({ n: r.qn, q: plainQ(r.q), at: Date.now(), g: c.g, y: c.y, r: c.r, none: r.students.size - c.g - c.y - c.r, by });
+  if (r.phist.length > 40) r.phist.shift();
+}
 
 const wss = new WebSocketServer({ server, maxPayload: 6e6 });
 wss.on('connection', ws => {
@@ -230,7 +268,7 @@ wss.on('connection', ws => {
         if (!goodCode(code) || !key) return tx(ws, { t: 'err', m: 'Bad code' });
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, hide: true, board: false, teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
           if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
@@ -269,9 +307,16 @@ wss.on('connection', ws => {
     if (m.t === 'join') {
       const r = rooms.get(cleanCode(m.code));
       if (!r) return tx(ws, { t: 'err', m: 'Class not found. Check the code.', nocls: true });
+      // A page that is coming back from a refresh only rejoins on its own while a teacher is still in the class;
+      // otherwise it is sent to the join steps, so nobody is left sitting in a room that has finished.
+      if (m.resume === true && ![...r.watchers].some(w => w.isHost && w.readyState === 1)) {
+        return tx(ws, { t: 'err', m: 'That class has finished. Type the code your teacher gives you.' });
+      }
       let s = typeof m.id === 'string' ? r.students.get(m.id) : null;
       if (r.roster.length) { // a class list is loaded: students sign in by picking their initials, never by typing a name
-        const e = typeof m.rid === 'string' ? entryOf(r, m.rid) : null;
+        // A page that is rejoining after a refresh sends the id it already had; the roster entry can come from that,
+        // so the student is not asked to pick their initials again.
+        const e = (typeof m.rid === 'string' && entryOf(r, m.rid)) || (s && s.rid ? entryOf(r, s.rid) : null);
         if (!e) return tx(ws, { t: 'err', m: 'Pick your initials from the list.', taken: true });
         const es = e.sid ? r.students.get(e.sid) : null;
         if (es && es !== s && live(es)) return tx(ws, { t: 'err', m: 'Those initials are already in use. Ask your teacher if that is you.', taken: true });
@@ -297,9 +342,12 @@ wss.on('connection', ws => {
       }
       // the student's own copy is the source of truth, so a server restart or dropped connection loses nothing.
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
-      if (Array.isArray(m.objs) && (m.objs.length || m.have) && r.spot !== s.id) s.objs = cleanList(m.objs, dm(s));
+      if (Array.isArray(m.objs) && (m.objs.length || m.have) && !r.picks.includes(s.id)) s.objs = cleanList(m.objs, dm(s));
       s.ws = ws; me = s; room = r; role = 'student';
-      tx(ws, { t: 'joined', id: s.id, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.spot === s.id, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+      // `host` tells a page that is rejoining after a refresh whether a teacher is still in this class, so a student
+      // whose lesson has ended is sent back to the join steps instead of sitting in a room nobody is running.
+      const hostLive = [...r.watchers].some(w => w.isHost && w.readyState === 1);
+      tx(ws, { t: 'joined', id: s.id, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: hostLive, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
       toWatchers(r, { t: 'join', s: stuView(s) });
       return pushScores(r);
     }
@@ -308,8 +356,18 @@ wss.on('connection', ws => {
 
     if (role === 'student') {
       if (room.students.get(me.id) !== me) return; // removed by Clear class
-      if (room.spot === me.id) return lockMsg(room, me);
-      if (m.t === 'sort') { // a sort question: the student's whole answer is one small map, card id to lane id
+      if (m.t === 'bye') { // the student left on purpose (the Leave button): no ghost card left behind on the teacher screen
+        const r = room; release(r, me, 'You left the class. Join again with the code when your teacher says.');
+        me = null; room = null; role = null;
+        return;
+      }
+      if (room.picks.includes(me.id)) return lockMsg(room, me);
+      if (room.frozen) return tx(me.ws, { t: 'freeze', on: true }); // frozen: nothing gets through, not even a colour
+      if (m.t === 'pulse') { // how confident the student feels about their drawing: red, amber or green (or none)
+        const c = ['r', 'y', 'g'].includes(m.c) ? m.c : null;
+        if (me.pulse === c) return;
+        me.pulse = c; toWatchers(room, { t: 'pulse', id: me.id, c });
+      } else if (m.t === 'sort') { // a sort question: the student's whole answer is one small map, card id to lane id
         if (!sortOf(room) || me.done) return;
         me.sort = cleanPlace(room, m.p);
         if (m.done === true && placedAll(room, me)) me.done = true;
@@ -329,23 +387,28 @@ wss.on('connection', ws => {
       if (m.t === 'q') {
         let nq, nk = null;
         if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
-        room.qn++; room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
-        toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk });
+        room.qn++;
+        // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
+        room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; s.pulse = null; });
+        setPicks(room, []);
+        if (room.frozen) setFreeze(room, false); // new question = work time
+        room.students.forEach(s => { tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
+        toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk, phist: room.phist });
         pushScores(room);
       } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
         room.simple = !!m.simple;
         room.students.forEach(s => tx(s.ws, { t: 'mode', simple: room.simple }));
         toWatchers(room, { t: 'mode', simple: room.simple });
-      } else if (m.t === 'spot') {
-        const prev = room.spot;
-        room.spot = room.students.has(m.id) ? m.id : null;
-        room.hide = !!m.hide;
-        toWatchers(room, { t: 'spot', spot: room.spot, hide: room.hide });
-        [prev, room.spot].forEach(id => { const s = room.students.get(id); if (s) lockMsg(room, s); });
+      } else if (m.t === 'spot') { // up to 3 drawings side by side; ids [] clears the projector
+        setPicks(room, m.ids !== undefined ? m.ids : m.id, m.hide);
+      } else if (m.t === 'freeze') { // stop everything so the teacher has the whole class's attention
+        setFreeze(room, m.on, m.secs);
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
-        room.students.clear(); room.spot = null; room.roster.forEach(e => (e.sid = null));
+        room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
+        setFreeze(room, false);
         broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
         applySetup(room, m); pushScores(room);
@@ -404,7 +467,7 @@ setInterval(() => {
   rooms.forEach((r, code) => {
     const live = r.watchers.size || [...r.students.values()].some(s => s.ws);
     if (live) r.last = Date.now();
-    else if (Date.now() - r.last > 6 * 3600e3) rooms.delete(code);
+    else if (Date.now() - r.last > 6 * 3600e3) { clearTimeout(r.fz); rooms.delete(code); }
   });
 }, 30000);
 

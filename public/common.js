@@ -95,6 +95,16 @@ function loadImg(src, cb) {
   const i = new Image(); i.onload = cb; i.src = src; return i;
 }
 
+// ---- confidence pulse (student page, teaching screen and projector all agree on these) ----
+// r = stuck, y = getting there, g = got it. Colour is never the only signal: every place that shows one also shows the word.
+const PULSES = {
+  r: { k: 'r', n: 'Stuck', short: 'Stuck', c: '#C62828', soft: '#FDECEC', e: '🙋' },
+  y: { k: 'y', n: 'Getting there', short: 'Getting there', c: '#B26A00', soft: '#FFF4DC', e: '🙂' },
+  g: { k: 'g', n: 'Got it', short: 'Got it', c: '#0E7C4A', soft: '#E6F4EC', e: '💡' },
+};
+const PULSE_ORDER = ['r', 'y', 'g'];
+const pulseOf = c => PULSES[c] || null;
+
 // ---- team labels and standings (shared by student, teacher and projector pages) ----
 // A team's icon can be a multi-part emoji (flag, family), so it is trimmed by code point, never by UTF-16 unit.
 const cleanIcon = s => Array.from(String(s || '')).slice(0, 8).join('');
