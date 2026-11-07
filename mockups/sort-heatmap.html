@@ -1,0 +1,383 @@
+<title>Sort Heat Map Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a teacher results screen. Summary strip, then idea bars, then a student-by-card grid beside a detail panel. */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --ink:#16202e; --muted:#586577; --line:#dce1ea; --soft:#eaeef5;
+  --accent:#3846c4; --accent-bg:#e6e9fb;
+  --good:#126a55; --good-bg:#d3eee4; --good-bar:#1f9a7b;
+  --bad:#9a3412; --bad-bg:#fddfce; --bad-bar:#e0561a;
+  --mid:#7a5200; --mid-bg:#fbebc4; --mid-bar:#d99a12;
+  --f-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e131a; --surface:#161d27; --ink:#e7ecf3; --muted:#9aa7b9; --line:#29333f; --soft:#1e2733;
+  --accent:#9ba6ff; --accent-bg:#252c55;
+  --good:#6fe0bb; --good-bg:#10382e; --good-bar:#2fb792;
+  --bad:#ffb085; --bad-bg:#4b2412; --bad-bar:#f0713a;
+  --mid:#f4c864; --mid-bg:#40300a; --mid-bar:#e0a92b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e131a; --surface:#161d27; --ink:#e7ecf3; --muted:#9aa7b9; --line:#29333f; --soft:#1e2733;
+  --accent:#9ba6ff; --accent-bg:#252c55;
+  --good:#6fe0bb; --good-bg:#10382e; --good-bar:#2fb792;
+  --bad:#ffb085; --bad-bg:#4b2412; --bad-bar:#f0713a;
+  --mid:#f4c864; --mid-bg:#40300a; --mid-bar:#e0a92b; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:28px;font-weight:700}
+h2{font-size:18px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mut{color:var(--muted)}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:var(--accent-bg);color:var(--accent)}
+
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-end}
+.top .meta{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.ctl label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+select{font:inherit;font-size:14px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+
+.prompt{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+.prompt q{font-size:16px;font-weight:500;quotes:none}
+.lanes{display:flex;flex-wrap:wrap;gap:6px}
+.lane{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--soft)}
+.lane b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;margin-right:6px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--f-display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .s{font-size:13px;color:var(--muted)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.panel>header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline;margin-bottom:12px}
+.panel>header p{font-size:13px;color:var(--muted)}
+
+.ideas{display:flex;flex-direction:column;gap:6px}
+.idea{display:grid;grid-template-columns:minmax(120px,190px) 1fr 56px 84px;gap:12px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid transparent;background:none;text-align:left;width:100%}
+.idea:hover{background:var(--soft)}
+.idea[aria-pressed=true]{background:var(--accent-bg);border-color:var(--accent)}
+.idea .nm{font-weight:600;font-size:14px}
+.idea .nm small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.bar{height:14px;border-radius:7px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:7px}
+.pct{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.band{font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;text-align:center}
+.b-good{background:var(--good-bg);color:var(--good)} .b-mid{background:var(--mid-bg);color:var(--mid)} .b-bad{background:var(--bad-bg);color:var(--bad)}
+.f-good{background:var(--good-bar)} .f-mid{background:var(--mid-bar)} .f-bad{background:var(--bad-bar)}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);align-items:center;margin-bottom:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;font-weight:700;font-size:13px}
+
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+th,td{padding:0;border-bottom:1px solid var(--line);border-right:1px solid var(--line);background:var(--surface)}
+th:last-child,td:last-child{border-right:0}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+thead th{vertical-align:bottom;border-bottom:2px solid var(--line)}
+.sticky{position:sticky;left:0;z-index:2;text-align:left;min-width:170px;box-shadow:1px 0 0 var(--line)}
+.colh{width:88px;min-width:88px;transition:opacity .15s}
+.colh button{display:flex;flex-direction:column;gap:6px;align-items:stretch;width:100%;border:0;background:none;padding:8px 6px;text-align:left;font-size:12px;line-height:1.25;font-weight:500;min-height:118px;justify-content:space-between}
+.colh button:hover{background:var(--soft)}
+.colh.sel button{background:var(--accent-bg)}
+.colh .p{font-size:12px;font-weight:700;text-align:center;border-radius:6px;padding:2px 0;font-variant-numeric:tabular-nums}
+.colh .t{flex:1}
+.colh .i{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.corner{padding:10px 12px;font-size:12px;color:var(--muted);font-weight:600;vertical-align:bottom}
+.dim{opacity:.28}
+
+.rowh{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:none;padding:0 10px 0 12px;height:34px;text-align:left;font-size:14px}
+.rowh:hover{background:var(--soft)}
+tr.sel .rowh{background:var(--accent-bg)}
+.rowh .sc{font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px}
+.cell{width:88px;height:34px;display:grid;place-items:center;font-weight:700;font-size:14px;transition:opacity .15s}
+.cell.ok{background:var(--good-bg);color:var(--good)}
+.cell.no{background:var(--bad-bg);color:var(--bad)}
+td.colsel .cell{box-shadow:inset 0 0 0 2px var(--accent)}
+
+.detail{display:flex;flex-direction:column;gap:14px;position:sticky;top:12px}
+.detail .hd{display:flex;flex-direction:column;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
+.chip.good{background:var(--good-bg);color:var(--good);border-color:transparent}
+.chip.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.card-q{font-family:var(--f-display);font-size:20px;font-weight:700;line-height:1.2}
+.dist{display:flex;flex-direction:column;gap:8px}
+.dist .r{display:grid;grid-template-columns:100px 1fr 28px;gap:10px;align-items:center;font-size:13px}
+.dist .r.right .l{font-weight:700}
+.note{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--soft);border-left:4px solid var(--accent)}
+.note b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;font-weight:600;font-size:14px}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sl{display:grid;grid-template-columns:1fr;gap:8px}
+.sl .ln{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.sl .ln h4{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sticky-note{font-size:13px;padding:6px 9px;border-radius:6px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.sticky-note.ok{background:var(--good-bg);color:var(--good)}
+.sticky-note.no{background:var(--bad-bg);color:var(--bad)}
+.sticky-note em{font-style:normal;font-size:11px;font-weight:700;white-space:nowrap}
+.foot{font-size:13px;color:var(--muted);max-width:75ch}
+
+@media (max-width:980px){.main{grid-template-columns:minmax(0,1fr)}.detail{position:static}}
+@media (max-width:560px){
+  h1{font-size:24px}
+  .idea{grid-template-columns:1fr 48px;grid-template-areas:"n p" "b b" "t t";gap:6px 10px}
+  .idea .nm{grid-area:n}.idea .bar{grid-area:b}.idea .pct{grid-area:p}.idea .band{grid-area:t;justify-self:start}
+  .sticky{min-width:128px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="meta">
+      <span class="tag">Mockup · sample class and sample answers</span>
+      <h1>Sort results</h1>
+      <p class="mut" id="sub"></p>
+    </div>
+    <div class="ctl">
+      <label for="stuSort">Students
+        <select id="stuSort"><option value="need">Needs help first</option><option value="top">Top scores first</option><option value="az">A to Z</option></select>
+      </label>
+      <label for="cardSort">Cards
+        <select id="cardSort"><option value="hard">Hardest first</option><option value="set">Order in question set</option></select>
+      </label>
+      <label for="anon"><input type="checkbox" id="anon"> Hide names (for projecting)</label>
+    </div>
+  </header>
+
+  <section class="prompt" aria-label="Question">
+    <q>Sort each card into the type of rock it describes.</q>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <section class="stats" id="stats" aria-label="Class summary"></section>
+
+  <section class="panel" aria-labelledby="ih">
+    <header><h2 id="ih">Which ideas are working?</h2><p>Each card in the key is tagged with an idea. Click an idea to highlight its cards below.</p></header>
+    <div class="ideas" id="ideas"></div>
+  </section>
+
+  <div class="main">
+    <section class="panel" aria-labelledby="gh">
+      <header><h2 id="gh">Who got which card</h2><p id="gsub"></p></header>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--good-bg);color:var(--good)">✓</i> In the right lane</span>
+        <span><i class="sw" style="background:var(--bad-bg);color:var(--bad)">S</i> Wrong. The letter is the lane the student chose</span>
+        <span id="lg"></span>
+      </div>
+      <div class="scroll"><table id="grid"></table></div>
+    </section>
+    <aside class="panel detail" id="detail" aria-live="polite"></aside>
+  </div>
+
+  <p class="foot">In the real app each student's answer would be saved as just "card → lane", and the server would grade it against your key. The key would never be sent to student devices. A teacher can write a short note on a card for its most likely wrong lane. That note shows up in the panel on the right.</p>
+</div>
+
+<script>
+(function(){
+  /* ---------- sample data: a "key" the teacher would build in the editor ---------- */
+  var LANES=[{id:'I',name:'Igneous'},{id:'S',name:'Sedimentary'},{id:'M',name:'Metamorphic'}];
+  var IDEAS=[
+    {id:'forms',name:'How it forms',sub:'Where the rock comes from'},
+    {id:'clues',name:'Clues you can see',sub:'Fossils, bands, crystals'},
+    {id:'ex',name:'Example rocks',sub:'Naming real rocks'}
+  ];
+  var CARDS=[
+    {id:1,text:'Cooled from magma or lava',lane:'I',idea:'forms',p:.9,conf:'M'},
+    {id:2,text:'Squeezed and heated underground',lane:'M',idea:'forms',p:.58,conf:'I',note:'"Heated" pulls students toward igneous. In metamorphic rock the rock never melts. It changes while it is still solid.'},
+    {id:3,text:'Compacted layers of sediment',lane:'S',idea:'forms',p:.88,conf:'M'},
+    {id:4,text:'Has fossils inside',lane:'S',idea:'clues',p:.74,conf:'M'},
+    {id:5,text:'Bands of mineral crystals',lane:'M',idea:'clues',p:.42,conf:'S',note:'Bands look like layers, so students send this to sedimentary. Ask: are these layers of grains, or crystals squeezed into stripes?'},
+    {id:6,text:'Glassy, no crystals',lane:'I',idea:'clues',p:.64,conf:'S'},
+    {id:7,text:'Granite',lane:'I',idea:'ex',p:.78,conf:'M'},
+    {id:8,text:'Marble',lane:'M',idea:'ex',p:.52,conf:'S',note:'Marble starts as limestone. Students who sorted both as sedimentary have not connected "changed by heat and pressure" to a real rock.'},
+    {id:9,text:'Limestone',lane:'S',idea:'ex',p:.7,conf:'M'},
+    {id:10,text:'Slate',lane:'M',idea:'ex',p:.6,conf:'S'}
+  ];
+  var NAMES=['Aaliyah','Andre','Beatriz','Caleb','Daniela','Elijah','Fatima','Gabriel','Hana','Isaiah','Jasmine','Kofi','Lucia','Mateo','Nia','Omar','Priya','Quinn','Rosa','Sam','Tariq','Uma','Victor','Yara'];
+  var ABIL=[.86,.45,.92,.7,.5,.78,.38,.82,.96,.6,.74,.34,.9,.66,.8,.42,.98,.56,.62,.72,.3,.88,.52,.76];
+
+  function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  var rnd=mulberry(11);
+  var laneName=function(id){return LANES.filter(function(l){return l.id===id})[0].name};
+  var STU=NAMES.map(function(n,i){
+    var ans={},score=0;
+    CARDS.forEach(function(c){
+      var p=Math.min(.97,Math.max(.06,c.p+(ABIL[i]-.68)*.95));
+      var ok=rnd()<p,pick=c.lane;
+      if(!ok){
+        var others=LANES.map(function(l){return l.id}).filter(function(x){return x!==c.lane});
+        pick=rnd()<.75?c.conf:others.filter(function(x){return x!==c.conf})[0];
+      }
+      ans[c.id]=pick;if(pick===c.lane)score++;
+    });
+    return {id:i,name:n,ans:ans,score:score};
+  });
+
+  /* ---------- derived numbers ---------- */
+  CARDS.forEach(function(c){
+    c.right=STU.filter(function(s){return s.ans[c.id]===c.lane}).length;
+    c.pct=Math.round(100*c.right/STU.length);
+    c.dist={I:0,S:0,M:0};STU.forEach(function(s){c.dist[s.ans[c.id]]++});
+  });
+  IDEAS.forEach(function(d){
+    var cs=CARDS.filter(function(c){return c.idea===d.id});
+    d.pct=Math.round(cs.reduce(function(a,c){return a+c.pct},0)/cs.length);
+    d.n=cs.length;
+  });
+  var ST={stu:'need',card:'hard',anon:false,idea:null,sel:null};
+  var tier=function(p){return p>=75?'good':p>=55?'mid':'bad'};
+  var tierWord=function(p){return p>=75?'Solid':p>=55?'Close':'Reteach'};
+
+  /* ---------- helpers ---------- */
+  var $=function(s){return document.querySelector(s)};
+  var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var nm=function(s){return ST.anon?'Student '+(s.id+1):s.name};
+  function orderedStudents(){
+    var a=STU.slice();
+    if(ST.stu==='need')a.sort(function(x,y){return x.score-y.score||x.name.localeCompare(y.name)});
+    else if(ST.stu==='top')a.sort(function(x,y){return y.score-x.score||x.name.localeCompare(y.name)});
+    else a.sort(function(x,y){return x.name.localeCompare(y.name)});
+    return a;
+  }
+  function orderedCards(){
+    var a=CARDS.slice();
+    if(ST.card==='hard')a.sort(function(x,y){return x.pct-y.pct||x.id-y.id});
+    return a;
+  }
+
+  /* ---------- static bits ---------- */
+  $('#lanes').innerHTML=LANES.map(function(l){return '<span class="lane"><b>'+l.id+'</b>'+l.name+'</span>'}).join('');
+  $('#lg').innerHTML=LANES.map(function(l){return '<b>'+l.id+'</b> = '+l.name}).join(' &nbsp; ');
+  $('#sub').textContent='Period 3 · '+STU.length+' of '+STU.length+' submitted · '+CARDS.length+' cards · '+LANES.length+' lanes';
+
+  /* ---------- summary ---------- */
+  function renderStats(){
+    var total=STU.reduce(function(a,s){return a+s.score},0);
+    var avg=total/STU.length;
+    var perfect=STU.filter(function(s){return s.score===CARDS.length}).length;
+    var low=STU.filter(function(s){return s.score<=5}).length;
+    var worst=null;
+    CARDS.forEach(function(c){LANES.forEach(function(l){
+      if(l.id!==c.lane&&(!worst||c.dist[l.id]>worst.n))worst={c:c,lane:l.id,n:c.dist[l.id]};
+    })});
+    $('#stats').innerHTML=
+      '<div class="stat"><span class="k">Class average</span><span class="v">'+avg.toFixed(1)+' / '+CARDS.length+'</span><span class="s">'+Math.round(100*avg/CARDS.length)+'% of cards in the right lane</span></div>'+
+      '<div class="stat"><span class="k">Need a small group</span><span class="v">'+low+' students</span><span class="s">Scored '+5+' or fewer out of '+CARDS.length+'</span></div>'+
+      '<div class="stat"><span class="k">Got every card</span><span class="v">'+perfect+' students</span><span class="s">Could be your helpers or extension group</span></div>'+
+      '<div class="stat"><span class="k">Biggest mix-up</span><span class="v" style="font-size:19px;line-height:1.2">'+esc(worst.c.text)+' → '+laneName(worst.lane)+'</span><span class="s">'+worst.n+' students put it there instead of '+laneName(worst.c.lane)+'</span></div>';
+  }
+
+  /* ---------- ideas ---------- */
+  function renderIdeas(){
+    $('#ideas').innerHTML=IDEAS.map(function(d){
+      var t=tier(d.pct);
+      return '<button class="idea" data-i="'+d.id+'" aria-pressed="'+(ST.idea===d.id)+'">'+
+        '<span class="nm">'+d.name+'<small>'+d.sub+' · '+d.n+' cards</small></span>'+
+        '<span class="bar" aria-hidden="true"><i class="f-'+t+'" style="width:'+d.pct+'%"></i></span>'+
+        '<span class="pct">'+d.pct+'%</span><span class="band b-'+t+'">'+tierWord(d.pct)+'</span></button>';
+    }).join('');
+  }
+
+  /* ---------- the grid ---------- */
+  function renderGrid(){
+    var cards=orderedCards(),stus=orderedStudents();
+    var h='<thead><tr><th class="sticky corner">Student<br><span style="font-weight:400">Score</span></th>';
+    cards.forEach(function(c){
+      var t=tier(c.pct),dim=ST.idea&&ST.idea!==c.idea,sel=ST.sel&&ST.sel.k==='c'&&ST.sel.id===c.id;
+      var idn=IDEAS.filter(function(d){return d.id===c.idea})[0].name;
+      h+='<th class="colh'+(dim?' dim':'')+(sel?' sel':'')+'"><button data-c="'+c.id+'" aria-label="Card: '+esc(c.text)+', '+c.pct+' percent correct">'+
+        '<span class="p b-'+t+'">'+c.pct+'%</span><span class="t">'+esc(c.text)+'</span><span class="i">'+esc(idn)+'</span></button></th>';
+    });
+    h+='</tr></thead><tbody>';
+    stus.forEach(function(s){
+      var t=tier(Math.round(100*s.score/CARDS.length)),sel=ST.sel&&ST.sel.k==='s'&&ST.sel.id===s.id;
+      h+='<tr'+(sel?' class="sel"':'')+'><th class="sticky" scope="row"><button class="rowh" data-s="'+s.id+'"><span>'+esc(nm(s))+'</span><span class="sc b-'+t+'">'+s.score+'/'+CARDS.length+'</span></button></th>';
+      cards.forEach(function(c){
+        var a=s.ans[c.id],ok=a===c.lane,dim=ST.idea&&ST.idea!==c.idea;
+        var cs=ST.sel&&ST.sel.k==='c'&&ST.sel.id===c.id;
+        h+='<td'+(cs?' class="colsel"':'')+'><div class="cell '+(ok?'ok':'no')+(dim?' dim':'')+'" title="'+esc(nm(s))+' put “'+esc(c.text)+'” in '+laneName(a)+'">'+(ok?'✓':a)+'</div></td>';
+      });
+      h+='</tr>';
+    });
+    $('#grid').innerHTML=h+'</tbody>';
+    $('#gsub').textContent=(ST.stu==='need'?'Students who need help are at the top. ':'')+(ST.card==='hard'?'Hardest cards are on the left.':'Cards are in question-set order.');
+  }
+
+  /* ---------- detail panel ---------- */
+  function renderDetail(){
+    var el=$('#detail'),sel=ST.sel;
+    if(!sel){
+      var worst=orderedCards()[0];sel={k:'c',id:worst.id};
+    }
+    if(sel.k==='c'){
+      var c=CARDS.filter(function(x){return x.id===sel.id})[0];
+      var wrong=STU.filter(function(s){return s.ans[c.id]!==c.lane}).sort(function(a,b){return a.score-b.score});
+      var top=LANES.filter(function(l){return l.id!==c.lane}).sort(function(a,b){return c.dist[b.id]-c.dist[a.id]})[0];
+      var idn=IDEAS.filter(function(d){return d.id===c.idea})[0].name;
+      var t=tier(c.pct);
+      var h='<div class="hd"><span class="tag">Card · '+esc(idn)+'</span><p class="card-q">“'+esc(c.text)+'”</p>'+
+        '<div class="row"><span class="chip good">Belongs in '+laneName(c.lane)+'</span><span class="chip">'+c.right+' of '+STU.length+' got it ('+c.pct+'%)</span></div></div>';
+      h+='<div class="dist"><h3>Where students put it</h3>'+LANES.map(function(l){
+        var n=c.dist[l.id],right=l.id===c.lane;
+        return '<div class="r'+(right?' right':'')+'"><span class="l">'+l.name+(right?' ✓':'')+'</span><span class="bar"><i class="'+(right?'f-good':'f-bad')+'" style="width:'+Math.round(100*n/STU.length)+'%"></i></span><span class="pct">'+n+'</span></div>';
+      }).join('')+'</div>';
+      if(c.note&&c.dist[top.id]>0)h+='<div class="note"><b>Your note on '+laneName(top.id)+'</b>'+esc(c.note)+'</div>';
+      else h+='<div class="note"><b>Add a note?</b>In the editor you can write what a wrong placement usually means. It would show here.</div>';
+      h+='<div><h3 style="margin-bottom:8px">Missed it ('+wrong.length+')</h3><div class="names">'+(wrong.length?wrong.map(function(s){return '<button class="chip bad" data-s="'+s.id+'" style="cursor:pointer">'+esc(nm(s))+'</button>'}).join(''):'<span class="mut">Nobody. Move on.</span>')+'</div></div>';
+      if(wrong.length)h+='<div class="row"><button class="btn pri" id="copy">Copy names for a small group</button><span class="mut" id="copied" role="status"></span></div>';
+      el.innerHTML=h;
+      var cp=$('#copy');
+      if(cp)cp.onclick=function(){
+        var txt=wrong.map(nm).join(', ');
+        var done=function(m){$('#copied').textContent=m};
+        try{navigator.clipboard.writeText(txt).then(function(){done('Copied')},function(){done('Copy not available here')})}catch(e){done('Copy not available here')}
+      };
+    }else{
+      var s=STU.filter(function(x){return x.id===sel.id})[0];
+      var miss=CARDS.filter(function(c){return s.ans[c.id]!==c.lane});
+      var ideasMissed={};miss.forEach(function(c){ideasMissed[c.idea]=(ideasMissed[c.idea]||0)+1});
+      var weak=IDEAS.filter(function(d){return ideasMissed[d.id]>=2}).map(function(d){return d.name.toLowerCase()});
+      var h='<div class="hd"><span class="tag">Student</span><p class="card-q">'+esc(nm(s))+'</p>'+
+        '<div class="row"><span class="chip '+(miss.length?'':'good')+'">'+s.score+' of '+CARDS.length+' right</span>'+
+        (weak.length?'<span class="chip bad">Trouble with: '+esc(weak.join(', '))+'</span>':'')+'</div></div>';
+      h+='<div class="sl">'+LANES.map(function(l){
+        var placed=CARDS.filter(function(c){return s.ans[c.id]===l.id});
+        return '<div class="ln"><h4>'+l.name+'</h4>'+(placed.length?placed.map(function(c){
+          var ok=c.lane===l.id;
+          return '<div class="sticky-note '+(ok?'ok':'no')+'"><span>'+esc(c.text)+'</span><em>'+(ok?'✓':'Belongs in '+laneName(c.lane))+'</em></div>';
+        }).join(''):'<span class="mut" style="font-size:13px">Nothing placed here</span>')+'</div>';
+      }).join('')+'</div>';
+      el.innerHTML=h;
+    }
+  }
+
+  function all(){renderStats();renderIdeas();renderGrid();renderDetail()}
+  all();
+
+  /* ---------- events ---------- */
+  document.addEventListener('click',function(e){
+    var b;
+    if((b=e.target.closest('[data-c]'))){ST.sel={k:'c',id:+b.dataset.c};renderGrid();renderDetail();return}
+    if((b=e.target.closest('[data-s]'))){ST.sel={k:'s',id:+b.dataset.s};renderGrid();renderDetail();return}
+    if((b=e.target.closest('[data-i]'))){ST.idea=ST.idea===b.dataset.i?null:b.dataset.i;renderIdeas();renderGrid();return}
+  });
+  $('#stuSort').onchange=function(){ST.stu=this.value;renderGrid()};
+  $('#cardSort').onchange=function(){ST.card=this.value;renderGrid()};
+  $('#anon').onchange=function(){ST.anon=this.checked;renderGrid();renderDetail()};
+})();
+</script>
