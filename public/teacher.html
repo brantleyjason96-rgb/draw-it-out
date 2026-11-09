@@ -71,6 +71,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 @media(pointer:coarse){.tcard-move .b{min-width:44px;min-height:44px}.swrow{gap:6px}.swbtn{width:36px;height:36px}}
 .ta-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .ta-empty{padding:20px 4px;color:var(--mut);font-size:16px}
+.copywrap{position:relative;display:inline-flex} /* anchors the copy-teams picker menu */
 .pv{display:flex;flex-direction:column;gap:12px}
 .pv-lbl{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
 .pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:14px;background:#fff;padding:10px 14px;font-size:18px;font-weight:600;max-width:220px}
@@ -194,6 +195,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     <div class="ta-list" id="talist"></div>
     <div class="ta-foot">
      <button class="b" id="taadd">+ Add team</button>
+     <span class="copywrap"><button class="b" id="tacopy" title="Copy the names, icons, colours and order of these teams to another class">⧉ Copy to another class…</button></span>
      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <select class="inp" id="tasize" aria-label="How many teams to create" style="width:auto;min-width:120px"></select>
       <button class="b" id="tacreate">Create teams</button>
@@ -212,7 +214,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     </section>
     <section class="card">
      <div class="lbl">Good to know</div>
-     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here.</div>
+     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here. ⧉ Copy to another class… reuses these teams in a second period; a team that is already there keeps its points.</div>
     </section>
    </aside>
   </div>
@@ -282,8 +284,9 @@ function renderClasses() {
 function classMenu(p, card, e) {
   e.stopPropagation(); const had = menu; closeMenu(); if (had && had.dataset.code === p.code) return;
   menu = el('div', { className: 'menu' }); menu.dataset.code = p.code; menu.style.cssText = 'top:52px;right:12px;min-width:220px';
-  const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
+  const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: ev => { ev.stopPropagation(); closeMenu(); f(); } }));
   add('Team names & icons', () => goTeams(p.code));
+  add('Copy teams to…', () => teamsPickMenu(p.code, card, 'top:52px;right:12px', 'to'));
   add('Rename', () => { const v = (prompt('Rename this class:', p.name) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
   add('Remove class', () => {
     if (!confirm('Remove "' + p.name + '"? Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''))) return;
@@ -408,7 +411,46 @@ function removeTeam(t) {
   working = working.filter(x => x.id !== t.id);
   editTeams(); renderTeamsTab();
 }
+// ---- copy teams between classes ----
+// Reuse one set of team identities in another period. The copy carries names, icons, colours and order —
+// never the class list, never the points. Team ids travel too, so repeating a copy is harmless:
+// a team that is already there (same id) keeps both its points and the students on it.
+function teamsPickMenu(srcCode, anchor, pos, dir) {
+  const others = periods.filter(p => p.code !== srcCode);
+  if (!others.length) return toast('There is only one class so far. Add another class first.');
+  const had = menu; closeMenu(); if (had && had.dataset.pick === srcCode + dir) return; // tap the same button again to close
+  menu = el('div', { className: 'menu' }); menu.dataset.pick = srcCode + dir; menu.style.cssText = pos + ';min-width:300px';
+  menu.append(el('div', { className: 'lbl', style: 'padding:8px 16px 0', textContent: dir === 'to' ? 'Copy these teams to…' : 'Copy teams from…' }));
+  others.forEach(p => {
+    const n = teamsFor(p.code).length;
+    const b = el('button', {},
+      el('span', { textContent: p.name }),
+      el('small', { textContent: (n ? n + (n === 1 ? ' team' : ' teams') : 'no teams') + (isLive(p.code) ? ' · Live now' : '') }));
+    b.onclick = ev => { ev.stopPropagation(); const from = dir === 'to' ? srcCode : p.code, to = dir === 'to' ? p.code : srcCode; closeMenu(); copyTeams(from, to); };
+    menu.append(b);
+  });
+  anchor.append(menu);
+}
+function copyTeams(from, to) {
+  const teams = loadTM(from).teams, src = periodOf(from), dst = periodOf(to);
+  if (!dst) return;
+  if (!teams.length) return toast('There are no teams in "' + (src ? src.name : from) + '" yet.');
+  const d = loadTM(to);
+  const gone = d.teams.filter(t => !teams.some(x => x.id === t.id));
+  const moved = d.roster.filter(e => e.team && !teams.some(x => x.id === e.team)).length;
+  let msg = 'Copy the ' + teams.length + (teams.length === 1 ? ' team' : ' teams') + ' from "' + (src ? src.name : from) + '" to "' + dst.name + '"?';
+  if (gone.length) msg += '\n\nThe ' + gone.length + (gone.length === 1 ? ' team there now that is not in this copy will be removed; its points start at 0'
+    : ' teams there now that are not in this copy will be removed; their points start at 0') + (moved ? ', and ' + moved + (moved === 1 ? ' student needs' : ' students need') + ' putting on a new team' : '') + '.';
+  if (isLive(to)) msg += '\n\n"' + dst.name + '" is running now, so students will see the change straight away.';
+  if ((gone.length || isLive(to)) && !confirm(msg)) return;
+  saveTeams(to, teams); // teams only: the class list and the points are never touched from here
+  pushTeams(to, teams); // a running class gets the new teams straight away
+  toast(teams.length + (teams.length === 1 ? ' team copied to "' : ' teams copied to "') + dst.name + '".');
+  renderClasses();
+  if (to === taCode && tab === 'teams') { loadWorking(); renderTeamsTab(); }
+}
 function renderTeamsTab() {
+  closeMenu();
   const sel = $('#taclass'), sig = periods.map(p => p.code + ':' + p.name).join('|');
   if (sel.dataset.sig !== sig) {
     sel.innerHTML = '';
@@ -427,7 +469,16 @@ function renderTeamsTab() {
   const ranked = rankTeams(working, scoresFor(taCode)), rankOf = new Map(ranked.map(x => [x.team.id, x]));
   const roster = loadTM(taCode).roster, box = $('#talist');
   box.innerHTML = '';
-  if (!working.length) box.append(el('div', { className: 'ta-empty', textContent: 'No teams yet. Use Create teams to start with four, or add them one at a time.' }));
+  if (!working.length) {
+    const e0 = el('div', { className: 'ta-empty', style: 'position:relative' }); // anchors the copy picker
+    e0.append(document.createTextNode('No teams yet. Use Create teams to start with four, or add them one at a time'));
+    if (periods.length > 1) {
+      e0.append(document.createTextNode(', or '));
+      e0.append(el('button', { className: 'link', textContent: 'copy teams from another class', onclick: ev => { ev.stopPropagation(); teamsPickMenu(taCode, e0, 'top:calc(100% + 8px);left:0', 'from'); } }));
+    }
+    e0.append(document.createTextNode('.'));
+    box.append(e0);
+  }
   working.forEach((t, i) => {
     const r = rankOf.get(t.id) || { rank: i + 1, score: 0, leader: false };
     const members = roster.filter(e => e.team === t.id).length;
@@ -542,6 +593,7 @@ $('#taadd').onclick = () => {
   if (working.length >= 12) return toast('12 teams is the most.');
   working.push(newTeam(working)); editTeams(); renderTeamsTab();
 };
+$('#tacopy').onclick = ev => { ev.stopPropagation(); teamsPickMenu(taCode, $('#tacopy').parentElement, 'bottom:calc(100% + 8px);left:0', 'to'); };
 $('#tasize').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + ' teams</option>').join('');
 $('#tacreate').onclick = () => {
   if (working.length && !confirm('Replace your ' + working.length + ' teams? Their points will be lost.')) return;

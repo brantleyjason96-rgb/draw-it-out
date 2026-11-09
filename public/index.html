@@ -67,7 +67,8 @@ body.playing main{padding:0;max-width:none}
 #quick{display:none;position:fixed;left:12px;bottom:10px;z-index:12;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004}
 #quick{gap:6px}
 #quick .swb{width:44px;height:44px;min-height:44px}
-.qt{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:22px;line-height:1}
+.qt{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:22px;line-height:1;transition:background-color .15s,color .15s,border-color .15s,transform .08s}
+.qt:active{transform:scale(.93)}
 .qt.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .qsep{width:1px;height:32px;background:var(--line);margin:0 4px}
 @media(max-width:900px){body.simple #ur{left:12px;transform:none;bottom:72px}body.simple #zoom{bottom:72px}body.simple #mini{bottom:134px}}
@@ -84,16 +85,22 @@ button{cursor:pointer}
 #qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'❓ Show question  '}
 #qbox:not(.min) #qt:before{content:'Hide ▲'}
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px;width:84px;flex:none}
-#drawer{position:fixed;left:0;top:0;bottom:0;width:340px;z-index:20;background:#f3f4f6;box-shadow:4px 0 18px #0004;transform:translateX(-105%);transition:transform .2s;display:flex;flex-direction:column}
+#drawer{position:fixed;left:0;top:0;bottom:0;width:340px;z-index:20;background:#f3f4f6;box-shadow:4px 0 18px #0004;transform:translateX(-105%);transition:transform .3s cubic-bezier(.2,.9,.3,1.03);display:flex;flex-direction:column;border-radius:0 18px 18px 0}
 #drawer.open{transform:none}
-#dhead{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#111827;color:#fff}
+/* the contents drift in a heartbeat after the drawer itself, so opening feels like one motion, not a jump */
+#drawer.open #tools,#drawer.open #opts{animation:tin .22s ease-out both}
+#drawer.open #opts{animation-delay:.05s}
+@keyframes tin{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+#dhead{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#111827;color:#fff;border-radius:0 18px 0 0}
 #dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:44px;padding:0 12px}
 #dhead button.on{background:var(--pri)}
 #dbody{display:flex;gap:10px;padding:10px;overflow:auto;flex:1;align-items:flex-start}
 #dfoot{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px}
 #dfoot button{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#b91c1c;font-weight:600;font-size:15px}
 #opts{flex:1;min-width:0}
-#toolsbtn{position:fixed;left:12px;bottom:10px;z-index:12;height:52px;padding:0 18px;border-radius:14px;border:0;background:#111827;color:#fff;display:flex;align-items:center;gap:10px;font-weight:600;box-shadow:0 4px 14px #0005}
+#toolsbtn{position:fixed;left:12px;bottom:10px;z-index:12;height:52px;padding:0 18px;border-radius:14px;border:0;background:#111827;color:#fff;display:flex;align-items:center;gap:10px;font-weight:600;box-shadow:0 4px 14px #0005;transition:background-color .15s,transform .08s}
+#toolsbtn:hover{background:#1F2937}
+#toolsbtn:active{transform:scale(.97)}
 #toolsbtn b{font-size:22px;font-weight:400}#toolsbtn i{width:18px;height:18px;border-radius:50%;border:2px solid #fff}
 #ur,#zoom{position:fixed}
 #ur{left:50%;transform:translateX(-50%);bottom:10px}
@@ -116,15 +123,19 @@ button{cursor:pointer}
 #ed{position:absolute;display:none;margin:0;padding:0;border:0;outline:2px solid var(--pri);background:rgba(255,255,255,.9);font-family:"Segoe Print","Comic Sans MS",system-ui,sans-serif;line-height:1.25;resize:none;overflow:hidden;z-index:5}
 /* toolbar */
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px}
-.tool{border:1px solid var(--line);background:#fff;border-radius:12px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px}
+.tool{border:1px solid var(--line);background:#fff;border-radius:12px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;transition:background-color .15s,color .15s,border-color .15s,transform .08s}
 .tool b{font-size:24px;font-weight:400;line-height:1}
+.tool:active{transform:scale(.95)}
 .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 /* options */
 #opts .sec{margin-bottom:14px}
 #opts h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);display:flex;justify-content:space-between}
 .sw{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.swb{aspect-ratio:1;min-height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.swb{aspect-ratio:1;min-height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);transition:box-shadow .12s,transform .12s}
+.swb:active{transform:scale(.92)}
 .swb.on{box-shadow:0 0 0 3px var(--pri)}
+@media(pointer:fine){.swb:hover,.wheelbtn:hover{transform:scale(1.08)}}
+@media(prefers-reduced-motion:reduce){#drawer{transition:none}#drawer.open #tools,#drawer.open #opts{animation:none}.tool,.qt,.swb,#toolsbtn{transition:none!important}.tool:active,.qt:active,.swb:active,#toolsbtn:active{transform:none}}
 .wheelbtn{background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
 .wheelbox{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
 #wheel{width:180px;height:180px;border-radius:50%;touch-action:none;cursor:crosshair}
@@ -148,10 +159,24 @@ button{cursor:pointer}
 @media(max-width:620px){#zoom{bottom:10px}#ur{bottom:72px;left:auto;right:12px;transform:none}#ur .lb{display:none}#ur button{min-width:48px;padding:0 10px;font-size:20px}}
 @media(max-width:520px){#zoom>span:first-child{display:none}#drawer{width:100%}#qbox{font-size:17px}#zoom input{width:70px}}
 
-/* confidence pulse: red / amber / green, down the left edge so it never fights the pen controls */
-#pulse{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:12;display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 4px 14px #0003}
+/* confidence pulse: red / amber / green on the right edge, clear of the tools on the left.
+   The label is the toggle, so the three buttons can be folded into a slim chip while drawing. */
+#pulse{position:fixed;right:10px;top:50%;transform:translateY(-50%);z-index:12;display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 4px 14px #0003}
 body.playing:not(.sorting) #pulse{display:flex}
-#pulse .plb{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);text-align:center;max-width:118px;line-height:1.2}
+#pulse[data-on=r]{--pc:#C62828}
+#pulse[data-on=y]{--pc:#8F5500}
+#pulse[data-on=g]{--pc:#0E7C4A}
+#ptog{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:44px;padding:0 8px;border:0;border-radius:10px;background:#fff;color:var(--mut)}
+#ptog:hover{background:#F3F5F7}
+#ptog:active{background:#E8EDF2}
+#ptog .plb{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:inherit;line-height:1.2;text-align:left;max-width:130px}
+#ptog .pdot{flex:none;width:9px;height:9px;border-radius:50%;background:currentColor;opacity:0;transition:opacity .15s}
+#ptog.on{color:var(--pc)}
+#ptog.on .pdot{opacity:1}
+#ptog .pchev{flex:none;transition:transform .2s;font-size:12px;line-height:1}
+#pulse.collapsed #ptog .pchev{transform:rotate(180deg)}
+#pbtns{display:flex;flex-direction:column;gap:8px;max-height:170px;opacity:1;visibility:visible;overflow:hidden;transition:max-height .25s cubic-bezier(.2,.9,.3,1),opacity .18s ease,visibility 0s}
+#pulse.collapsed #pbtns{max-height:0;opacity:0;visibility:hidden;transition:max-height .25s cubic-bezier(.2,.9,.3,1),opacity .18s ease,visibility 0s .25s}
 #pulse .pb{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:15px}
 #pulse .pb i{font-style:normal;font-size:20px;line-height:1}
 #pulse .pb[data-p=r]{--pc:#C62828;--ps:#FDECEC}
@@ -159,7 +184,13 @@ body.playing:not(.sorting) #pulse{display:flex}
 #pulse .pb[data-p=g]{--pc:#0E7C4A;--ps:#E6F4EC}
 #pulse .pb.on{border-color:var(--pc);background:var(--ps);box-shadow:0 0 0 3px var(--pc)}
 #pulse .pb.on:after{content:'✓';font-weight:800;color:var(--pc);margin-left:auto}
-@media(max-width:620px){#pulse .pb span{display:none}#pulse .pb{padding:0 10px;min-height:50px;min-width:50px;justify-content:center}#pulse .plb{display:none}#pulse{top:auto;bottom:72px;left:10px;transform:none;flex-direction:row;gap:6px;padding:6px}}
+@media(prefers-reduced-motion:reduce){#pbtns,#ptog .pchev,#ptog .pdot{transition:none}}
+@media(max-width:620px){
+ #pulse .pb span{display:none}
+ #pulse .pb{padding:0 10px;min-height:50px;min-width:50px;justify-content:center}
+ #ptog{min-width:44px;justify-content:center;padding:0}
+ #ptog .plb{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap} /* off screen, but its name stays with the button for screen readers */
+}
 
 /* frozen: the whole class's attention, with a bit of frost */
 #frz{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;
@@ -215,10 +246,12 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="smsg" hidden>Answer sent. Hold on for your teacher…</div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
   <div id="pulse" class="lockable" role="group" aria-label="How are you going with your drawing?">
-   <span class="plb">How's it going?</span>
-   <button class="pb" type="button" data-p="r" aria-label="Stuck — I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>Stuck</span></button>
-   <button class="pb" type="button" data-p="y" aria-label="Getting there" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Getting there</span></button>
-   <button class="pb" type="button" data-p="g" aria-label="Got it" aria-pressed="false"><i aria-hidden="true">💡</i><span>Got it</span></button>
+   <button id="ptog" type="button" aria-expanded="true" aria-controls="pbtns"><span class="plb">How's it going?</span><span class="pdot" aria-hidden="true"></span><span class="pchev" aria-hidden="true">▸</span></button>
+   <div id="pbtns">
+    <button class="pb" type="button" data-p="r" aria-label="Stuck — I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>Stuck</span></button>
+    <button class="pb" type="button" data-p="y" aria-label="Getting there" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Getting there</span></button>
+    <button class="pb" type="button" data-p="g" aria-label="Got it" aria-pressed="false"><i aria-hidden="true">💡</i><span>Got it</span></button>
+   </div>
   </div>
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
@@ -344,10 +377,13 @@ function applyLock(proj) { // work on the projector can't be changed
   document.body.classList.toggle('locked', proj); $('#lockmsg').hidden = !proj; if (proj) openDrawer(false); all();
 }
 
-// ---- confidence pulse: three taps, sent to the teacher and the projector ----
+// ---- confidence pulse: three taps on the right edge; the label itself folds the buttons to a slim chip ----
 let myPulse = null;
+const pbox = $('#pulse'), ptog = $('#ptog');
 function setPulse(c, tell) {
   myPulse = PULSES[c] ? c : null;
+  pbox.dataset.on = myPulse || '';
+  ptog.classList.toggle('on', !!myPulse); // a small coloured dot on the folded chip shows how they said they feel
   document.querySelectorAll('#pulse .pb').forEach(b => {
     const on = b.dataset.p === myPulse;
     b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -357,6 +393,13 @@ function setPulse(c, tell) {
 document.querySelectorAll('#pulse .pb').forEach(b => {
   b.onclick = e => { e.stopPropagation(); if (frozen) return; setPulse(myPulse === b.dataset.p ? null : b.dataset.p, true); };
 });
+function foldPulse(on, keep) {
+  pbox.classList.toggle('collapsed', on);
+  ptog.setAttribute('aria-expanded', on ? 'false' : 'true');
+  if (!keep) localStorage.do_pulsefold = on ? '1' : '0';
+}
+ptog.onclick = e => { e.stopPropagation(); if (frozen) return; foldPulse(!pbox.classList.contains('collapsed')); };
+foldPulse(localStorage.do_pulsefold === '1', true); // every student keeps their own folded or open choice
 
 // ---- frozen: the teacher has the floor. Nothing here can be touched until it lifts. ----
 const FLAKES = '❄✳❅✻❆';
@@ -402,6 +445,7 @@ function onmsg(m) {
     tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
     SS.joined(m);
     loaded = true; resuming = false; applyLock(!!m.proj); applySimple(!!m.simple); applyFreeze(!!m.frozen); setPulse(m.pulse || null, false);
+    if (S.pin && !m.simple && !m.proj) openDrawer(true); // a student who pinned the tools open last time starts with them open again
   } else if (m.t === 'lock') applyLock(!!m.proj);
   else if (m.t === 'freeze') applyFreeze(!!m.on);
   else if (m.t === 'mode') applySimple(!!m.simple);
@@ -418,7 +462,7 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const COLORS=['#111111','#6b7280','#dc2626','#f97316','#facc15','#22c55e','#059669','#06b6d4','#2563eb','#7c3aed','#db2777','#92400e'];
 const SHAPES={rect:'▭',ellipse:'◯',tri:'△',diamond:'◇',star:'☆'},LINES={line:'╱',arrow:'➚'};
 const HF={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5]};
-let S={erase:'whole',esize:20,pin:false,tool:'select',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]};
+let S={erase:'whole',esize:20,pin:localStorage.do_pin==='1',tool:'select',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]}; // a pinned tools drawer stays pinned in the next class too
 let uid=1;const nid=()=>uid++;
 let objs=[],synced=new Map(),loaded=false;
 let sel=null,editing=null,g=null,cur=null,locked=false,frozen=false,lastTap={id:0,t:0};
@@ -654,6 +698,7 @@ document.onkeydown=e=>{
  else if(m&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}
  else if((e.key==='Delete'||e.key==='Backspace')&&sel){e.preventDefault();del()}
  else if(e.key==='+'||e.key==='=')setZoom(V.z+.5);else if(e.key==='-')setZoom(V.z-.5);
+ else if(e.key==='Escape'&&drawer.classList.contains('open')&&!S.pin)openDrawer(false); // no reaching: Esc puts the tools away
 };
 /* ---------- quick mode: the teacher limits students to a pen and 4 colors ---------- */
 function applySimple(on){
@@ -670,7 +715,9 @@ const drawer=$('#drawer');
 function layout(){PAD.l=drawer.classList.contains('open')&&S.pin&&innerWidth>900?352:12;clampView();all(true)}
 function openDrawer(o){drawer.classList.toggle('open',o);$('#toolsbtn').hidden=o;layout()}
 $('#toolsbtn').onclick=()=>openDrawer(true);$('#dclose').onclick=()=>openDrawer(false);
-$('#pin').onclick=()=>{S.pin=!S.pin;$('#pin').classList.toggle('on',S.pin);$('#pin').textContent=S.pin?'📌 Pinned open':'📌 Keep open';layout()}
+function setPinUI(){const b=$('#pin');b.classList.toggle('on',S.pin);b.textContent=S.pin?'📌 Pinned open':'📌 Keep open'}
+$('#pin').onclick=()=>{S.pin=!S.pin;localStorage.do_pin=S.pin?'1':'0';setPinUI();layout()}
+setPinUI();
 // leaving on purpose: the server takes the student out of the room, so no ghost card is left on the teacher's screen
 $('#leave').onclick=()=>{if(confirm('Leave this class? You can join again with your class code.'))ws.send({t:'bye'})};
 $('#qt').onclick=()=>$('#qbox').classList.toggle('min');
