@@ -9,8 +9,8 @@
 <style>
 body{background:#0b1220;color:#fff}
 .qbar{background:transparent;font-size:34px;text-align:center}
-#join{text-align:center;margin-top:40px;font-size:30px}
-#join b{font-size:90px;letter-spacing:.2em;display:block;color:#93c5fd}
+#join{text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}
+#join b{font-size:clamp(64px,10vw,150px);letter-spacing:.2em;display:block;color:#93c5fd}
 #who{text-align:center;font-size:24px;margin-top:10px;color:#93c5fd}
 main{max-width:1000px;display:flex;flex-direction:column;height:100vh;height:100dvh}
 canvas{border:0}
@@ -38,14 +38,17 @@ canvas{border:0}
 /* one drawing, or two or three side by side */
 #boards{display:grid;gap:18px;margin-top:8px;flex:1;min-height:200px;grid-auto-rows:100%}
 #boards .bp{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
-#boards .bph{display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;font-size:24px;color:#93c5fd}
+#boards .bph{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 12px;min-height:40px;font-size:clamp(22px,2.4vw,34px);color:#93c5fd}
 #boards .bph b{font-weight:700;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#boards .bpc{flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center}
+#boards .bpc{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+body.multi #boards .bpc{align-items:flex-start}
+body.multi #boards{padding-top:9vh}
 body:not(.multi) #boards .bpc{align-items:center}
 #boards canvas{display:block;border:0;border-radius:12px;background:#e5e7eb}
 body.multi main{max-width:none;padding:12px 20px}
-body.multi #boards .bph{font-size:20px}
-.pchip{font-size:14px;font-weight:700;border-radius:99px;padding:2px 10px;white-space:nowrap}
+body:has(#boards:not([hidden])) main{max-width:none;padding:12px 24px}
+body.multi #boards .bph{font-size:clamp(20px,1.9vw,28px)}
+.pchip{font-size:clamp(14px,1.4vw,20px);font-weight:700;border-radius:99px;padding:2px 10px;white-space:nowrap}
 /* frozen: the teacher has the floor */
 #frz{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;background:radial-gradient(120% 110% at 50% -10%,#082f49 0%,#0b3f5e 45%,#0c4a6e 100%);color:#E0F2FE}
 body.frozen #frz{display:flex}
@@ -68,7 +71,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
  <div id="boards" hidden></div>
- <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:260px;height:260px;margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
+ <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:clamp(200px,22vw,340px);height:clamp(200px,22vw,340px);margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
  <div id="who"></div>
 </main>
 <div id="frz" role="alertdialog" aria-label="Class frozen">
