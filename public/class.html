@@ -692,7 +692,7 @@ $('#setmenu').onclick = e => {
   e.stopPropagation();
   openMenu($('#setmenu'), [
     { t: 'Edit this set', f: () => (location.href = '/sets?id=' + activeSet().id + '&code=' + code) },
-    { t: 'New set…', f: () => { const n = (prompt('Name for the new set (for example Fractions Unit 3):') || '').trim().slice(0, 60); if (n) { const s = addSet(n, []); location.href = '/sets?id=' + s.id + '&q=new&code=' + code; } } },
+    { t: 'New set…', f: () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new&code=' + code)) },
     { t: 'Move to a folder…', sub: 'Group sets by unit', f: () => folderPicker(activeSet(), renderSet) },
     { t: 'Share link', f: () => copyShareLink(activeSet()) },
     { t: 'Export this set as a file', f: () => exportSets([activeSet()]) },

@@ -48,12 +48,12 @@ h1{font-size:38px;letter-spacing:-.01em}
 .seg.tabs button{min-height:52px;padding:0 30px;font-size:17px}
 .ta-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 18px}
 .ta-top h2{font-size:24px}
-.ta-top .pick{display:flex;align-items:center;gap:10px}
-.ta-top select{width:auto;min-width:200px;font-weight:700}
+.ta-top .pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.ta-top select{width:auto;min-width:200px;max-width:100%;font-weight:700}
 .ta-cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
 .ta-cols>.card{padding:16px 18px}
-.ta-main{flex:1 1 520px;min-width:0}
-.ta-side{flex:0 1 340px;display:flex;flex-direction:column;gap:14px}
+.ta-main{flex:2 1 520px;min-width:0}
+.ta-side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:14px;padding:10px 12px;background:#fff}
 .tcard-ic{width:56px;height:56px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
@@ -116,6 +116,7 @@ h1{font-size:38px;letter-spacing:-.01em}
  .ta-side{flex:1 1 100%}
 }
 @media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:30px}.tb{padding:0 12px}}
+@media(max-width:560px){.ta-top .pick{width:100%}.ta-top select{flex:1 1 160px;min-width:0}#taopen{flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -307,6 +308,7 @@ function folderMenu(f, anchor) {
   if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, fn, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); fn(); } }));
+  add('New set in this folder…', () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'), f.id));
   add('Rename folder', () => { const v = (prompt('Rename this folder:', f.name) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
   add('Delete folder', () => {
     const n = sets.filter(x => x.folder === f.id).length;
@@ -357,7 +359,7 @@ function renderBackup() {
   $('#bkd').textContent = backupText() + '. A backup file lets you move to another computer.';
 }
 
-$('#newset').onclick = () => { const n = (prompt('Name for the new set (for example Fractions Unit 3):') || '').trim().slice(0, 60); if (!n) return; const s = addSet(n, []); location.href = '/sets?id=' + s.id + '&q=new'; };
+$('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
 $('#newfolder').onclick = () => { const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
 $('#imp').onclick = () => $('#impfile').click();
 $('#impfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await importSetsFile(f)) { renderSets(); renderShelf(); } };
