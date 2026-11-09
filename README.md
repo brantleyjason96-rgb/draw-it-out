@@ -9,7 +9,7 @@ Two kinds of question:
 - Students: `/` (join with a class code)
 - Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
   - **Classes** tab: pick a class to start; each card shows the top three teams by points.
-  - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
+  - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. Copy the same teams into another class — buttons on the Teams tab, on each class card's ⋯ menu, and a link on the empty team list — with the points of any team that is already there kept. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
   - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle (click up to three to compare them on the projector), a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px. The top bar holds **❄ Freeze**, and each card is outlined in the student's own red/amber/green pulse.
   - `/sets?id=…` is the question editor (its own screen)
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
@@ -31,6 +31,7 @@ Three things the teacher runs from the teaching screen (`/class`), all of which 
 
 **Pulse — how is it going?**
 - On their drawing, a student taps **🙋 Stuck / 🙂 Getting there / 💡 Got it**. Tap again to clear it, or tap another to change it. Their page is not touched: no marks are added, nothing is handed in.
+- The three buttons live on the right edge of the student's page, clear of the tools. The **How's it going?** label is also the toggle: tapping it folds the three buttons into a slim chip (a dot in their chosen colour shows the last answer stays put), and tapping again brings them back. Each student's folded or open choice is remembered.
 - The teacher's card for that student gets an **outline in that colour**, plus a chip that spells it out (never colour alone). The row above the grid shows the class at a glance — `🙋 4 · 🙂 2 · 💡 2 · 1 no answer` — and clicking a colour shows only those students, which is the "who do I go and help" button.
 - Pulse is for drawing questions. It clears when a new question is sent, so a colour always describes the drawing on screen.
 
