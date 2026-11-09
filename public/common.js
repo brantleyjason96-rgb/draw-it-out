@@ -99,7 +99,7 @@ function loadImg(src, cb) {
 // r = stuck, y = getting there, g = got it. Colour is never the only signal: every place that shows one also shows the word.
 const PULSES = {
   r: { k: 'r', n: 'Stuck', short: 'Stuck', c: '#C62828', soft: '#FDECEC', e: '🙋' },
-  y: { k: 'y', n: 'Getting there', short: 'Getting there', c: '#B26A00', soft: '#FFF4DC', e: '🙂' },
+  y: { k: 'y', n: 'Getting there', short: 'Getting there', c: '#8F5500', soft: '#FFF4DC', e: '🙂' },
   g: { k: 'g', n: 'Got it', short: 'Got it', c: '#0E7C4A', soft: '#E6F4EC', e: '💡' },
 };
 const PULSE_ORDER = ['r', 'y', 'g'];
