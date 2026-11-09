@@ -146,6 +146,41 @@ function fillSetSelect(sel, value) {
   else setGroups().forEach(g => { if (!g.sets.length) return; const og = el('optgroup'); og.label = g.folder ? '📁 ' + g.folder.name : 'Not in a folder'; g.sets.forEach(x => og.append(opt(x))); sel.append(og); });
   sel.value = value;
 }
+// "New set" dialog: a name and, if you like, a folder (or make a new folder on the spot). after(set) runs once it is saved.
+function newSetDialog(after, presetFolder) {
+  const old = document.getElementById('nsdlg'); if (old) old.remove();
+  const d = el('dialog', { id: 'nsdlg' }); d.style.maxWidth = '480px';
+  const name = el('input', { className: 'inp', id: 'nsname', maxLength: 60, placeholder: 'For example Fractions Unit 3', autocomplete: 'off' });
+  name.setAttribute('aria-label', 'Set name');
+  const sel = el('select', { className: 'inp', id: 'nsfolder' }); sel.setAttribute('aria-label', 'Folder');
+  const fill = v => {
+    sel.innerHTML = '';
+    sel.append(el('option', { value: '', textContent: 'No folder' }));
+    folders.forEach(f => sel.append(el('option', { value: f.id, textContent: '📁 ' + f.name })));
+    sel.append(el('option', { value: '__new', textContent: '＋ New folder…' }));
+    sel.value = v && folderById(v) ? v : '';
+  };
+  fill(presetFolder); let last = sel.value;
+  sel.onchange = () => {
+    if (sel.value !== '__new') { last = sel.value; return; }
+    const n = folders.length < MAX_FOLDERS ? (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim() : '';
+    const f = n && addFolder(n); fill(f ? f.id : last); last = sel.value;
+  };
+  const close = () => { d.close(); d.remove(); };
+  const form = el('form', { className: 'nsform' },
+    el('label', { className: 'lbl', textContent: 'Set name', htmlFor: 'nsname' }), name,
+    el('label', { className: 'lbl', textContent: 'Folder (optional)', htmlFor: 'nsfolder' }), sel,
+    el('div', { className: 'nsbtns' }, el('button', { type: 'button', className: 'b', textContent: 'Cancel', onclick: close }), el('button', { type: 'submit', className: 'b pri', textContent: 'Create set' })));
+  form.onsubmit = e => {
+    e.preventDefault();
+    const n = name.value.trim(); if (!n) { name.focus(); return toast('Give the set a name first.'); }
+    const st = addSet(n, [], sel.value === '__new' ? '' : sel.value); close();
+    persistSets().then(() => after && after(st));
+  };
+  d.append(el('div', { className: 'dh' }, el('h2', { textContent: 'New question set', style: 'font-size:24px' })), form);
+  d.addEventListener('close', () => d.remove());
+  document.body.append(d); d.showModal(); name.focus();
+}
 // "Move to folder" dialog, shared by Today, the class screen and the set editor.
 function folderPicker(st, after) {
   const old = document.getElementById('fpdlg'); if (old) old.remove();

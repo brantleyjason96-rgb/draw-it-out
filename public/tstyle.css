@@ -81,3 +81,9 @@ select.inp{padding-right:8px}
 .fpopt small{color:var(--mut);font-weight:500;font-size:14px;white-space:nowrap}
 .fpopt.on{border:2px solid var(--pri);background:var(--pri-l)}
 .fpopt.new{border-style:dashed;color:var(--pri-d)}
+
+/* very narrow phones: keep the top bar inside the screen */
+@media(max-width:400px){.tb{gap:8px}.tb .grp{gap:8px}.tb .b{padding:0 10px;font-size:14px}.logo{font-size:18px;gap:6px}.logo svg{width:26px;height:26px}}
+.nsform{display:flex;flex-direction:column;gap:8px;padding:18px 24px 22px}
+.nsform .lbl{margin-top:6px}
+.nsbtns{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
