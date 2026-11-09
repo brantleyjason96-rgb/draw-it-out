@@ -47,6 +47,8 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #sdone b{text-align:center;font-size:15px}
 #smsg{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(34vh + 24px);z-index:13;background:#92400e;color:#fff;border-radius:12px;padding:8px 16px;font-size:18px;box-shadow:0 4px 14px #0004;white-space:nowrap}
 .nc.sel{outline:3px solid var(--pri)}
+#sortview [role=button]:focus-visible{outline:3px solid #111827;outline-offset:2px;box-shadow:0 0 0 5px #fff}
+@media(pointer:coarse){#sortview .nc[data-card]{min-height:44px;display:flex;flex-direction:column;justify-content:center}}
 #sortview.sdone #sstage{opacity:.85}
 @media(max-width:700px){#spile .nc{width:calc(50% - 4px)}#sbar{flex-direction:column}#sdone{width:auto;flex-direction:row;align-items:center;justify-content:space-between}#smsg{font-size:15px;white-space:normal;text-align:center;width:calc(100% - 24px)}}
 #pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:0 0 12px}
@@ -208,6 +210,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="sortview" hidden>
    <div id="sstage" class="lockable"></div>
    <div id="sbar"><div id="spile" data-zone="pile" class="lockable"></div><div id="sdone"></div></div>
+   <div id="sortlive" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></div>
   </div>
   <div id="smsg" hidden>Answer sent. Hold on for your teacher…</div>
   <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
