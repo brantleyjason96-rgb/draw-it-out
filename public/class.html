@@ -67,7 +67,9 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 #freeze.on{background:#0C4A6E;border-color:#0E5B85;color:#E0F2FE;font-weight:700}
 #frzbar{position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:26;display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#0C4A6E,#0A3B57);color:#E0F2FE;border:1px solid #0E5B85;border-radius:14px;padding:8px 10px 8px 16px;box-shadow:0 12px 30px rgba(12,74,110,.45);font-weight:600;max-width:calc(100% - 32px)}
 #frzbar .b{background:#E0F2FE;border-color:#E0F2FE;color:#0C4A6E;font-weight:700}
-@media(max-width:700px){#frzbar{font-size:14px;gap:8px;padding:6px 8px 6px 12px;top:68px}}
+#frzbar span{min-width:0}#frzbar .b{flex:none}
+@media(max-width:700px){#frzbar{font-size:14px;gap:8px;padding:6px 8px 6px 12px;top:68px;left:10px;right:10px;transform:none;max-width:none;justify-content:space-between}
+ #toast{bottom:84px}}
 
 /* the confidence report */
 #rep{max-width:900px}
