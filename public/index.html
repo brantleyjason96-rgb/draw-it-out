@@ -78,14 +78,14 @@ button{cursor:pointer}
 #cv{width:100%;height:100%;display:block;touch-action:none;border:0;border-radius:0;background:none}
 #qbox{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:#1e3a8a;color:#fff;border-radius:14px;padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 14px #0004}
 #qbox span{padding-top:2px}
-#qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;height:34px;padding:0 12px;font-size:14px}
+#qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;min-height:44px;padding:0 14px;font-size:14px}
 #qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'❓ Show question  '}
 #qbox:not(.min) #qt:before{content:'Hide ▲'}
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px;width:84px;flex:none}
 #drawer{position:fixed;left:0;top:0;bottom:0;width:340px;z-index:20;background:#f3f4f6;box-shadow:4px 0 18px #0004;transform:translateX(-105%);transition:transform .2s;display:flex;flex-direction:column}
 #drawer.open{transform:none}
 #dhead{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#111827;color:#fff}
-#dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:40px;padding:0 12px}
+#dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:44px;padding:0 12px}
 #dhead button.on{background:var(--pri)}
 #dbody{display:flex;gap:10px;padding:10px;overflow:auto;flex:1;align-items:flex-start}
 #dfoot{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px}
@@ -104,8 +104,8 @@ button{cursor:pointer}
 #ur button{width:auto;padding:0 12px;font-size:15px}
 
 #zoom button{font-weight:700}
-#zoom .fit{width:auto;padding:0 10px;font-size:14px;font-weight:400}
-#zoom input{width:110px}
+#zoom .fit{width:auto;min-width:44px;padding:0 12px;font-size:14px;font-weight:400}
+#zoom input{width:110px;min-height:44px;margin:0;touch-action:pan-y}
 #zv{min-width:48px;text-align:center;font-weight:700}
 #mini{position:fixed;width:120px;aspect-ratio:8/5;background:#fff;border:2px solid var(--ink);border-radius:6px;z-index:6;touch-action:none;box-shadow:0 2px 8px #0002;cursor:pointer}
 #mv{position:absolute;border:2px solid var(--pri);background:#2563eb33;border-radius:3px}
@@ -220,7 +220,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
   <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo">↶<span class="lb"> Undo</span></button><button id="redo" aria-label="Redo">↷<span class="lb"> Redo</span></button></div>
-  <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" title="Connection"></span></div>
+  <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" role="img" aria-label="Connected" title="Connection"></span></div>
   <aside id="drawer" aria-label="Tools">
    <div id="dhead"><b>Tools</b><button id="pin">📌 Keep open</button><button id="dclose" aria-label="Close tools">✕ Close</button></div>
    <div id="dbody">
@@ -255,7 +255,7 @@ let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam 
 
 let waking = false;
 const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); } if (target) sendJoin(); }, ok => {
-  $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
+  $('#dot').classList.toggle('ok', ok); $('#dot').title = $('#dot').ariaLabel = ok ? 'Connected' : 'Reconnecting…';
 });
 SS.init(o => ws.send(o));
 function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
