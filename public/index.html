@@ -7,11 +7,28 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/sortkit.css">
 <style>
-#join .card{max-width:380px;margin:40px auto;text-align:center}
-#join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
+/* join screen: one calm card, big code field, visible labels, clear focus ring */
+body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,#e0e7ff 0,var(--bg) 320px) no-repeat}
+#join .card{max-width:400px;margin:clamp(16px,8vh,72px) auto;padding:28px 24px 20px;text-align:center;border-radius:20px;border-color:#c7d2fe;box-shadow:0 1px 2px #1e3a8a14,0 12px 32px -12px #1e3a8a40}
+#join .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 18px;font-weight:700;font-size:15px;color:#1e3a8a;letter-spacing:.02em}
+#join .brand svg{width:32px;height:32px;flex:none}
+#join h1{margin:0 0 4px;font-size:28px;line-height:1.15}
+#join #jh{color:#4b5563;margin:0 0 16px;font-size:16px}
+#join label{display:block;text-align:left;font-size:14px;font-weight:600;color:var(--ink);margin:0 0 6px}
+#join label:has(+ [hidden]){display:none}
+#join input{width:100%;padding:12px;font-size:20px;margin:0 0 14px;border:2px solid #9ca3af;border-radius:12px;text-align:center;background:#fff;transition:border-color .15s,box-shadow .15s}
+#join input:focus-visible{outline:0;border-color:var(--pri);box-shadow:0 0 0 4px #2563eb33}
+#join input[readonly]{background:#f3f4f6;color:#374151}
 #join #code{letter-spacing:.3em;text-transform:uppercase;font-size:34px;font-weight:700;padding:16px 12px}
-#join .tlink{display:inline-block;padding:12px 8px;margin-top:6px;font-size:15px;color:var(--mut)}
-#err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
+#join .btn{width:100%;min-height:52px;font-size:18px;font-weight:600;border-radius:12px;transition:background-color .15s,transform .1s}
+#join .btn:hover{background:#1d4ed8}
+#join .btn:active{transform:scale(.98)}
+#join .btn:focus-visible,#join .tlink:focus-visible,#pick button:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+#join .tlink{display:inline-block;padding:12px 8px;margin-top:6px;font-size:15px;color:#4b5563;text-decoration:underline;text-underline-offset:3px}
+#pick button{transition:border-color .15s,transform .1s}
+#pick button:not(:disabled):hover{transform:translateY(-2px)}
+#err{color:#b91c1c;min-height:1.4em;margin:0 0 10px;font-weight:600}
+@media(prefers-reduced-motion:reduce){#join *{transition:none!important}#pick button:hover,#join .btn:active{transform:none!important}}
 /* sort questions: lanes to fill with sticky notes, a pile of cards below */
 body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur,body.sorting #zoom,body.sorting #quick,body.sorting #mini,body.sorting #selbar{display:none!important}
 #sortview{position:fixed;left:12px;right:12px;top:96px;bottom:12px;z-index:5;display:flex;flex-direction:column;gap:10px}
@@ -166,10 +183,13 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
 <main>
  <div id="join">
   <form class="card" id="jf">
-   <h1 style="margin:0 0 4px">Join class</h1>
-   <p id="jh" style="color:var(--mut);margin:0 0 12px">Type your class code</p>
-   <input id="code" maxlength="10" placeholder="CODE" aria-label="Class code" autocomplete="off">
-   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" aria-label="Nickname" autocomplete="off" hidden>
+   <div class="brand" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</div>
+   <h1>Join class</h1>
+   <p id="jh">Type your class code</p>
+   <label for="code">Class code</label>
+   <input id="code" maxlength="10" placeholder="e.g. ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <label for="name">Nickname</label>
+   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" autocomplete="off" hidden>
    <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
    <button class="btn" id="go" style="width:100%">Next</button>
