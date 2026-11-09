@@ -15,7 +15,7 @@ h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.15}
 /* top bar */
 .tb{height:68px;flex:none;background:var(--dark);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:16px;position:relative;z-index:20}
 .tb .grp{display:flex;align-items:center;gap:12px;min-width:0}
-.logo{padding:8px 0;white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:22px;color:#fff;text-decoration:none}
+.logo{min-height:44px;padding:8px 0;white-space:nowrap;display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:22px;color:#fff;text-decoration:none}
 .dotc{display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:8px}
 .dotc.ok{background:#3DD68C}
 

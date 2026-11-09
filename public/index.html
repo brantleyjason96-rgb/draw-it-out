@@ -7,11 +7,28 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/sortkit.css">
 <style>
-#join .card{max-width:380px;margin:40px auto;text-align:center}
-#join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
+/* join screen: one calm card, big code field, visible labels, clear focus ring */
+body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,#e0e7ff 0,var(--bg) 320px) no-repeat}
+#join .card{max-width:400px;margin:clamp(16px,8vh,72px) auto;padding:28px 24px 20px;text-align:center;border-radius:20px;border-color:#c7d2fe;box-shadow:0 1px 2px #1e3a8a14,0 12px 32px -12px #1e3a8a40}
+#join .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 18px;font-weight:700;font-size:15px;color:#1e3a8a;letter-spacing:.02em}
+#join .brand svg{width:32px;height:32px;flex:none}
+#join h1{margin:0 0 4px;font-size:28px;line-height:1.15}
+#join #jh{color:#4b5563;margin:0 0 16px;font-size:16px}
+#join label{display:block;text-align:left;font-size:14px;font-weight:600;color:var(--ink);margin:0 0 6px}
+#join label:has(+ [hidden]){display:none}
+#join input{width:100%;padding:12px;font-size:20px;margin:0 0 14px;border:2px solid #9ca3af;border-radius:12px;text-align:center;background:#fff;transition:border-color .15s,box-shadow .15s}
+#join input:focus-visible{outline:0;border-color:var(--pri);box-shadow:0 0 0 4px #2563eb33}
+#join input[readonly]{background:#f3f4f6;color:#374151}
 #join #code{letter-spacing:.3em;text-transform:uppercase;font-size:34px;font-weight:700;padding:16px 12px}
-#join .tlink{display:inline-block;padding:12px 8px;margin-top:6px;font-size:15px;color:var(--mut)}
-#err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
+#join .btn{width:100%;min-height:52px;font-size:18px;font-weight:600;border-radius:12px;transition:background-color .15s,transform .1s}
+#join .btn:hover{background:#1d4ed8}
+#join .btn:active{transform:scale(.98)}
+#join .btn:focus-visible,#join .tlink:focus-visible,#pick button:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+#join .tlink{display:inline-block;padding:12px 8px;margin-top:6px;font-size:15px;color:#4b5563;text-decoration:underline;text-underline-offset:3px}
+#pick button{transition:border-color .15s,transform .1s}
+#pick button:not(:disabled):hover{transform:translateY(-2px)}
+#err{color:#b91c1c;min-height:1.4em;margin:0 0 10px;font-weight:600}
+@media(prefers-reduced-motion:reduce){#join *{transition:none!important}#pick button:hover,#join .btn:active{transform:none!important}}
 /* sort questions: lanes to fill with sticky notes, a pile of cards below */
 body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur,body.sorting #zoom,body.sorting #quick,body.sorting #mini,body.sorting #selbar{display:none!important}
 #sortview{position:fixed;left:12px;right:12px;top:96px;bottom:12px;z-index:5;display:flex;flex-direction:column;gap:10px}
@@ -61,14 +78,14 @@ button{cursor:pointer}
 #cv{width:100%;height:100%;display:block;touch-action:none;border:0;border-radius:0;background:none}
 #qbox{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:#1e3a8a;color:#fff;border-radius:14px;padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 4px 14px #0004}
 #qbox span{padding-top:2px}
-#qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;height:34px;padding:0 12px;font-size:14px}
+#qt{flex:none;border:0;background:#ffffff26;color:#fff;border-radius:9px;min-height:44px;padding:0 14px;font-size:14px}
 #qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'❓ Show question  '}
 #qbox:not(.min) #qt:before{content:'Hide ▲'}
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px;width:84px;flex:none}
 #drawer{position:fixed;left:0;top:0;bottom:0;width:340px;z-index:20;background:#f3f4f6;box-shadow:4px 0 18px #0004;transform:translateX(-105%);transition:transform .2s;display:flex;flex-direction:column}
 #drawer.open{transform:none}
 #dhead{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#111827;color:#fff}
-#dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:40px;padding:0 12px}
+#dhead b{flex:1}#dhead button{background:#374151;color:#fff;border:0;border-radius:9px;min-height:44px;padding:0 12px}
 #dhead button.on{background:var(--pri)}
 #dbody{display:flex;gap:10px;padding:10px;overflow:auto;flex:1;align-items:flex-start}
 #dfoot{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px}
@@ -87,8 +104,8 @@ button{cursor:pointer}
 #ur button{width:auto;padding:0 12px;font-size:15px}
 
 #zoom button{font-weight:700}
-#zoom .fit{width:auto;padding:0 10px;font-size:14px;font-weight:400}
-#zoom input{width:110px}
+#zoom .fit{width:auto;min-width:44px;padding:0 12px;font-size:14px;font-weight:400}
+#zoom input{width:110px;min-height:44px;margin:0;touch-action:pan-y}
 #zv{min-width:48px;text-align:center;font-weight:700}
 #mini{position:fixed;width:120px;aspect-ratio:8/5;background:#fff;border:2px solid var(--ink);border-radius:6px;z-index:6;touch-action:none;box-shadow:0 2px 8px #0002;cursor:pointer}
 #mv{position:absolute;border:2px solid var(--pri);background:#2563eb33;border-radius:3px}
@@ -136,7 +153,7 @@ body.playing:not(.sorting) #pulse{display:flex}
 #pulse .pb{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:15px}
 #pulse .pb i{font-style:normal;font-size:20px;line-height:1}
 #pulse .pb[data-p=r]{--pc:#C62828;--ps:#FDECEC}
-#pulse .pb[data-p=y]{--pc:#B26A00;--ps:#FFF4DC}
+#pulse .pb[data-p=y]{--pc:#8F5500;--ps:#FFF4DC}
 #pulse .pb[data-p=g]{--pc:#0E7C4A;--ps:#E6F4EC}
 #pulse .pb.on{border-color:var(--pc);background:var(--ps);box-shadow:0 0 0 3px var(--pc)}
 #pulse .pb.on:after{content:'✓';font-weight:800;color:var(--pc);margin-left:auto}
@@ -166,10 +183,13 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
 <main>
  <div id="join">
   <form class="card" id="jf">
-   <h1 style="margin:0 0 4px">Join class</h1>
-   <p id="jh" style="color:var(--mut);margin:0 0 12px">Type your class code</p>
-   <input id="code" maxlength="10" placeholder="CODE" aria-label="Class code" autocomplete="off">
-   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" aria-label="Nickname" autocomplete="off" hidden>
+   <div class="brand" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</div>
+   <h1>Join class</h1>
+   <p id="jh">Type your class code</p>
+   <label for="code">Class code</label>
+   <input id="code" maxlength="10" placeholder="e.g. ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <label for="name">Nickname</label>
+   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" autocomplete="off" hidden>
    <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
    <button class="btn" id="go" style="width:100%">Next</button>
@@ -200,7 +220,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
   <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo">↶<span class="lb"> Undo</span></button><button id="redo" aria-label="Redo">↷<span class="lb"> Redo</span></button></div>
-  <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" title="Connection"></span></div>
+  <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" role="img" aria-label="Connected" title="Connection"></span></div>
   <aside id="drawer" aria-label="Tools">
    <div id="dhead"><b>Tools</b><button id="pin">📌 Keep open</button><button id="dclose" aria-label="Close tools">✕ Close</button></div>
    <div id="dbody">
@@ -235,7 +255,7 @@ let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam 
 
 let waking = false;
 const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); } if (target) sendJoin(); }, ok => {
-  $('#dot').classList.toggle('ok', ok); $('#dot').title = ok ? 'Connected' : 'Reconnecting…';
+  $('#dot').classList.toggle('ok', ok); $('#dot').title = $('#dot').ariaLabel = ok ? 'Connected' : 'Reconnecting…';
 });
 SS.init(o => ws.send(o));
 function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
