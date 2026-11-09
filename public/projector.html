@@ -33,7 +33,7 @@ canvas{border:0}
 .sr .nm{font-size:28px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sr .bar{grid-column:1;height:30px;border-radius:10px;min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
 .sr .pt{grid-column:2;grid-row:1/3;font-size:44px;font-weight:800;text-align:right}
-#corner{position:fixed;top:12px;right:18px;font-size:22px;color:#93c5fd}
+#corner{position:fixed;top:12px;right:18px;font-size:clamp(22px,2vw,32px);color:#93c5fd}
 #corner b{letter-spacing:.15em;color:#fff}
 /* one drawing, or two or three side by side */
 #boards{display:grid;gap:18px;margin-top:8px;flex:1;min-height:200px;grid-auto-rows:100%}
@@ -71,7 +71,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
  <div id="boards" hidden></div>
- <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" aria-label="QR code to join" style="width:clamp(200px,22vw,340px);height:clamp(200px,22vw,340px);margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:20px;margin-top:8px;color:#93c5fd">or scan to join</div></div>
+ <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" role="img" aria-label="QR code to join" style="width:clamp(200px,22vw,340px);height:clamp(200px,22vw,340px);margin:20px auto 0;background:#fff;border-radius:12px;padding:6px"></div><div style="font-size:clamp(22px,2vw,32px);margin-top:10px;color:#93c5fd">or scan to join</div></div>
  <div id="who"></div>
 </main>
 <div id="frz" role="alertdialog" aria-label="Class frozen">
