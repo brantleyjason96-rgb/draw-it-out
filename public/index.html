@@ -18,7 +18,8 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #sstage{flex:1;min-height:0;display:grid;gap:10px}
 .slane{background:#fff;border:2px dashed #9ca3af;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;min-width:0;transition:background .1s,border-color .1s}
 .slane.over{background:#eff6ff;border-color:var(--pri)}
-.slane h3{margin:0;font-size:18px;text-align:center}
+.slane h3{margin:0;font-size:18px;text-align:center;overflow-wrap:anywhere;hyphens:auto}
+@media(max-width:700px){.slane{padding:8px 6px}.slane .nc{font-size:13px;padding:6px 6px}.slane h3{font-size:14px;line-height:1.2}}
 #sbar{flex:none;display:flex;gap:10px;align-items:stretch}
 #spile{flex:1;min-width:0;max-height:34vh;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004;transition:background .1s}
 #spile.over{background:#eff6ff}
@@ -37,7 +38,7 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #pick button .em{font-size:30px;display:block}
 #pick button:disabled{opacity:.4;cursor:not-allowed}
 #pick .back{grid-column:1/-1;min-height:40px;font-size:15px;font-weight:400;border-style:dashed}
-#tm{display:inline-block;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6}
+#tm{display:block;width:fit-content;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
 .seg button{border:0;background:#fff;color:var(--ink);padding:8px 12px;min-height:44px}
 .seg button.on{background:var(--ink);color:#fff}
