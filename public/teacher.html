@@ -57,10 +57,10 @@ h1{font-size:38px;letter-spacing:-.01em}
 .ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:14px;padding:10px 12px;background:#fff}
 .tcard-ic{width:56px;height:56px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
-.tcard-nm{font-weight:700;font-size:17px;min-height:42px}
+.tcard-nm{font-weight:700;font-size:17px;min-height:44px}
 .tcard-sub{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}
 .swrow{display:flex;gap:4px;flex-wrap:wrap}
-.swbtn{width:22px;height:22px;border-radius:6px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
+.swbtn{width:28px;height:28px;border-radius:7px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
 .swbtn.on{box-shadow:0 0 0 3px var(--ink)}
 .tcard-score{display:flex;align-items:center;gap:8px;min-width:76px;justify-content:flex-end}
 .tcard-score b{font-family:var(--disp);font-weight:800;font-size:28px;min-width:34px;text-align:right}
@@ -68,6 +68,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 .tcard-score .rk.top{background:#FDF0CE;color:#7A5200}
 .tcard-move{display:flex;gap:4px}
 .tcard-move .b{min-width:36px;min-height:36px;padding:0}
+@media(pointer:coarse){.tcard-move .b{min-width:44px;min-height:44px}.swrow{gap:6px}.swbtn{width:36px;height:36px}}
 .ta-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .ta-empty{padding:20px 4px;color:var(--mut);font-size:16px}
 .pv{display:flex;flex-direction:column;gap:12px}
@@ -108,11 +109,13 @@ h1{font-size:38px;letter-spacing:-.01em}
 .stand-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stand-pt{font-weight:800}
 .stand-more{align-self:flex-start;background:none;border:0;padding:0;min-height:28px;color:var(--pri-d);font-weight:700;font-size:14px;text-decoration:underline}
+@media(pointer:coarse){.stand-more{min-height:44px;display:inline-flex;align-items:center;padding:0 4px}}
 @media(max-width:760px){
  .tcard{grid-template-columns:48px minmax(0,1fr) auto}
  .tcard-score{grid-column:2;justify-content:flex-start;min-width:0}
  .tcard-move{grid-column:3;grid-row:2}
  .tcard-ic{width:48px;height:48px;font-size:22px}
+ .tcard>div:nth-child(2){grid-column:2/4} /* the name box gets the full width, not what is left beside the buttons */
  .ta-side{flex:1 1 100%}
 }
 @media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:30px}.tb{padding:0 12px}}
