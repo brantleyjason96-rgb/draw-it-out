@@ -69,11 +69,28 @@ h1{font-size:38px;letter-spacing:-.01em}
 .pvboard .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvboard .bar{height:12px;border-radius:99px;background:var(--tc);min-width:8px;margin-top:4px}
 .pvboard .pt{font-family:var(--disp);font-weight:800;font-size:24px;text-align:right}
-.ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:16px 24px}
+.icdlg{max-width:680px;width:calc(100% - 24px);max-height:calc(100dvh - 24px);padding:0;overflow:hidden}
+.icdlg[open]{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 24px))}
+.ic-top{display:flex;gap:12px;align-items:center;padding:4px 24px 10px}
+.ic-now{flex:none;width:56px;height:56px;border-radius:14px;border:2px solid var(--pri);background:var(--pri-l);font-size:30px;display:flex;align-items:center;justify-content:center}
+.ic-top .inp{flex:1;min-width:0}
+.ic-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 24px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ic-tabs::-webkit-scrollbar{display:none}
+.ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:99px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ic-tabs button.on{background:var(--dark);border-color:var(--dark);color:#fff}
+.ic-scroll{flex:1;min-height:180px;overflow:auto;border-top:1px solid var(--line);background:#FAFBFC}
+.ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:14px 24px}
+.ic-empty{margin:0;padding:24px;text-align:center;color:var(--mut)}
+.ic-paste{display:flex;gap:8px;align-items:center}
+.ic-paste .inp{flex:1;min-width:0}
+.ic-prev{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line2);background:#fff;font-size:26px;display:flex;align-items:center;justify-content:center}
+.ic-note{font-size:13px;color:var(--mut);min-height:18px}
+.ic-note.bad{color:#B3261E;font-weight:600}
+@media(max-width:560px){.ic-grid{grid-template-columns:repeat(5,1fr);gap:6px;padding:12px}.ic-top,.ic-tabs{padding-left:12px;padding-right:12px}.ic-custom{padding:12px!important}.ic-custom .f{flex:1 1 100%!important}}
 .ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:12px;background:#fff;font-size:26px;line-height:1}
 .ic-grid button.on{border:3px solid var(--pri);background:var(--pri-l)}
-.ic-custom{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:0 24px 22px}
-.ic-custom .f{display:flex;flex-direction:column;gap:6px;flex:0 1 220px}
+.ic-custom{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:12px 24px 18px;border-top:1px solid var(--line);flex:none;background:#fff}
+.ic-custom .f{display:flex;flex-direction:column;gap:6px;flex:1 1 260px}
 .stand{display:flex;flex-direction:column;gap:4px;margin-top:2px}
 .stand-r{display:grid;grid-template-columns:22px 24px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:15px}
 .stand-rk{font-weight:800;font-size:13px;color:var(--mut);text-align:center}
@@ -187,11 +204,16 @@ h1{font-size:38px;letter-spacing:-.01em}
  </div>
 </main>
 
-<dialog id="icondlg" style="max-width:640px">
+<dialog id="icondlg" class="icdlg">
  <div class="dh"><div><div class="lbl" id="icteam"></div><h2>Pick an icon</h2></div><button class="b pri" id="icdone">Done</button></div>
- <div class="ic-grid" id="icgrid"></div>
+ <div class="ic-top">
+  <span class="ic-now" id="icnow" aria-hidden="true">＋</span>
+  <input class="inp" id="icsearch" type="search" placeholder="Search: fox, volcano, star…" aria-label="Search icons" autocomplete="off">
+ </div>
+ <div class="ic-tabs" id="ictabs" role="tablist" aria-label="Icon groups"></div>
+ <div class="ic-scroll"><div class="ic-grid" id="icgrid" role="listbox" aria-label="Icons"></div><p class="ic-empty" id="icempty" hidden>No icons match. Try another word, or paste any emoji below.</p></div>
  <div class="ic-custom">
-  <div class="f"><label class="lbl" for="ictext">Or paste any emoji</label><input class="inp" id="ictext" maxlength="16" placeholder="🪨"></div>
+  <div class="f"><label class="lbl" for="ictext">Or paste any emoji</label><div class="ic-paste"><input class="inp" id="ictext" maxlength="24" placeholder="Paste or type an emoji" autocomplete="off"><span class="ic-prev" id="icprev" aria-hidden="true"></span></div><div class="ic-note" id="icnote">On a phone, tap the emoji key on your keyboard.</div></div>
   <button class="b" id="icset">Use this icon</button>
   <button class="link" id="icnone">Remove icon</button>
  </div>
@@ -201,6 +223,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
+<script src="/emoji.js"></script>
 <script>
 if (DEMO) location.replace('/class?demo=1');
 const TILE = ['#8A5A2B', '#B3261E', '#0A74A8', '#B4540A', '#4B5A6B', '#2E9B5E', '#7A4FBF', '#854d0e'];
@@ -406,18 +429,56 @@ function renderPreview() {
   });
   if (ranked.length > 4) board.append(el('div', { className: 'mut', style: 'font-size:14px', textContent: '+' + (ranked.length - 4) + ' more on the projector' }));
 }
-function openIcons(t) {
-  iconTarget = t; $('#icteam').textContent = t.name; $('#ictext').value = cleanIcon(t.emoji);
-  const g = $('#icgrid'); g.innerHTML = '';
-  TEAM_ICONS.forEach(ic => {
-    const b = el('button', { textContent: ic, className: cleanIcon(t.emoji) === ic ? 'on' : '', onclick: () => applyIcon(ic) });
-    b.setAttribute('aria-label', 'Icon ' + ic); g.append(b);
+const RECENT_KEY = 'do_recent_icons';
+const recentIcons = () => { try { return (JSON.parse(store[RECENT_KEY] || '[]') || []).filter(x => typeof x === 'string').slice(0, 14); } catch { return []; } };
+const rememberIcon = ic => { if (!ic) return; try { store[RECENT_KEY] = JSON.stringify([ic, ...recentIcons().filter(x => x !== ic)].slice(0, 14)); } catch {} };
+const isEmoji = s => /\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u20e3]/u.test(s);
+let icTab = '';
+function icTabs() {
+  const sug = iconMatches(iconTarget ? iconTarget.name : '', 24), rec = recentIcons();
+  const tabs = [];
+  if (sug.length) tabs.push({ id: 'sug', label: '✨ Suggested', list: sug });
+  if (rec.length) tabs.push({ id: 'rec', label: '🕘 Recent', list: rec });
+  ICON_CATS.forEach(c => tabs.push({ id: c.name, label: c.icon + ' ' + c.name, list: c.items.map(i => i.e) }));
+  return tabs;
+}
+function renderIcons() {
+  const cur = iconTarget ? cleanIcon(iconTarget.emoji) : '', q = $('#icsearch').value.trim(), tabs = icTabs();
+  if (!tabs.some(t => t.id === icTab)) icTab = tabs.find(t => t.id === 'sug' && t.list.length > 2) ? 'sug' : tabs.find(t => t.id === 'rec') ? 'rec' : 'Science';
+  const bar = $('#ictabs'); bar.innerHTML = ''; bar.hidden = !!q;
+  tabs.forEach(t => {
+    const b = el('button', { className: t.id === icTab ? 'on' : '', textContent: t.label, onclick: () => { icTab = t.id; renderIcons(); $('.ic-scroll').scrollTop = 0; } });
+    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t.id === icTab ? 'true' : 'false'); bar.append(b);
   });
+  let list;
+  if (q) { list = iconMatches(q, 120); } else list = tabs.find(t => t.id === icTab).list;
+  const g = $('#icgrid'); g.innerHTML = '';
+  list.forEach(ic => {
+    const b = el('button', { textContent: ic, className: cur === ic ? 'on' : '', onclick: () => applyIcon(ic) });
+    b.setAttribute('aria-label', 'Icon ' + ic); b.setAttribute('role', 'option'); b.setAttribute('aria-selected', cur === ic ? 'true' : 'false'); g.append(b);
+  });
+  $('#icempty').hidden = list.length > 0;
+  $('#icnow').textContent = cur || '＋';
+}
+function checkPaste() {
+  const v = $('#ictext').value, note = $('#icnote'), ic = cleanIcon(v);
+  $('#icprev').textContent = ic && isEmoji(ic) ? ic : '';
+  const bad = v.trim() && !isEmoji(ic);
+  note.classList.toggle('bad', !!bad);
+  note.textContent = bad ? 'That doesn’t look like an emoji. On a phone, tap the emoji key on your keyboard.' : 'On a phone, tap the emoji key on your keyboard.';
+  $('#icset').disabled = !!bad || !v.trim();
+}
+function openIcons(t) {
+  iconTarget = t; $('#icteam').textContent = t.name; $('#ictext').value = ''; $('#icsearch').value = ''; icTab = '';
+  renderIcons(); checkPaste();
   $('#icondlg').showModal();
 }
+$('#icsearch').oninput = () => renderIcons();
+$('#ictext').oninput = checkPaste;
+$('#ictext').onkeydown = e => { if (e.key === 'Enter' && !$('#icset').disabled) { e.preventDefault(); applyIcon($('#ictext').value); } };
 function applyIcon(ic) {
   if (!iconTarget) return;
-  iconTarget.emoji = cleanIcon(ic);
+  iconTarget.emoji = cleanIcon(ic); rememberIcon(iconTarget.emoji);
   editTeams(); renderTeamsTab();
   if ($('#icondlg').open) $('#icondlg').close();
 }
