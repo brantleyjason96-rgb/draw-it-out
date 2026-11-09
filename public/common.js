@@ -107,7 +107,11 @@ const pulseOf = c => PULSES[c] || null;
 
 // ---- team labels and standings (shared by student, teacher and projector pages) ----
 // A team's icon can be a multi-part emoji (flag, family), so it is trimmed by code point, never by UTF-16 unit.
-const cleanIcon = s => Array.from(String(s || '')).slice(0, 8).join('');
+const cleanIcon = s => {
+  s = String(s || '').trim();
+  try { if (typeof Intl !== 'undefined' && Intl.Segmenter) { const g = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s)[Symbol.iterator]().next(); return g.done ? '' : Array.from(g.value.segment).slice(0, 8).join(''); } } catch {}
+  return Array.from(s).slice(0, 8).join('');
+};
 const teamLabel = t => { const i = cleanIcon(t && t.emoji); return (i ? i + ' ' : '') + ((t && t.name) || 'Team'); };
 // Standard competition ranking: scores 12, 9, 9, 4 rank 1, 2, 2, 4. The lead is shared when teams tie on top.
 function rankTeams(teams, scores = {}) {

@@ -9,7 +9,8 @@
 <style>
 #join .card{max-width:380px;margin:40px auto;text-align:center}
 #join input{width:100%;padding:12px;font-size:20px;margin:6px 0 12px;border:1px solid var(--line);border-radius:10px;text-align:center}
-#join #code{letter-spacing:.3em;text-transform:uppercase}
+#join #code{letter-spacing:.3em;text-transform:uppercase;font-size:34px;font-weight:700;padding:16px 12px}
+#join .tlink{display:inline-block;padding:12px 8px;margin-top:6px;font-size:15px;color:var(--mut)}
 #err{color:#b91c1c;min-height:1.4em;margin:0 0 8px}
 /* sort questions: lanes to fill with sticky notes, a pile of cards below */
 body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur,body.sorting #zoom,body.sorting #quick,body.sorting #mini,body.sorting #selbar{display:none!important}
@@ -17,7 +18,8 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #sstage{flex:1;min-height:0;display:grid;gap:10px}
 .slane{background:#fff;border:2px dashed #9ca3af;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto;min-width:0;transition:background .1s,border-color .1s}
 .slane.over{background:#eff6ff;border-color:var(--pri)}
-.slane h3{margin:0;font-size:18px;text-align:center}
+.slane h3{margin:0;font-size:18px;text-align:center;overflow-wrap:anywhere;hyphens:auto}
+@media(max-width:700px){.slane{padding:8px 6px}.slane .nc{font-size:13px;padding:6px 6px}.slane h3{font-size:14px;line-height:1.2}}
 #sbar{flex:none;display:flex;gap:10px;align-items:stretch}
 #spile{flex:1;min-width:0;max-height:34vh;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 12px;box-shadow:0 4px 14px #0004;transition:background .1s}
 #spile.over{background:#eff6ff}
@@ -36,7 +38,7 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #pick button .em{font-size:30px;display:block}
 #pick button:disabled{opacity:.4;cursor:not-allowed}
 #pick .back{grid-column:1/-1;min-height:40px;font-size:15px;font-weight:400;border-style:dashed}
-#tm{display:inline-block;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6}
+#tm{display:block;width:fit-content;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid #fff6}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
 .seg button{border:0;background:#fff;color:var(--ink);padding:8px 12px;min-height:44px}
 .seg button.on{background:var(--ink);color:#fff}
@@ -124,7 +126,8 @@ button{cursor:pointer}
 .tool{min-height:60px}
 @media(max-width:760px){#ur{left:12px;transform:none;bottom:72px}#zoom{bottom:72px}#mini{bottom:134px}}
 @media(max-width:560px){#zoom input{display:none}}
-@media(max-width:520px){#drawer{width:100%}#qbox{font-size:17px}#zoom input{width:70px}}
+@media(max-width:620px){#zoom{bottom:10px}#ur{bottom:72px;left:auto;right:12px;transform:none}#ur .lb{display:none}#ur button{min-width:48px;padding:0 10px;font-size:20px}}
+@media(max-width:520px){#zoom>span:first-child{display:none}#drawer{width:100%}#qbox{font-size:17px}#zoom input{width:70px}}
 
 /* confidence pulse: red / amber / green, down the left edge so it never fights the pen controls */
 #pulse{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:12;display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 4px 14px #0003}
@@ -137,7 +140,7 @@ body.playing:not(.sorting) #pulse{display:flex}
 #pulse .pb[data-p=g]{--pc:#0E7C4A;--ps:#E6F4EC}
 #pulse .pb.on{border-color:var(--pc);background:var(--ps);box-shadow:0 0 0 3px var(--pc)}
 #pulse .pb.on:after{content:'✓';font-weight:800;color:var(--pc);margin-left:auto}
-@media(max-width:620px){#pulse .pb span{display:none}#pulse .pb{padding:0 10px;min-height:50px;min-width:50px;justify-content:center}#pulse .plb{display:none}#pulse{top:auto;bottom:132px;left:10px;transform:none;flex-direction:row;gap:6px;padding:6px}}
+@media(max-width:620px){#pulse .pb span{display:none}#pulse .pb{padding:0 10px;min-height:50px;min-width:50px;justify-content:center}#pulse .plb{display:none}#pulse{top:auto;bottom:72px;left:10px;transform:none;flex-direction:row;gap:6px;padding:6px}}
 
 /* frozen: the whole class's attention, with a bit of frost */
 #frz{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;
@@ -170,7 +173,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
    <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
    <button class="btn" id="go" style="width:100%">Next</button>
-   <p style="margin:14px 0 0;font-size:14px"><a href="/start" style="color:var(--mut)">Teacher? Start here</a></p>
+   <p style="margin:8px 0 0"><a class="tlink" href="/start">Teacher? Start here</a></p>
   </form>
  </div>
 
@@ -196,7 +199,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   </div>
   <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
   <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
-  <div class="ov lockable" id="ur"><button id="undo">↶ Undo</button><button id="redo">↷ Redo</button></div>
+  <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo">↶<span class="lb"> Undo</span></button><button id="redo" aria-label="Redo">↷<span class="lb"> Redo</span></button></div>
   <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" title="Connection"></span></div>
   <aside id="drawer" aria-label="Tools">
    <div id="dhead"><b>Tools</b><button id="pin">📌 Keep open</button><button id="dclose" aria-label="Close tools">✕ Close</button></div>
