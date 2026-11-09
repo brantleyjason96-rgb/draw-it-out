@@ -57,6 +57,20 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .issue{font-size:14px;color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:10px;padding:8px 12px}
 .okmsg{font-size:14px;color:#0A5A36;background:#E6F4EC;border-radius:10px;padding:8px 12px;font-weight:600}
 @media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
+/* phones: the top bar wraps instead of pushing the page wider than the screen */
+@media(max-width:600px){
+ .tb{height:auto;min-height:68px;flex-wrap:wrap;padding:8px 12px;gap:8px}
+ .tb .grp{flex:1 1 100%}
+ .tb .grp:last-child .b{flex:1}
+ /* a card row: the text gets the whole line, the idea picker and delete button sit under it */
+ .srow:has(select){flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)}
+ .srow:has(select)>input{flex:1 1 100%!important}
+ .srow:has(select)>select{flex:1 1 0!important;width:auto!important;min-width:0!important}
+ /* answer key: lanes keep a readable width and scroll sideways inside the panel */
+ #skey .board{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(170px,1fr);overflow-x:auto;padding-bottom:6px}
+ #skey .zone .nc{hyphens:manual}
+}
+@media(pointer:coarse){.ichip{padding-top:0;padding-bottom:0}.ichip button{min-width:44px;min-height:44px}}
 </style>
 </head>
 <body>
