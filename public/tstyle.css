@@ -74,3 +74,10 @@ select.inp{padding-right:8px}
 @media(max-width:480px){.logo{font-size:18px;gap:8px}}
 
 @media(pointer:coarse){.b.sm{min-height:44px;min-width:44px}}
+
+/* folders for question sets */
+.fplist{display:flex;flex-direction:column;gap:8px;padding:16px 24px 22px;max-height:60dvh;overflow:auto}
+.fpopt{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 16px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:17px;font-weight:600;text-align:left}
+.fpopt small{color:var(--mut);font-weight:500;font-size:14px;white-space:nowrap}
+.fpopt.on{border:2px solid var(--pri);background:var(--pri-l)}
+.fpopt.new{border-style:dashed;color:var(--pri-d)}

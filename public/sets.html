@@ -295,6 +295,7 @@ $('#manage').onclick = e => {
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
   add('Rename this set', () => { const v = (prompt('Rename this set:', set.name) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
+  add('Move to a folder…', () => folderPicker(set, renderAll));
   add('Export this set as a file', () => exportSets([set]));
   add('Delete this set', () => {
     if (!confirm('Delete the set "' + set.name + '" and all ' + set.questions.length + ' of its questions? This cannot be undone.')) return;
