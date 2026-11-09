@@ -609,9 +609,7 @@ const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg =
 function go(i) { if (i < 0 || i >= qs().length) return; cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
-  const sel = $('#setsel'); sel.innerHTML = '';
-  sets.forEach(s => sel.append(el('option', { value: s.id, textContent: s.name + ' (' + s.questions.length + ')' })));
-  sel.value = activeSet().id;
+  fillSetSelect($('#setsel'), activeSet().id);
   const box = $('#qlist'); box.innerHTML = ''; const n = qs().length;
   qs().forEach((q, i) => {
     const row = el('div', { className: 'qi' + (i === cur ? ' on' : '') });
@@ -695,6 +693,7 @@ $('#setmenu').onclick = e => {
   openMenu($('#setmenu'), [
     { t: 'Edit this set', f: () => (location.href = '/sets?id=' + activeSet().id + '&code=' + code) },
     { t: 'New set…', f: () => { const n = (prompt('Name for the new set (for example Fractions Unit 3):') || '').trim().slice(0, 60); if (n) { const s = addSet(n, []); location.href = '/sets?id=' + s.id + '&q=new&code=' + code; } } },
+    { t: 'Move to a folder…', sub: 'Group sets by unit', f: () => folderPicker(activeSet(), renderSet) },
     { t: 'Share link', f: () => copyShareLink(activeSet()) },
     { t: 'Export this set as a file', f: () => exportSets([activeSet()]) },
   ], 'top:50px;right:0;min-width:240px');

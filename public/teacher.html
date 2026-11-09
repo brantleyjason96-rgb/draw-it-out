@@ -22,6 +22,16 @@ h1{font-size:38px;letter-spacing:-.01em}
 .dots{background:none;border:0;width:44px;height:44px;border-radius:8px;font-size:20px;line-height:1;color:var(--mut)}
 .dots:hover{background:#F3F5F7}
 .newc{border:2px dashed #AEB9C4;border-radius:16px;min-height:150px;background:transparent;font-weight:700;font-size:16px;color:#394551;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.fstack{display:flex;flex-direction:column;gap:18px}
+.fgroup{display:flex;flex-direction:column;gap:12px}
+.fhead{display:flex;align-items:center;gap:8px;position:relative}
+.ftog{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 14px;font-weight:700;font-size:17px;text-align:left}
+.ftog .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ftog small{color:var(--mut);font-weight:500;font-size:14px;white-space:nowrap}
+.ftog .chev{display:inline-block;transition:transform .15s;color:var(--mut)}
+.ftog[aria-expanded=false] .chev{transform:rotate(-90deg)}
+.fgroup .grid{padding-left:14px;border-left:3px solid var(--line)}
+.fempty{color:var(--mut);font-size:15px;padding:2px 4px 6px}
 .setc{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
 .setc .hd{display:flex;gap:12px;align-items:center}
 .tile{flex:none;width:44px;height:44px;border-radius:12px}
@@ -135,9 +145,10 @@ h1{font-size:38px;letter-spacing:-.01em}
   <section class="sec">
    <div class="sech">
     <div class="lbl">Your question sets</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
      <button class="b" id="imp">Import a file</button>
      <input type="file" id="impfile" accept=".json,application/json" hidden>
+     <button class="b" id="newfolder">📁 New folder</button>
      <button class="b" id="newset">+ New set</button>
     </div>
    </div>
@@ -282,14 +293,48 @@ function addClass() {
   const c = newPeriod(name); renderClasses(); toast('Added "' + name + '". Code ' + c + '.');
 }
 
+const fcoll = () => { try { return JSON.parse(store.do_fcollapsed || '{}') || {}; } catch { return {}; } };
+function setCard(s) {
+  const c = el('div', { className: 'card setc' });
+  const tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
+  const hd = el('div', { className: 'hd' }, tile, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:17px;line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:14px' })));
+  const mv = el('button', { className: 'b', textContent: '📁', title: 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' });
+  mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
+  const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
+  c.append(hd, btns); return c;
+}
+function folderMenu(f, anchor) {
+  if (menu) return closeMenu();
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
+  const add = (t, fn, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); fn(); } }));
+  add('Rename folder', () => { const v = (prompt('Rename this folder:', f.name) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
+  add('Delete folder', () => {
+    const n = sets.filter(x => x.folder === f.id).length;
+    if (!confirm('Delete the folder "' + f.name + '"?' + (n ? '\n\nThe ' + n + ' set' + (n === 1 ? '' : 's') + ' inside will be kept and moved out of the folder.' : ''))) return;
+    deleteFolder(f); renderSets();
+  }, 'danger');
+  anchor.append(menu);
+}
 function renderSets() {
-  const box = $('#sets'); box.innerHTML = '';
-  sets.forEach(s => {
-    const c = el('div', { className: 'card setc' });
-    const tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
-    const hd = el('div', { className: 'hd' }, tile, el('div', {}, el('div', { textContent: s.name, style: 'font-weight:700;font-size:17px;line-height:1.2' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:14px' })));
-    const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }));
-    c.append(hd, btns); box.append(c);
+  closeMenu();
+  const box = $('#sets'); box.innerHTML = ''; box.className = folders.length ? 'fstack' : 'grid';
+  $('#newfolder').textContent = '📁 New folder';
+  if (!folders.length) { sets.forEach(s => box.append(setCard(s))); return; }
+  const coll = fcoll();
+  setGroups().forEach(g => {
+    if (!g.folder && !g.sets.length) return;
+    const id = g.folder ? g.folder.id : '_none', open = !coll[id];
+    const tog = el('button', { className: 'ftog', onclick: () => { const c = fcoll(); c[id] = open ? 1 : 0; try { store.do_fcollapsed = JSON.stringify(c); } catch {} renderSets(); } },
+      el('span', { className: 'chev', textContent: '▾' }), el('span', { className: 'fn', textContent: (g.folder ? '📁 ' + g.folder.name : 'Not in a folder') }), el('small', { textContent: g.sets.length + ' set' + (g.sets.length === 1 ? '' : 's') }));
+    tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const head = el('div', { className: 'fhead' }, tog);
+    if (g.folder) { const dots = el('button', { className: 'dots', textContent: '⋯', title: 'Folder options', onclick: e => { e.stopPropagation(); folderMenu(g.folder, head); } }); dots.setAttribute('aria-label', 'Options for folder ' + g.folder.name); head.append(dots); }
+    const grp = el('div', { className: 'fgroup' }, head);
+    if (open) {
+      if (g.sets.length) { const gr = el('div', { className: 'grid' }); g.sets.forEach(x => gr.append(setCard(x))); grp.append(gr); }
+      else grp.append(el('div', { className: 'fempty', textContent: 'Empty. Tap 📁 on any set to move it here.' }));
+    }
+    box.append(grp);
   });
 }
 async function renderShelf() {
@@ -313,6 +358,7 @@ function renderBackup() {
 }
 
 $('#newset').onclick = () => { const n = (prompt('Name for the new set (for example Fractions Unit 3):') || '').trim().slice(0, 60); if (!n) return; const s = addSet(n, []); location.href = '/sets?id=' + s.id + '&q=new'; };
+$('#newfolder').onclick = () => { const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
 $('#imp').onclick = () => $('#impfile').click();
 $('#impfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await importSetsFile(f)) { renderSets(); renderShelf(); } };
 $('#allst').onclick = () => showStarters(() => { renderSets(); renderShelf(); });

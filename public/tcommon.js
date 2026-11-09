@@ -105,6 +105,7 @@ function hostDo(code, msgs) {
 
 // ---- question sets (IndexedDB) ----
 let sets = [];
+let folders = []; // unit folders for question sets: [{ id, name }]; a set points at one with set.folder
 // A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
 // (the delete has not finished), so wait for the wipe before opening: that is why the question rail used to stay empty in demo.
 const demoWipe = DEMO
@@ -112,15 +113,59 @@ const demoWipe = DEMO
   : Promise.resolve();
 const db = demoWipe.then(() => new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; }));
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
-const persistSets = () => db.then(d => d.transaction('k', 'readwrite').objectStore('k').put(sets, 'sets')).catch(() => alert('Could not save in this browser. Use Back up everything to keep a copy.'));
+const persistSets = () => db.then(d => new Promise(ok => { const tx = d.transaction('k', 'readwrite'), o = tx.objectStore('k'); o.put(sets, 'sets'); o.put(folders, 'folders'); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => { alert('Could not save in this browser. Use Back up everything to keep a copy.'); ok(); }; })).catch(() => alert('Could not save in this browser. Use Back up everything to keep a copy.'));
 function loadSets() {
-  return Promise.all([idbGet('sets'), idbGet('set')]).then(([s, old]) => {
+  return Promise.all([idbGet('sets'), idbGet('set'), idbGet('folders')]).then(([s, old, f]) => {
     sets = s && s.length ? s : [{ id: crypto.randomUUID(), name: old ? 'My questions' : 'My first set', questions: old || [] }];
+    folders = cleanFolders(f); tidyFolders();
     persistSets(); return sets;
-  }).catch(() => { sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }]; return sets; });
+  }).catch(() => { sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }]; folders = []; return sets; });
 }
 const setById = id => sets.find(s => s.id === id);
 const activeSet = () => setById(store.do_active) || sets[0];
+
+// ---- folders: group sets by unit ----
+const MAX_FOLDERS = 40;
+const cleanFolders = a => (Array.isArray(a) ? a : []).filter(f => f && typeof f.id === 'string' && f.id.length <= 64).slice(0, MAX_FOLDERS).map(f => ({ id: f.id, name: String(f.name || 'Folder').trim().slice(0, 40) || 'Folder' }));
+const folderById = id => folders.find(f => f.id === id) || null;
+const tidyFolders = () => sets.forEach(x => { if (x.folder && !folderById(x.folder)) delete x.folder; }); // a set never points at a folder that is gone
+function addFolder(name) {
+  name = String(name || '').trim().slice(0, 40); if (!name || folders.length >= MAX_FOLDERS) return null;
+  const f = { id: crypto.randomUUID(), name }; folders.push(f); persistSets(); return f;
+}
+function renameFolder(f, name) { name = String(name || '').trim().slice(0, 40); if (!name) return; f.name = name; persistSets(); }
+function deleteFolder(f) { folders = folders.filter(x => x !== f); tidyFolders(); persistSets(); } // the sets inside are kept, just un-filed
+function moveSet(st, folderId) { if (folderId && folderById(folderId)) st.folder = folderId; else delete st.folder; persistSets(); }
+// [{ folder, sets }]: each folder in order, then whatever is not in a folder (folder: null)
+const setGroups = () => [...folders.map(f => ({ folder: f, sets: sets.filter(x => x.folder === f.id) })), { folder: null, sets: sets.filter(x => !folderById(x.folder)) }];
+// A <select> of sets: grouped under folder names once any folders exist.
+function fillSetSelect(sel, value) {
+  sel.innerHTML = '';
+  const opt = x => el('option', { value: x.id, textContent: x.name + ' (' + x.questions.length + ')' });
+  if (!folders.length) sets.forEach(x => sel.append(opt(x)));
+  else setGroups().forEach(g => { if (!g.sets.length) return; const og = el('optgroup'); og.label = g.folder ? '📁 ' + g.folder.name : 'Not in a folder'; g.sets.forEach(x => og.append(opt(x))); sel.append(og); });
+  sel.value = value;
+}
+// "Move to folder" dialog, shared by Today, the class screen and the set editor.
+function folderPicker(st, after) {
+  const old = document.getElementById('fpdlg'); if (old) old.remove();
+  const d = el('dialog', { id: 'fpdlg' }); d.style.maxWidth = '460px';
+  const close = () => { d.close(); d.remove(); };
+  const choose = id => { moveSet(st, id); close(); toast(id ? 'Moved to "' + folderById(id).name + '".' : 'Taken out of its folder.'); after && after(); };
+  const row = (label, count, on, f) => { const b = el('button', { className: 'fpopt' + (on ? ' on' : ''), onclick: f }, el('span', { textContent: label }), el('small', { textContent: on ? '✓ here' : count == null ? '' : count + ' set' + (count === 1 ? '' : 's') })); return b; };
+  const list = el('div', { className: 'fplist' });
+  list.append(row('No folder', null, !folderById(st.folder), () => choose(null)));
+  folders.forEach(f => list.append(row('📁 ' + f.name, sets.filter(x => x.folder === f.id).length, st.folder === f.id, () => choose(f.id))));
+  const nb = el('button', { className: 'fpopt new', onclick: () => {
+    if (folders.length >= MAX_FOLDERS) return toast('That is the most folders.');
+    const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return;
+    const f = addFolder(n); if (f) choose(f.id);
+  } }, el('span', { textContent: '＋ New folder…' }));
+  list.append(nb);
+  d.append(el('div', { className: 'dh' }, el('div', {}, el('div', { className: 'lbl', textContent: 'Move set to a folder' }), el('h2', { textContent: st.name, style: 'font-size:22px;overflow-wrap:anywhere' })), el('button', { className: 'b', textContent: 'Cancel', onclick: close })), list);
+  d.addEventListener('close', () => d.remove());
+  document.body.append(d); d.showModal();
+}
 
 // ---- rich text: the server and projector allow only <b> <i> <u> <br> ----
 function clean(html) {
@@ -153,8 +198,9 @@ const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
   let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'blank'; if (bg === 'photo' && !img) bg = 'blank';
   return plain(text).trim() || img ? { question: text, bg, img: bg === 'photo' ? img : null } : null;
 }).filter(Boolean);
-function addSet(name, questions) {
+function addSet(name, questions, folder) {
   const st = { id: crypto.randomUUID(), name: String(name || 'New set').slice(0, 60), questions: cleanQs(questions) };
+  if (folder && folderById(folder)) st.folder = folder;
   sets.push(st); persistSets(); return st;
 }
 // photos are resized to <=1600px JPEG so Chromebooks stay fast
@@ -243,7 +289,7 @@ function backupText() { const t = lastBackup(); if (!t) return 'No backup yet'; 
 const backupStale = () => !lastBackup() || Date.now() - lastBackup() > 14 * 864e5;
 function doBackup() {
   const withNames = confirm('Include class lists and scores in the backup?\n\nOK = include them (the file will contain student names, so keep it private).\nCancel = back up only your question sets and class periods.');
-  const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, periods, active: store.do_active, teams: {} };
+  const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, folders, periods, active: store.do_active, teams: {} };
   if (withNames) periods.forEach(p => { const t = loadTM(p.code); if (t.teams.length || t.roster.length) data.teams[p.code] = t; });
   downloadJSON('draw-it-out-backup-' + new Date().toISOString().slice(0, 10) + '.json', data);
   store.do_lastbackup = Date.now();
@@ -253,7 +299,8 @@ async function doRestore(file, after) {
     const d = JSON.parse(await file.text()); if (!d || d.app !== 'draw-it-out' || !Array.isArray(d.sets)) throw 0;
     if (!confirm('Restore this backup? It adds its question sets and class periods to what is already here. Nothing is deleted.')) return;
     let ns = 0, np = 0;
-    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { sets.push({ id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }); ns++; } });
+    cleanFolders(d.folders).forEach(f => { if (!folderById(f.id) && folders.length < MAX_FOLDERS) folders.push(f); }); // folders first, so restored sets can point at them
+    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
     (Array.isArray(d.periods) ? d.periods : []).forEach(x => {
       if (!x || !/^[A-Z0-9]{4,10}$/.test(x.code) || periods.some(y => y.code === x.code)) return;
       periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;
