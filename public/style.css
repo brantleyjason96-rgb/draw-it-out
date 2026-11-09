@@ -1,4 +1,4 @@
-:root{--ink:#1f2937;--mut:#6b7280;--line:#e5e7eb;--pri:#2563eb;--bg:#f3f4f6}
+:root{--ink:#1f2937;--mut:#5b6470;--line:#e5e7eb;--pri:#2563eb;--bg:#f3f4f6}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.4 system-ui,sans-serif;color:var(--ink);background:var(--bg)}
 button,select,input,textarea{font:inherit}
