@@ -415,6 +415,77 @@ await test('the report keeps one pulse snapshot per question, and clears with th
   st2.ws.close();
 });
 
+// ---- session record: the host can pull what each question collected ----
+const XC = 'EXPORT';
+const xh = client(); await xh.ready; xh.send({ t: 'host', code: XC, key: KEY, setup: { teams, roster: [], scores: {}, cap: false } }); await xh.wait('state');
+async function xjoin(name, team) { const c = client(); await c.ready; c.send({ t: 'join', code: XC, name, team, bw: 800, bh: 500 }); const j = await c.wait('joined'); c.id = j.id; return c; }
+const xa = await xjoin('Ann', 'ta'), xb = await xjoin('Ben', 'tb');
+const pull = async () => { xh.clear(); xh.send({ t: 'export' }); return (await xh.wait('export')).rec; };
+
+await test('export: nothing to report before a question is sent', async () => {
+  const rec = await pull();
+  assert.equal(rec.v, 1); assert.deepEqual(rec.questions, []);
+  assert.equal(rec.teams.length, 2);
+});
+
+await test('export: a drawing question is boiled down to numbers, and kept after the next question wipes it', async () => {
+  xh.send({ t: 'q', question: '<b>Draw</b> the rock cycle', bg: 'graph' }); await sleep(80);
+  xa.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[0, 0], [30, 40]] } });
+  xa.send({ t: 'set', o: { id: 2, k: 'text', c: '#dc2626', x: 100, y: 100, w: 120, size: 20, t: 'magma' } });
+  xa.send({ t: 'set', o: { id: 3, k: 'shape', s: 'rect', c: '#111111', lw: 2, dash: 'solid', fill: 'none', x: 200, y: 200, w: 100, h: 80 } });
+  xa.send({ t: 'del', oid: 3 });
+  xa.send({ t: 'pulse', c: 'r' }); await sleep(40); xa.send({ t: 'pulse', c: 'g' });
+  xh.send({ t: 'award', id: xa.id, on: true }); xh.send({ t: 'spot', ids: [xa.id], hide: true });
+  xh.send({ t: 'freeze', on: true }); await sleep(60); xh.send({ t: 'freeze', on: false });
+  await sleep(120);
+  let rec = await pull();
+  assert.equal(rec.questions.length, 1); assert.equal(rec.questions[0].live, true, 'the question on screen is marked live');
+  xh.send({ t: 'q', question: 'Second', bg: 'blank' }); await sleep(120);
+  rec = await pull();
+  assert.equal(rec.questions.length, 2);
+  const q = rec.questions[0], a = q.students.find(x => x.id === xa.id), b = q.students.find(x => x.id === xb.id);
+  assert.equal(q.live, false); assert.equal(q.kind, 'draw'); assert.equal(q.q, 'Draw the rock cycle', 'markup is stripped');
+  assert.equal(q.freezes, 1); assert.ok(q.end >= q.start);
+  assert.equal(a.team, 'ta'); assert.equal(a.pulse, 'g'); assert.deepEqual(a.trail.map(t => t[1]), ['r', 'g'], 'every colour change is kept, in order');
+  assert.equal(a.awarded, true); assert.equal(a.shown, true); assert.equal(a.revisions, 1);
+  assert.ok(a.first !== null && a.last >= a.first, 'first and last mark times');
+  assert.equal(a.drawing.n, 2); assert.equal(a.drawing.stroke, 1); assert.equal(a.drawing.text, 1);
+  assert.deepEqual(a.drawing.labels, ['magma']); assert.equal(a.drawing.ink, 50); assert.equal(a.drawing.colors, 2);
+  assert.ok(a.drawing.cover > 0 && a.drawing.cover <= 1);
+  assert.equal(b.drawing, null, 'a student who drew nothing is still listed'); assert.equal(b.first, null); assert.equal(b.awarded, false);
+  assert.equal(q.scores.ta, 1, 'team points as they stood when the question ended');
+  const live = rec.questions[1];
+  assert.equal(live.live, true); assert.equal(live.frozenSecs, 0, 'each question has its own clock'); assert.equal(live.students.find(x => x.id === xa.id).awarded, false);
+});
+
+await test('export: a sort question carries per-card results and which wrong lane students chose', async () => {
+  xh.send({ t: 'q', kind: 'sort', question: 'Sort the rocks', sort: { lanes: [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }], shuffle: false, fb: 'reveal',
+    cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'cooling' }, { id: 2, text: 'Sandstone', lane: 'B', idea: 'layers' }] } });
+  await sleep(80);
+  xa.send({ t: 'sort', p: { 1: 'A', 2: 'A' }, done: true }); xb.send({ t: 'sort', p: { 1: 'A', 2: 'B' }, done: true }); await sleep(120);
+  const rec = await pull(), q = rec.questions[rec.questions.length - 1];
+  assert.equal(q.kind, 'sort'); assert.equal(q.sort.cards.length, 2);
+  const c1 = q.sort.cards.find(c => c.id === 1), c2 = q.sort.cards.find(c => c.id === 2);
+  assert.equal(c1.right, 2); assert.equal(c2.right, 1); assert.deepEqual(c2.wrong, { A: 1 }); assert.equal(c2.idea, 'layers');
+  assert.equal(q.students.find(x => x.id === xa.id).sort.correct, 1); assert.equal(q.students.find(x => x.id === xb.id).sort.correct, 2);
+  assert.equal(q.students.find(x => x.id === xb.id).sort.done, true);
+  const pj = client(); await pj.ready; pj.send({ t: 'watch', code: XC }); await pj.wait('state');
+  pj.send({ t: 'export' }); await sleep(100);
+  assert.ok(!pj.last('export'), 'the projector never gets the record (it holds the answer key results)');
+  xa.send({ t: 'export' }); await sleep(100);
+  assert.ok(!xa.last('export'), 'students never get it either');
+  pj.ws.close();
+});
+
+await test('export: Clear class starts a fresh record', async () => {
+  const before = await pull();
+  assert.ok(before.questions.some(q => q.students.some(s => s.id === xa.id)));
+  xh.send({ t: 'reset' }); await sleep(150);
+  const after = await pull();
+  assert.ok(after.questions.every(q => q.live), 'finished questions are gone');
+  assert.deepEqual(after.questions[0].students, []);
+});
+
 // ---- a refresh in the middle of a lesson must not lose the student ----
 const RES = 'RESUME';
 const resHost = client(); await resHost.ready;

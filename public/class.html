@@ -299,6 +299,7 @@ function onmsg(m) {
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
+    case 'export': if (wantExport) { const k = wantExport; wantExport = null; saveSession(k, m.rec); } break;
     case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
@@ -572,6 +573,8 @@ $('#more').onclick = e => {
     { t: 'Quick mode', sub: 'Students get just a pen and 4 colors', tog: S.simple, keep: true, f: () => { ws.send({ t: 'mode', simple: !S.simple }); closeMenu(); } },
     { t: 'How the class felt (report)', sub: 'Confidence question by question, and who to check in with', f: openReport },
     { t: 'Save all drawings as a picture (PNG)', f: savePng },
+    { t: 'Save lesson data (spreadsheet)', sub: 'One row per student per question. Includes student names', f: () => pullSession('csv') },
+    { t: 'Save lesson data (JSON)', sub: 'Everything the lesson collected, for your own analysis', f: () => pullSession('json') },
     '-',
     { h: 'Joining' },
     { t: 'Show QR code to join', f: showQR },
@@ -760,6 +763,51 @@ $('#repcopy').onclick = () => {
   navigator.clipboard.writeText(t).then(() => toast('Summary copied.'), () => prompt('Copy this summary:', t));
 };
 
+
+// ---- lesson data: ask the server for what each question collected, join names here, and save a file ----
+// The server only knows initials or nicknames. Real names come from the class list on this computer and go into the file, nowhere else.
+let wantExport = null;
+function pullSession(kind) {
+  if (!S.conn) return toast('Not connected yet.');
+  wantExport = kind; ws.send({ t: 'export' });
+}
+const median = a => { a = a.filter(x => x != null).sort((x, y) => x - y); return a.length ? a[Math.floor((a.length - 1) / 2)] : ''; };
+function saveSession(kind, rec) {
+  if (!rec.questions.length) return toast('No questions have been sent yet, so there is nothing to save.');
+  const nm = x => disp({ rid: x.rid, name: x.ini }), day = new Date().toISOString().slice(0, 10), tmName = id => (teamOf(id) || {}).name || '';
+  let blob, ext;
+  if (kind === 'json') {
+    const out = { ...rec, class: per().name, saved: new Date().toISOString(), questions: rec.questions.map(q => ({ ...q, students: q.students.map(x => ({ ...x, name: nm(x) })) })) };
+    blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }); ext = 'json';
+  } else {
+    const laneName = (q, id) => ((q.sort.lanes.find(l => l.id === id) || {}).name) || id;
+    const out = [['Draw It Out — lesson data'], ['Class', per().name], ['Date', day], [],
+      ['Question #', 'Question', 'Type', 'Seconds on question', 'Students', 'Active students', 'Median first mark (s)', 'Median last mark (s)', 'Freezes', 'Seconds frozen', 'Sort: % right']];
+    rec.questions.forEach(q => {
+      const act = q.students.filter(x => x.first != null), sc = q.sort ? q.sort.cards.reduce((a, c) => ({ p: a.p + c.placed, r: a.r + c.right }), { p: 0, r: 0 }) : null;
+      out.push([q.n, q.q, q.kind, q.elapsed, q.students.length, act.length, median(q.students.map(x => x.first)), median(q.students.map(x => x.last)), q.freezes, q.frozenSecs, sc && sc.p ? Math.round(100 * sc.r / sc.p) + '%' : '']);
+    });
+    out.push([], ['Question #', 'Question', 'Type', 'Student', 'Team', 'Joined late', 'Final colour', 'First colour at (s)', 'Colour changes', 'First mark at (s)', 'Last mark at (s)', 'Undo/delete count',
+      'Objects', 'Strokes', 'Lines', 'Arrows', 'Shapes', 'Labels', 'Label text', 'Ink length (px)', 'Colours used', 'Page covered %', 'Shown on projector', 'Point awarded', 'Cards placed', 'Cards correct', 'Finished sort']);
+    rec.questions.forEach(q => q.students.forEach(x => {
+      const d = x.drawing, so = x.sort, yn = v => (v ? 'yes' : 'no');
+      out.push([q.n, q.q, q.kind, nm(x), tmName(x.team), yn(x.late), x.pulse ? PULSES[x.pulse].n : '', x.trail.length ? x.trail[0][0] : '', Math.max(0, x.trail.length - 1), x.first == null ? '' : x.first, x.last == null ? '' : x.last, so ? '' : x.revisions,
+        d ? d.n : '', d ? d.stroke : '', d ? d.line : '', d ? d.arrow : '', d ? d.shape : '', d ? d.text : '', d ? d.labels.join(' | ') : '', d ? d.ink : '', d ? d.colors : '', d ? Math.round(d.cover * 100) + '%' : '',
+        yn(x.shown), yn(x.awarded), so ? so.placed : '', so && so.correct != null ? so.correct : '', so ? yn(so.done) : '']);
+    }));
+    const cards = rec.questions.filter(q => q.sort);
+    if (cards.length) {
+      out.push([], ['Question #', 'Card', 'Belongs in', 'Idea', 'Placed', 'Right', '% right', 'Most common wrong lane']);
+      cards.forEach(q => q.sort.cards.forEach(c => {
+        const w = Object.entries(c.wrong).sort((a, b) => b[1] - a[1])[0];
+        out.push([q.n, c.text, laneName(q, c.lane), c.idea || '', c.placed, c.right, c.placed ? Math.round(100 * c.right / c.placed) + '%' : '', w ? laneName(q, w[0]) + ' (' + w[1] + ')' : '']);
+      }));
+    }
+    blob = new Blob([SK.csv(out)], { type: 'text/csv' }); ext = 'csv';
+  }
+  el('a', { href: URL.createObjectURL(blob), download: 'lesson-' + code + '-' + day + '.' + ext }).click();
+  toast('Saved ' + rec.questions.length + ' question' + (rec.questions.length === 1 ? '' : 's') + '. The file has student names in it.');
+}
 
 // ---- thumbnails: refresh at most every 150ms + 15ms per student, 3 per frame, longest-waiting first ----
 (function loop() {
