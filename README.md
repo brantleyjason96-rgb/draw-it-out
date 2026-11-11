@@ -13,7 +13,6 @@ Two kinds of question:
   - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle (click up to three to compare them on the projector), a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px. The top bar holds **❄ Freeze**, and each card is outlined in the student's own red/amber/green pulse.
   - `/sets?id=…` is the question editor (its own screen)
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
-  - `/classic` is the previous single-page teacher screen, kept as a fallback
 - Landing page: `/start`
 - Projector: opened from the teaching screen. Shows one student's work, or up to three side by side, or the leaderboard, and the frozen screen while the class is frozen.
 

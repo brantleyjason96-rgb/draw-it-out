@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MAX_STU = 60, MAX_ROOMS = +process.env.MAX_ROOMS || 200;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
-const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/classic': 'classic.html', '/projector': 'projector.html', '/start': 'landing.html' };
+const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/projector': 'projector.html', '/start': 'landing.html' };
 
 // ---- static files ----
 const server = http.createServer((req, res) => {
