@@ -21,8 +21,8 @@ h1{font-size:38px;letter-spacing:-.01em}
 .cls .ln{font-size:15px;color:var(--mut);line-height:1.4;min-height:42px}
 .cls .go{margin-top:4px;min-height:48px;font-size:17px;font-weight:700}
 .dots{background:none;border:0;width:44px;height:44px;border-radius:8px;font-size:20px;line-height:1;color:var(--mut)}
-.dots:hover{background:#F3F5F7}
-.newc{border:2px dashed #AEB9C4;border-radius:16px;min-height:150px;background:transparent;font-weight:700;font-size:16px;color:#394551;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.dots:hover{background:var(--c-bg)}
+.newc{border:2px dashed var(--c-control);border-radius:16px;min-height:150px;background:transparent;font-weight:700;font-size:16px;color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .fstack{display:flex;flex-direction:column;gap:18px}
 .fgroup{display:flex;flex-direction:column;gap:12px}
 .fhead{display:flex;align-items:center;gap:8px;position:relative}
@@ -52,7 +52,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 .ta-top .pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
 .ta-top select{width:auto;min-width:200px;max-width:100%;font-weight:700}
 .ta-cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
-.ta-cols>.card{padding:16px 18px}
+.ta-cols>.card,.ta-side>.card{padding:16px 18px}
 .ta-main{flex:2 1 520px;min-width:0}
 .ta-side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
@@ -65,11 +65,11 @@ h1{font-size:38px;letter-spacing:-.01em}
 .swbtn.on{box-shadow:0 0 0 3px var(--ink)}
 .tcard-score{display:flex;align-items:center;gap:8px;min-width:76px;justify-content:flex-end}
 .tcard-score b{font-family:var(--disp);font-weight:800;font-size:28px;min-width:34px;text-align:right}
-.tcard-score .rk{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#E8EDF2;color:#394551;font-weight:800;font-size:14px}
-.tcard-score .rk.top{background:#FDF0CE;color:#7A5200}
+.tcard-score .rk{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);font-weight:800;font-size:14px}
+.tcard-score .rk.top{background:var(--c-warn-soft);color:var(--c-warn-strong)}
 .tcard-move{display:flex;gap:4px}
 .tcard-move .b{min-width:36px;min-height:36px;padding:0}
-@media(pointer:coarse){.tcard-move .b{min-width:44px;min-height:44px}.swrow{gap:6px}.swbtn{width:36px;height:36px}}
+@media(pointer:coarse){.tcard-move .b{min-width:44px;min-height:44px}.swrow{gap:6px}.swbtn{width:44px;height:44px}}
 .ta-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .ta-empty{padding:20px 4px;color:var(--mut);font-size:16px}
 .copywrap{position:relative;display:inline-flex} /* anchors the copy-teams picker menu */
@@ -91,14 +91,14 @@ h1{font-size:38px;letter-spacing:-.01em}
 .ic-tabs::-webkit-scrollbar{display:none}
 .ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:99px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .ic-tabs button.on{background:var(--dark);border-color:var(--dark);color:#fff}
-.ic-scroll{flex:1;min-height:180px;overflow:auto;border-top:1px solid var(--line);background:#FAFBFC}
+.ic-scroll{flex:1;min-height:180px;overflow:auto;border-top:1px solid var(--line);background:var(--c-surface-2)}
 .ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:14px 24px}
 .ic-empty{margin:0;padding:24px;text-align:center;color:var(--mut)}
 .ic-paste{display:flex;gap:8px;align-items:center}
 .ic-paste .inp{flex:1;min-width:0}
 .ic-prev{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line2);background:#fff;font-size:26px;display:flex;align-items:center;justify-content:center}
 .ic-note{font-size:13px;color:var(--mut);min-height:18px}
-.ic-note.bad{color:#B3261E;font-weight:600}
+.ic-note.bad{color:var(--c-bad);font-weight:600}
 @media(max-width:560px){.ic-grid{grid-template-columns:repeat(5,1fr);gap:6px;padding:12px}.ic-top,.ic-tabs{padding-left:12px;padding-right:12px}.ic-custom{padding:12px!important}.ic-custom .f{flex:1 1 100%!important}}
 .ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:12px;background:#fff;font-size:26px;line-height:1}
 .ic-grid button.on{border:3px solid var(--pri);background:var(--pri-l)}
