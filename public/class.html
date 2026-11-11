@@ -26,7 +26,6 @@
   </div>
   <div class="grp">
    <span class="chip" id="qtag" hidden style="background:var(--c-warn-soft);color:var(--c-warn-strong)">Quick mode on</span>
-   <button class="b dk" id="stoggle" aria-expanded="true" title="Show or hide team scores">Scores</button>
    <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go" aria-label="Freeze the class"><svg data-i="snow"></svg><span class="bl">Freeze</span></button>
    <button class="b sky" id="proj" title="Open the projector view in a new window" aria-label="Open the projector view"><svg data-i="screen"></svg><span class="bl">Projector</span></button>
    <button class="b dk" id="more" title="More" aria-label="More"><span class="bl">More</span><svg data-i="dots"></svg></button>
@@ -78,15 +77,18 @@
   <aside id="scores" aria-label="Team scores">
    <div class="sh">
     <h2>Team scores</h2>
-    <button class="b sm" id="sclose" title="Hide team scores" aria-label="Hide team scores"><svg data-i="x"></svg></button>
+    <button class="b sq ter" id="sclose" title="Fold team scores" aria-label="Fold team scores"><svg data-i="next"></svg></button>
    </div>
    <div class="ssum" id="ssum"></div>
    <div class="slist" id="slist"></div>
    <div class="sfoot">
     <button class="tog" id="lbproj"><span>Leaderboard on projector</span><i></i></button>
-    <a class="b" id="sadmin" href="/teacher?tab=teams" target="_blank" rel="noopener" style="text-decoration:none">Rename teams &amp; icons</a>
-    <button class="b" id="tedit">Class list &amp; teams</button>
+    <button class="b" id="tedit"><svg data-i="users"></svg>Set up teams</button>
    </div>
+  </aside>
+  <aside id="sstrip" aria-label="Team scores, folded">
+   <button class="b sq ter" id="sopen" aria-label="Show team scores" title="Show team scores"><svg data-i="trophy"></svg></button>
+   <div id="smini"></div>
   </aside>
   <div id="scoreback"></div>
  </div>
@@ -445,30 +447,31 @@ function setCpick(name) { const c = $('#cpick'); c.textContent = name + ' '; c.a
 // Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
 function renderScores() {
   const box = $('#slist'), ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
+  if (typeof menu !== 'undefined' && menu && box.contains(menu.anchor)) return; // a row menu is open: do not rebuild the list under it
   box.innerHTML = '';
   const total = ranked.reduce((a, x) => a + x.score, 0);
-  $('#ssum').textContent = !TM.teams.length ? 'No teams yet. Use "Class list & teams" below to make them.'
+  $('#ssum').textContent = !TM.teams.length ? 'No teams yet. Use "Set up teams" below to make them.'
     : ranked.length + (ranked.length === 1 ? ' team' : ' teams') + ' · ' + total + ' pt' + (total === 1 ? '' : 's')
       + (ranked[0] && ranked[0].score && ranked[0].leader ? ' · ' + ranked[0].team.name + ' leads' : ' · no points yet');
+  $('#smini').replaceChildren(...ranked.map(x => el('div', { className: 'mini', title: x.team.name + ': ' + x.score }, el('span', { textContent: cleanIcon(x.team.emoji) }), el('b', { textContent: x.score }))));
   ranked.forEach(x => {
     const t = x.team;
     const r = el('div', { className: 'srow' + (x.leader ? ' lead' : '') }); r.style.setProperty('--tc', t.color);
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const plus = el('button', { className: 'b sq', title: 'Give a point to ' + t.name, onclick: () => ws.send({ t: 'adj', team: t.id, d: 1 }) }, icoEl('plus')); plus.setAttribute('aria-label', 'Give a point to ' + t.name);
     const bar = el('div', { className: 'sbar' }, el('i', {})); bar.firstChild.style.width = Math.max(3, Math.round(x.score / max * 100)) + '%';
-    const more = el('button', { className: 'b dots', title: 'More for ' + t.name }, icoEl('dots')); more.setAttribute('aria-label', 'More for ' + t.name);
+    const more = el('button', { className: 'b sq ter', title: 'More for ' + t.name }, icoEl('dots')); more.setAttribute('aria-label', 'More for ' + t.name);
     more.onclick = e => {
       e.stopPropagation();
-      openMenu(more, [
-        { t: '+5 points', f: () => ws.send({ t: 'adj', team: t.id, d: 5 }) },
-        { t: '−5 points', f: () => ws.send({ t: 'adj', team: t.id, d: -5 }) },
+      openMenuFixed(more, [
+        { t: 'Take a point away', f: () => ws.send({ t: 'adj', team: t.id, d: -1 }) },
+        { t: 'Rename, icon and color', f: () => window.open(teamAdminHref(code), '_blank') },
         '-',
-        { t: 'Rename or change the icon', f: () => window.open(teamAdminHref(code), '_blank') },
-      ], 'top:40px;right:0;min-width:230px');
+        { t: 'Reset this team to 0', danger: true, f: () => { if (!confirm('Set ' + t.name + ' back to 0 points?')) return; for (let n = x.score; n > 0;) { const d = n >= 5 ? 5 : 1; ws.send({ t: 'adj', team: t.id, d: -d }); n -= d; } } }, // the server only takes steps of 1 or 5
+      ], 230);
     };
-    r.append(el('div', { className: 'r1' }, el('span', { className: 'rk', textContent: x.leader ? '🏆' : x.rank }),
+    r.append(el('div', { className: 'r1' }, el('span', { className: 'rk', textContent: x.rank }),
       el('span', { className: 'em', textContent: cleanIcon(t.emoji) }), el('span', { className: 'nm', textContent: t.name }),
-      el('span', { className: 'pt', textContent: x.score })), bar,
-      el('div', { className: 'r2' }, adj('−', -1, 'Take a point from'), adj('+', 1, 'Give a point to'), more));
+      el('span', { className: 'pt', textContent: x.score }), plus, more), bar);
     box.append(r);
   });
 }
@@ -779,15 +782,13 @@ function setScoresOpen(on, remember = true) {
   scoresOpen = on;
   document.body.classList.toggle('scores-off', !on);
   document.body.classList.toggle('scores-on', on && !wideScr.matches);
-  $('#stoggle').classList.toggle('on', on);
-  $('#stoggle').setAttribute('aria-expanded', on ? 'true' : 'false');
+  $('#sopen').setAttribute('aria-expanded', on ? 'true' : 'false');
   if (remember) store.do_scores = on ? '1' : '0';
 }
-$('#stoggle').onclick = () => { setScoresOpen(!scoresOpen); if (scoresOpen) renderScores(); };
+$('#sopen').onclick = () => { setScoresOpen(true); renderScores(); };
 $('#sclose').onclick = () => setScoresOpen(false);
 $('#scoreback').onclick = () => setScoresOpen(false);
 wideScr.addEventListener('change', () => setScoresOpen(wideScr.matches ? store.do_scores !== '0' : false, false));
-$('#sadmin').href = teamAdminHref(code);
 $('#tadmin').href = teamAdminHref(code);
 setScoresOpen(scoresOpen, false);
 $('#tdone').onclick = () => sheet.close();
