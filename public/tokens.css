@@ -20,7 +20,7 @@
 /* freeze */
 --c-frost:#0C4A6E;--c-frost-2:#0E5B85;--c-frost-soft:#E0F2FE;
 /* projector */
---c-stage:#0B1220;--c-stage-accent:#93C5FD;--c-stage-ink:#E2E8F0;
+--c-stage:#0B1220;--c-stage-accent:#93C5FD;--c-stage-ink:#E2E8F0;--c-stage-2:#141D30;--c-stage-3:#1E2A42;--c-stage-mut:#A9B6CA;
 /* type */
 --font-system:system-ui,-apple-system,'Segoe UI',sans-serif;
 --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;

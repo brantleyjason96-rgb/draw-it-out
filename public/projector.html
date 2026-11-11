@@ -11,16 +11,15 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/sortkit.css">
 <style>
-body{background:var(--c-stage);color:#fff}
+body{background:var(--c-stage);color:#fff;display:flex;flex-direction:column;height:100vh;height:100dvh;--fh:max(56px,7.2vh)}
 .qbar{background:transparent;font-size:clamp(34px,min(3vw,5vh),54px);line-height:1.25;text-align:center}
-#join{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(24px,6vw,110px);text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}
+#join{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(24px,6vw,110px);text-align:center;margin:auto;padding-bottom:2vh;font-size:clamp(24px,3vw,40px)}
 #qr{width:clamp(200px,min(26vw,46vh),440px);height:clamp(200px,min(26vw,46vh),440px);background:#fff;border-radius:var(--r-lg);padding:6px}
 .jcap{font-size:clamp(22px,2vw,32px);margin-top:10px;color:var(--c-stage-accent)}
-body:has(#join:not([hidden])) main{max-width:none;padding:12px 24px}
 body:has(#join:not([hidden])) .qbar{font-size:clamp(34px,min(3.6vw,6vh),64px)}
 #join b{font-size:clamp(64px,10vw,150px);letter-spacing:.2em;display:block;color:var(--c-stage-accent)}
 #who{text-align:center;font-size:clamp(24px,2.4vw,36px);margin-top:10px;color:var(--c-stage-accent)}
-main{max-width:1000px;display:flex;flex-direction:column;height:100vh;height:100dvh}
+main{max-width:none;display:flex;flex-direction:column;flex:1;min-height:0;width:100%;padding:12px 4vw 8px;margin:0}
 canvas{border:0}
 #lb{display:flex;flex-direction:column;gap:14px;margin-top:10px}
 .lr{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;gap:14px;transition:transform .5s}
@@ -41,10 +40,6 @@ canvas{border:0}
 .sr .nm{font-size:28px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sr .bar{grid-column:1;height:30px;border-radius:var(--r-md);min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
 .sr .pt{grid-column:2;grid-row:1/3;font-size:44px;font-weight:800;text-align:right}
-#corner{position:fixed;top:12px;right:18px;font-size:clamp(22px,2vw,32px);color:var(--c-stage-accent)}
-#corner b{letter-spacing:.15em;color:#fff}
-/* the corner code is fixed top-right: keep the question clear of it on both sides so it stays centred */
-body:has(#corner:not([hidden])) .qbar{padding-left:clamp(190px,17vw,300px);padding-right:clamp(190px,17vw,300px)}
 /* one drawing, or two or three side by side */
 #boards{display:grid;gap:18px;margin-top:8px;flex:1;min-height:200px;grid-auto-rows:100%}
 #boards .bp{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
@@ -55,12 +50,17 @@ body.multi #boards .bpc{align-items:flex-start}
 body.multi #boards{padding-top:9vh}
 body:not(.multi) #boards .bpc{align-items:center}
 #boards canvas{display:block;border:0;border-radius:var(--r-lg);background:var(--c-canvas-gap)}
-body.multi main{max-width:none;padding:12px 20px}
-body:has(#boards:not([hidden])) main{max-width:none;padding:12px 24px}
 body.multi #boards .bph{font-size:clamp(20px,1.9vw,28px)}
 .pchip{font-size:clamp(18px,1.8vw,28px);font-weight:700;border-radius:var(--r-pill);padding:2px 10px;white-space:nowrap}
+/* the footer is on every view: logo left, how to join right. The question keeps the full width. */
+#foot{flex:none;position:relative;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:2vw;padding:0 3vw;height:var(--fh);background:var(--c-stage-2);border-top:1px solid var(--c-stage-3);font-size:clamp(20px,2.7vh,30px)}
+#foot .logo{display:flex;align-items:center;gap:1vw;font-family:var(--font-display);font-weight:700;color:#fff}
+#foot .logo svg{height:1.5em;width:1.5em;flex:none}
+#foot .joinline{color:var(--c-stage-mut)}
+#foot .site{color:var(--c-stage-ink);font-weight:600}
+#foot b{color:#fff;font-weight:800;letter-spacing:.14em;margin-left:.3em;font-size:1.12em}
 /* frozen: the teacher has the floor */
-#frz{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;background:var(--c-frost);color:var(--c-frost-soft)}
+#frz{position:fixed;inset:0 0 var(--fh) 0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;background:var(--c-frost);color:var(--c-frost-soft)}
 body.frozen #frz{display:flex}
 body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
 #frz .fi{font-size:92px;line-height:1;animation:fzwave 2.6s ease-in-out infinite}
@@ -74,7 +74,6 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
 </style>
 </head>
 <body>
-<div id="corner" hidden>Join: <b id="ccode"></b></div>
 <main>
  <div class="qbar" id="q"></div>
  <div id="lb" hidden></div>
@@ -84,6 +83,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
  <div id="join"><div class="jl">Go to <span id="url"></span><b id="code"></b></div><div class="jr"><div id="qr" role="img" aria-label="QR code to join"></div><div class="jcap">or scan to join</div></div></div>
  <div id="who"></div>
 </main>
+<div id="foot"><div class="logo"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</div><div class="joinline">Join at <span class="site" id="fsite"></span> · code <b id="fcode"></b></div></div>
 <div id="frz" role="alertdialog" aria-label="Class frozen">
  <div id="frzflakes" aria-hidden="true"></div>
  <span class="fi" aria-hidden="true">✋</span><b>Class frozen</b><p>Look at your teacher.</p>
@@ -97,7 +97,7 @@ const code = (new URLSearchParams(location.search).get('code') || '').toUpperCas
 $('#url').textContent = location.host; $('#code').textContent = code;
 try { $('#qr').innerHTML = qrSvg(location.origin + '/?code=' + code); } catch (e) { $('#qr').hidden = true; }
 const S = { q: { question: '', bg: 'graph', img: null }, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, teams: [], scores: {}, sres: false, sum: null, stu: new Map() };
-$('#ccode').textContent = code;
+$('#fsite').textContent = location.host; $('#fcode').textContent = code;
 const ws = connect(onmsg, () => ws.send({ t: 'watch', code }), ok => { if (!ok) $('#who').textContent = 'Reconnecting…'; });
 
 function setQ(q) { S.q = q; S.im = loadImg(q.img, draw); }
@@ -198,7 +198,7 @@ function paint() {
   $('#sb').hidden = !(one && sort);
   $('#sm').hidden = !sum;
   $('#join').hidden = !!picks.length || !!lb || !!sum;
-  $('#lb').hidden = !lb; $('#corner').hidden = !(lb || sum) || !!S.frozen;
+  $('#lb').hidden = !lb;
   if (lb) board();
   if (sum) sortSummary();
   if (drawings.length) paintBoards(drawings);
