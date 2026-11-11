@@ -58,7 +58,7 @@
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="b line2 big" id="revbtn" hidden></button><button class="b good big" id="awbig" hidden></button></div>
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div class="mut" id="sub" style="font-size:16px;font-weight:500"></div>
+    <div class="mut" id="sub" style="font-size:var(--fs-md);font-weight:500"></div>
     <div id="pulsesum" hidden></div>
     <button class="tog blue" id="hide"><span id="hidet">Names hidden on projector</span><i></i></button>
    </div>
@@ -87,7 +87,7 @@
  <!-- phone layout -->
  <div id="phone">
   <div class="ph-h">
-   <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
+   <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:var(--fs-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
    <button class="b sky" id="pproj">Projector</button>
    <button class="b dk" id="pfreeze" aria-pressed="false" aria-label="Freeze the class" title="Freeze the class" style="min-width:44px;padding:0 12px"><svg data-i="snow"></svg></button>
   </div>
@@ -105,15 +105,15 @@
  <div class="dh"><div><div class="lbl" id="tcls"></div><h2>Teams &amp; class list</h2></div><button class="b pri big" id="tdone" style="min-height:48px">Done</button></div>
  <div class="sheet" id="sheet">
   <section style="width:440px;flex:none;border-right:1px solid var(--line)">
-   <h3 style="font-size:21px">Teams</h3>
-   <div class="mut" style="font-size:14px;margin-top:-6px">Names, icons and order are on the <a id="tadmin" href="/teacher?tab=teams" target="_blank" rel="noopener">Teams tab of Today</a>. Points and the class list are here.</div>
+   <h3 style="font-size:var(--fs-xl)">Teams</h3>
+   <div class="mut" style="font-size:var(--fs-sm);margin-top:-6px">Names, icons and order are on the <a id="tadmin" href="/teacher?tab=teams" target="_blank" rel="noopener">Teams tab of Today</a>. Points and the class list are here.</div>
    <div id="trows" style="display:flex;flex-direction:column;gap:8px"></div>
    <div style="display:flex;gap:8px"><select class="inp" id="tn" aria-label="How many teams"></select><button class="b" id="mkteams" style="flex:1">Create teams</button><button class="b" id="addteam" style="flex:1">+ Team</button></div>
    <button class="tog" id="cap" style="justify-content:space-between"><span>One point per team, per question</span><i></i></button>
    <button class="b danger" id="rsc" style="margin-top:auto;border-color:var(--c-bad-line)">Reset all scores to 0</button>
   </section>
   <section style="flex:1;min-width:0">
-   <div style="display:flex;align-items:baseline;justify-content:space-between"><h3 style="font-size:21px">Class list</h3><span class="mut" id="rcount" style="font-weight:600"></span></div>
+   <div style="display:flex;align-items:baseline;justify-content:space-between"><h3 style="font-size:var(--fs-xl)">Class list</h3><span class="mut" id="rcount" style="font-weight:600"></span></div>
    <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="b" id="rup">Upload a CSV</button><input type="file" id="rfile" accept=".csv,.txt,text/csv,text/plain" hidden>
     <button class="b" id="rpastebtn">Paste names</button>
@@ -126,7 +126,7 @@
    </div>
    <div class="rt" style="flex:1"><div class="rr h"><div>Student (stays on this computer)</div><div>Initials</div><div>Team</div><div></div></div><div class="scroll" id="rrows"></div></div>
    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div class="mut" style="font-size:14px;display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#0E7C4A" stroke-width="2" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>Students see only initials. Full names stay on this computer.</div>
+    <div class="mut" style="font-size:var(--fs-sm);display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#0E7C4A" stroke-width="2" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>Students see only initials. Full names stay on this computer.</div>
     <button class="link danger" id="rclr" style="color:var(--bad)">Remove class list</button>
    </div>
   </section>
@@ -135,15 +135,15 @@
 
 <dialog id="qrdlg" style="text-align:center;max-width:520px;padding:24px">
  <div id="qrbig" style="width:min(80vw,420px);margin:auto;background:#fff"></div>
- <div style="font-size:20px;margin:10px 0">Scan to join, or go to <b id="qrurl"></b> and enter <b class="code" id="qrcode"></b></div>
+ <div style="font-size:var(--fs-xl);margin:10px 0">Scan to join, or go to <b id="qrurl"></b> and enter <b class="code" id="qrcode"></b></div>
  <div style="display:flex;gap:10px;justify-content:center"><button class="b" id="qrcopy">Copy student link</button><button class="b pri" id="qrclose">Close</button></div>
 </dialog>
 
 <dialog id="rdlg" style="text-align:center;max-width:520px;padding:24px">
- <h2 style="font-size:24px">Use your phone as a remote</h2>
+ <h2 style="font-size:var(--fs-2xl)">Use your phone as a remote</h2>
  <p class="mut" style="margin:6px 0 12px">Scan this with your phone's camera. Your phone opens this class so you can walk the room, look at drawings and give points.</p>
  <div id="rqr" style="width:min(80vw,360px);margin:auto;background:#fff"></div>
- <p style="margin:12px 0 4px;font-size:15px;background:var(--c-warn-soft);border:1px solid var(--c-warn-line);border-radius:var(--r-md);padding:10px 12px;color:var(--c-warn-strong)">Keep this private. Anyone who scans it can control this class, so do not show it on the projector.</p>
+ <p style="margin:12px 0 4px;font-size:var(--fs-md);background:var(--c-warn-soft);border:1px solid var(--c-warn-line);border-radius:var(--r-md);padding:10px 12px;color:var(--c-warn-strong)">Keep this private. Anyone who scans it can control this class, so do not show it on the projector.</p>
  <div style="display:flex;gap:10px;justify-content:center;margin-top:8px"><button class="b" id="rcopy">Copy link instead</button><button class="b pri" id="rclose">Done</button></div>
 </dialog>
 
@@ -322,7 +322,7 @@ function pulseSummary() {
     b.onclick = () => { pulseFilter = pulseFilter === k ? null : k; applyPulseFilter(); pulseSummary(); };
     box.append(b);
   });
-  if (none) box.append(el('span', { className: 'mut', textContent: none + ' no answer', style: 'font-size:14px;font-weight:600' }));
+  if (none) box.append(el('span', { className: 'mut', textContent: none + ' no answer', style: 'font-size:var(--fs-sm);font-weight:600' }));
   box.append(el('button', { className: 'b sm', title: 'How the class felt, question by question', onclick: openReport }, icoEl('report', 'sm'), ' Report'));
 }
 function applyPulseFilter() {
@@ -604,7 +604,7 @@ function drawReport() {
   box.innerHTML = ''; $('#replbl').textContent = per().name + ' · ' + new Date().toLocaleDateString();
   const rows = reportRows();
   if (!rows.length) {
-    box.append(el('div', { className: 'mut', style: 'font-size:17px', textContent: 'No colours yet. Students tap red, amber or green while they draw, and this fills in as the lesson goes.' }));
+    box.append(el('div', { className: 'mut', style: 'font-size:var(--fs-lg)', textContent: 'No colours yet. Students tap red, amber or green while they draw, and this fills in as the lesson goes.' }));
     return;
   }
   const tot = reportTotal(rows), pct = pulsePct(tot.g, tot.y, tot.r);
@@ -612,12 +612,12 @@ function drawReport() {
     el('div', { className: 'big', textContent: pct + '%' }),
     el('div', { style: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px' },
       el('div', { className: 'r', textContent: 'The class felt ' + readOf(pct) }),
-      el('div', { className: 'mut', style: 'font-size:14px', textContent: rows.length + (rows.length === 1 ? ' question' : ' questions') + ' · ' + S.stu.size + ' students · ' + tot.g + ' understand, ' + tot.y + ' almost, ' + tot.r + ' need help' }),
+      el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: rows.length + (rows.length === 1 ? ' question' : ' questions') + ' · ' + S.stu.size + ' students · ' + tot.g + ' understand, ' + tot.y + ' almost, ' + tot.r + ' need help' }),
       stackBar(tot)));
   box.append(head);
   if (rows.length > 1) {
     const a = pulsePct(rows[0].g, rows[0].y, rows[0].r), b = pulsePct(rows[rows.length - 1].g, rows[rows.length - 1].y, rows[rows.length - 1].r), d = b - a;
-    box.append(el('div', { style: 'font-weight:600;font-size:15px', textContent: d === 0 ? 'Confidence held steady, ' + a + '% from the first question to the last.' : 'Confidence ' + (d > 0 ? 'rose' : 'fell') + ' from ' + a + '% on question 1 to ' + b + '% on question ' + rows.length + '.' }));
+    box.append(el('div', { style: 'font-weight:600;font-size:var(--fs-md)', textContent: d === 0 ? 'Confidence held steady, ' + a + '% from the first question to the last.' : 'Confidence ' + (d > 0 ? 'rose' : 'fell') + ' from ' + a + '% on question 1 to ' + b + '% on question ' + rows.length + '.' }));
   }
   const list = el('div', {}, el('div', { className: 'lbl', textContent: 'Question by question', style: 'margin-bottom:4px' }));
   rows.forEach(r => {
@@ -650,7 +650,7 @@ function reportPeople(box, rows) {
       sec.append(el('div', { style: 'display:flex;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line)' },
         el('span', { className: 'pchip', textContent: PULSES[t.last].e + ' ' + PULSES[t.last].n, style: 'background:' + PULSES[t.last].soft + ';color:' + PULSES[t.last].c }),
         el('b', { textContent: nameOf(id), style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }),
-        el('span', { className: 'mut', textContent: why, style: 'font-size:14px' })));
+        el('span', { className: 'mut', textContent: why, style: 'font-size:var(--fs-sm)' })));
     });
     box.append(sec);
   }
@@ -664,7 +664,7 @@ function reportPeople(box, rows) {
     const sec = el('div', {}, el('div', { className: 'lbl', textContent: 'By team', style: 'margin-bottom:6px' }));
     teams.forEach(({ t, pct, agg }) => {
       sec.append(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) 120px 52px;gap:10px;align-items:center;padding:4px 0' },
-        el('b', { textContent: teamLabel(t), style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px' }),
+        el('b', { textContent: teamLabel(t), style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-md)' }),
         stackBar(agg), el('b', { textContent: pct + '%', style: 'text-align:right' })));
     });
     box.append(sec);
@@ -768,8 +768,8 @@ function sheetUI() {
     const n = TM.roster.length ? TM.roster.filter(e => e.team === t.id).length : [...S.stu.values()].filter(s => s.team === t.id).length;
     const bar = el('div', { className: 'tbar' }, el('i', {})); bar.firstChild.style.width = Math.max(4, Math.round(x.score / max * 100)) + '%';
     const nm = el('div', { style: 'flex:1;min-width:0' },
-      el('div', { style: 'font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, teamLabel(t)),
-      el('div', { className: 'mut', textContent: n + ' student' + (n === 1 ? '' : 's'), style: 'font-size:13px' }), bar);
+      el('div', { style: 'font-weight:700;font-size:var(--fs-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, teamLabel(t)),
+      el('div', { className: 'mut', textContent: n + ' student' + (n === 1 ? '' : 's'), style: 'font-size:var(--fs-xs)' }), bar);
     const adj = (l, d, lab) => { const b = el('button', { className: 'b sm', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
     r.append(el('span', { className: 'rk' + (x.leader ? ' top' : ''), textContent: x.leader ? '🏆' : x.rank }), nm,
       adj('−', -1, 'Take a point from'), el('div', { className: 'pt', textContent: x.score }), adj('+', 1, 'Give a point to'));
@@ -858,11 +858,11 @@ function phoneReview(box) {
   const q = el('div', { className: 'ph-q' }); const lab = el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' });
   const qt = el('div', {}); qt.innerHTML = S.q.question || 'Nothing sent yet. Open the Questions tab.'; q.append(lab, qt); box.append(q);
   const s = list[pi];
-  if (!s) return box.append(el('div', { className: 'ph-pad mut', textContent: 'Waiting for students to join. Class code ' + code + '.', style: 'font-size:18px' }));
+  if (!s) return box.append(el('div', { className: 'ph-pad mut', textContent: 'Waiting for students to join. Class code ' + code + '.', style: 'font-size:var(--fs-lg)' }));
   const rev = el('div', { className: 'ph-rev' });
   const tm = teamOf(s.team);
   const head = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px' },
-    el('div', { style: 'display:flex;align-items:center;gap:10px;min-width:0' }, el('b', { textContent: disp(s), style: 'font-family:var(--disp);font-size:24px' }), tm ? el('span', { className: 'chip', textContent: teamLabel(tm) }) : el('span', {})),
+    el('div', { style: 'display:flex;align-items:center;gap:10px;min-width:0' }, el('b', { textContent: disp(s), style: 'font-family:var(--disp);font-size:var(--fs-2xl)' }), tm ? el('span', { className: 'chip', textContent: teamLabel(tm) }) : el('span', {})),
     el('span', { className: 'mut', textContent: (pi + 1) + ' of ' + list.length, style: 'font-weight:600' }));
   const cvw = el('div', { className: 'ph-cv' }); const cv = el('canvas', { id: 'pcv', width: 720, height: 840 });
   const prev = el('button', { className: 'nav', style: 'left:-6px', onclick: () => { pi = (pi + list.length - 1) % list.length; renderPhone(); s.dirty = true; } }, icoEl('back')); prev.setAttribute('aria-label', 'Previous drawing'); prev.title = 'Previous drawing';
@@ -872,7 +872,7 @@ function phoneReview(box) {
   list.slice(0, 40).forEach((x, i) => dots.append(el('span', { style: 'height:8px;border-radius:var(--r-pill);width:' + (i === pi ? 22 : 8) + 'px;background:' + (i === pi ? 'var(--pri)' : x.aw ? 'var(--good)' : 'var(--c-line-2)') })));
   const row = el('div', { style: 'display:flex;gap:8px' });
   if (TM.teams.length) { const sel = el('select', { className: 'inp' }); sel.setAttribute('aria-label', 'Team'); [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); sel.value = s.team || ''; sel.onchange = () => setTeam(s, sel.value || null); row.append(sel); }
-  const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), style: 'min-height:64px;font-size:20px;border-radius:var(--r-lg)' }, icoEl('check'), s.aw ? ' Point given (undo)' : ' Give ' + (tm ? tm.name : 'a team') + ' a point'); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
+  const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), style: 'min-height:64px;font-size:var(--fs-xl);border-radius:var(--r-lg)' }, icoEl('check'), s.aw ? ' Point given (undo)' : ' Give ' + (tm ? tm.name : 'a team') + ' a point'); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
   if (!TM.teams.length) { aw.disabled = true; aw.textContent = 'Make teams to give points'; }
   const acts = el('div', { style: 'display:flex;gap:10px' }, el('button', { className: 'b', textContent: S.picks.includes(s.id) ? 'Stop showing' : 'Show on projector', style: 'flex:1;min-height:48px;border-width:2px;font-weight:700', onclick: () => pick(s.id) }), el('button', { className: 'b', textContent: 'Skip', style: 'width:110px;min-height:48px;border-width:2px;font-weight:700', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }));
   rev.append(head, cvw, dots, ...(TM.teams.length ? [row] : []), aw, acts); box.append(rev);
@@ -883,26 +883,26 @@ function phoneQuestions(box) {
   const srt = S.q.kind === 'sort', drawn = [...S.stu.values()].filter(s => srt ? s.done : s.objs && s.objs.length).length, tot = S.stu.size;
   const now = el('div', { className: 'card', style: 'padding:14px 16px;border:2px solid var(--pri);display:flex;flex-direction:column;gap:8px' });
   now.append(el('div', { className: 'lbl', textContent: cur >= 0 ? 'On students\' screens' : 'Nothing sent yet', style: 'color:var(--pri-d)' }));
-  const t = el('div', { style: 'font-family:var(--disp);font-weight:600;font-size:20px;line-height:1.25' }); t.innerHTML = S.q.question || 'Pick a question to send.'; now.append(t);
-  if (tot) now.append(el('div', { style: 'display:flex;align-items:center;gap:12px' }, el('div', { style: 'flex:1;height:10px;border-radius:var(--r-pill);background:var(--c-fill);overflow:hidden' }, el('div', { style: 'height:100%;border-radius:var(--r-pill);background:var(--pri);width:' + Math.round(drawn / tot * 100) + '%' })), el('span', { textContent: drawn + ' of ' + tot + (srt ? ' handed in' : ' drawing'), style: 'font-weight:700;font-size:14px' })));
+  const t = el('div', { style: 'font-family:var(--disp);font-weight:600;font-size:var(--fs-xl);line-height:1.25' }); t.innerHTML = S.q.question || 'Pick a question to send.'; now.append(t);
+  if (tot) now.append(el('div', { style: 'display:flex;align-items:center;gap:12px' }, el('div', { style: 'flex:1;height:10px;border-radius:var(--r-pill);background:var(--c-fill);overflow:hidden' }, el('div', { style: 'height:100%;border-radius:var(--r-pill);background:var(--pri);width:' + Math.round(drawn / tot * 100) + '%' })), el('span', { textContent: drawn + ' of ' + tot + (srt ? ' handed in' : ' drawing'), style: 'font-weight:700;font-size:var(--fs-sm)' })));
   pad.append(now);
   if (cur + 1 < n) {
     const nx = qs()[cur + 1], c = el('div', { className: 'card', style: 'padding:14px 16px;display:flex;flex-direction:column;gap:12px' });
-    c.append(el('div', { className: 'lbl', textContent: 'Up next · Question ' + (cur + 2) + ' of ' + n }), el('div', { textContent: plain(nx.question).trim() || '(photo only)', style: 'font-size:18px;line-height:1.35;font-weight:500' }),
-      el('button', { className: 'b pri big', textContent: 'Send question ' + (cur + 2) + ' →', style: 'min-height:64px;font-size:20px;border-radius:var(--r-lg)', onclick: () => go(cur + 1) })); pad.append(c);
+    c.append(el('div', { className: 'lbl', textContent: 'Up next · Question ' + (cur + 2) + ' of ' + n }), el('div', { textContent: plain(nx.question).trim() || '(photo only)', style: 'font-size:var(--fs-lg);line-height:1.35;font-weight:500' }),
+      el('button', { className: 'b pri big', textContent: 'Send question ' + (cur + 2) + ' →', style: 'min-height:64px;font-size:var(--fs-xl);border-radius:var(--r-lg)', onclick: () => go(cur + 1) })); pad.append(c);
   } else if (n && cur === n - 1) pad.append(el('div', { className: 'mut', textContent: 'That was the last question in this set.', style: 'padding:4px 2px' }));
-  else if (n && cur < 0) pad.append(el('button', { className: 'b pri big', textContent: 'Send question 1 →', style: 'min-height:64px;font-size:20px;border-radius:var(--r-lg)', onclick: () => go(0) }));
+  else if (n && cur < 0) pad.append(el('button', { className: 'b pri big', textContent: 'Send question 1 →', style: 'min-height:64px;font-size:var(--fs-xl);border-radius:var(--r-lg)', onclick: () => go(0) }));
   const later = qs().slice(cur + 2).map((q, i) => [q, cur + 2 + i]);
-  if (later.length) { pad.append(el('div', { className: 'lbl', textContent: 'Later' })); later.slice(0, 6).forEach(([q, i]) => pad.append(el('div', { className: 'ph-row' }, el('div', { className: 'n qi-n', textContent: i + 1, style: 'flex:none;width:30px;height:30px;border-radius:50%;background:var(--c-fill);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px' }), el('div', { textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1;min-width:0;font-size:15px;line-height:1.3;font-weight:500' }), el('button', { className: 'b', textContent: 'Send', style: 'border-width:2px;font-weight:700', onclick: () => go(i) })))); }
+  if (later.length) { pad.append(el('div', { className: 'lbl', textContent: 'Later' })); later.slice(0, 6).forEach(([q, i]) => pad.append(el('div', { className: 'ph-row' }, el('div', { className: 'n qi-n', textContent: i + 1, style: 'flex:none;width:30px;height:30px;border-radius:50%;background:var(--c-fill);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--fs-sm)' }), el('div', { textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1;min-width:0;font-size:var(--fs-md);line-height:1.3;font-weight:500' }), el('button', { className: 'b', textContent: 'Send', style: 'border-width:2px;font-weight:700', onclick: () => go(i) })))); }
   const tg = (label, sub, on, f) => { const b = el('button', { className: 'tog' + (on ? ' on' : ''), style: 'width:100%;justify-content:space-between;min-height:60px;text-align:left', onclick: f }); b.append(el('span', {}, document.createTextNode(label), el('small', { textContent: sub, style: 'display:block;font-weight:500;color:var(--mut)' })), document.createElement('i')); return b; };
   pad.append(tg('Leaderboard on projector', 'Shows when no drawing is up', S.board, () => ws.send({ t: 'board', on: !S.board })), tg('Names hidden on projector', 'Projector says “A student’s work”', S.hide, () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide })), tg('Quick mode', 'Students get a pen and 4 colors', S.simple, () => ws.send({ t: 'mode', simple: !S.simple })));
   pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', onclick: openReport }, icoEl('report'), ' How the class felt (report)'));
-  pad.append(el('div', { className: 'mut', textContent: 'To write or edit questions, use a computer.', style: 'font-size:14px;text-align:center' }));
+  pad.append(el('div', { className: 'mut', textContent: 'To write or edit questions, use a computer.', style: 'font-size:var(--fs-sm);text-align:center' }));
   box.append(pad);
 }
 function phoneTeams(box) {
   const pad = el('div', { className: 'ph-pad' });
-  if (!TM.teams.length) pad.append(el('div', { className: 'mut', textContent: 'No teams yet. Set up teams on a computer, or use the demo to see how points work.', style: 'font-size:17px' }));
+  if (!TM.teams.length) pad.append(el('div', { className: 'mut', textContent: 'No teams yet. Set up teams on a computer, or use the demo to see how points work.', style: 'font-size:var(--fs-lg)' }));
   const ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
   ranked.forEach(x => {
     const t = x.team;
@@ -910,10 +910,10 @@ function phoneTeams(box) {
     const adj = (l, d, lab) => { const b = el('button', { className: 'b sq', style: 'flex:1;min-height:52px', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus', 'lg')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
     const bar = el('div', { style: 'height:6px;border-radius:var(--r-pill);background:var(--c-fill);overflow:hidden;margin-top:6px' }, el('i', {}));
     bar.firstChild.style.cssText = 'display:block;height:100%;border-radius:var(--r-pill);background:' + t.color + ';width:' + Math.max(4, Math.round(x.score / max * 100)) + '%';
-    const rk = el('span', { textContent: x.leader ? '🏆' : x.rank, style: 'flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:' + (x.leader ? 'var(--c-warn-soft)' : 'var(--c-fill)') + ';color:' + (x.leader ? 'var(--c-warn-strong)' : 'var(--c-ink-2)') });
+    const rk = el('span', { textContent: x.leader ? '🏆' : x.rank, style: 'flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:var(--fs-xs);background:' + (x.leader ? 'var(--c-warn-soft)' : 'var(--c-fill)') + ';color:' + (x.leader ? 'var(--c-warn-strong)' : 'var(--c-ink-2)') });
     const top = el('div', { style: 'display:flex;align-items:center;gap:10px;min-width:0' }, rk,
-      el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: teamLabel(t), style: 'font-weight:700;font-size:18px' }), bar),
-      el('div', { textContent: x.score, style: 'font-family:var(--disp);font-weight:800;font-size:32px;min-width:40px;text-align:center' }));
+      el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: teamLabel(t), style: 'font-weight:700;font-size:var(--fs-lg)' }), bar),
+      el('div', { textContent: x.score, style: 'font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);min-width:40px;text-align:center' }));
     r.append(top, el('div', { style: 'display:flex;gap:8px' }, adj('−', -1, 'Take a point from'), adj('+', 1, 'Give a point to')));
     pad.append(r);
   });

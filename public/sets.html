@@ -19,45 +19,45 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .q{border:2px solid var(--line);border-radius:var(--r-lg);padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#fff;cursor:pointer;text-align:left;width:100%}
 .q.on{border-color:var(--pri);background:var(--pri-l)}
 .q .t{display:flex;gap:10px;align-items:flex-start}
-.q .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.q .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--fs-sm)}
 .q.on .n{background:var(--pri);color:#fff}
-.q .x{font-size:15px;line-height:1.35;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.q .x{font-size:var(--fs-md);line-height:1.35;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .q .meta{display:flex;align-items:center;gap:6px}
-#qin{min-height:150px;border:2px solid var(--pri);border-radius:var(--r-lg);padding:14px 16px;font-size:19px;line-height:1.4;background:#fff;overflow-wrap:anywhere}
+#qin{min-height:150px;border:2px solid var(--pri);border-radius:var(--r-lg);padding:14px 16px;font-size:var(--fs-lg);line-height:1.4;background:#fff;overflow-wrap:anywhere}
 #qin:empty:before{content:attr(data-ph);color:var(--mut)}
 .bgs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .bgs button{border:1px solid var(--c-line-2);border-radius:var(--r-lg);overflow:hidden;background:#fff;padding:0;display:flex;flex-direction:column;min-height:0}
 .bgs button.on{border:3px solid var(--pri)}
 .bgs .sw2{height:50px;background-color:#fff}
-.bgs .lb{height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.bgs .lb{height:36px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);font-weight:600}
 .bgs button.on .lb{background:var(--pri-l);font-weight:700}
 .prev{align-items:center;justify-content:center}
 .dev{width:100%;max-width:900px;background:#fff;border:1px solid var(--c-line-2);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
-.dev .qb{background:var(--c-question);color:#fff;padding:16px 22px;font-size:21px;line-height:1.35;min-height:62px}
+.dev .qb{background:var(--c-question);color:#fff;padding:16px 22px;font-size:var(--fs-xl);line-height:1.35;min-height:62px}
 .dev canvas{display:block;width:100%;height:auto;border:0;border-radius:0}
 .dev .dock{height:62px;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px}
 .dev .dock i{width:30px;height:30px;border-radius:50%}
 .prev.sort{align-items:stretch;justify-content:flex-start;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
 .srow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
 .srow .inp{flex:1;min-width:0}
-.ichip{display:inline-flex;align-items:center;font-size:14px;font-weight:600;padding:2px 2px 2px 12px;border-radius:var(--r-pill);background:var(--pri-l);border:1px solid var(--c-primary-line);color:var(--pri-d)}
-.ichip button{border:0;background:none;color:inherit;font-size:14px;min-width:32px;min-height:32px}
+.ichip{display:inline-flex;align-items:center;font-size:var(--fs-sm);font-weight:600;padding:2px 2px 2px 12px;border-radius:var(--r-pill);background:var(--pri-l);border:1px solid var(--c-primary-line);color:var(--pri-d)}
+.ichip button{border:0;background:none;color:inherit;font-size:var(--fs-sm);min-width:32px;min-height:32px}
 .sec{display:flex;flex-direction:column;gap:8px}
 .zone{background:#fff;border:2px dashed var(--c-control);border-radius:var(--r-lg);padding:10px;min-height:150px;display:flex;flex-direction:column;gap:8px;min-width:0;transition:background .1s,border-color .1s}
 .zone.over{background:var(--pri-l);border-color:var(--pri)}
-.zone h3{font-size:18px;display:flex;justify-content:space-between;gap:8px}
-.zone h3 span{font-family:var(--body);font-weight:600;color:var(--mut);font-size:15px}
+.zone h3{font-size:var(--fs-lg);display:flex;justify-content:space-between;gap:8px}
+.zone h3 span{font-family:var(--body);font-weight:600;color:var(--mut);font-size:var(--fs-md)}
 .tray{min-height:0;background:var(--amber);border-color:var(--amber-b);margin-bottom:12px}
 .board{display:grid;gap:12px;align-items:start}
 .slanes{display:grid;gap:10px;padding:14px;background:var(--c-canvas-gap)}
 .slane{background:#fff;border:2px dashed var(--c-control);border-radius:var(--r-lg);min-height:110px;padding:8px}
-.slane h3{font-family:system-ui,sans-serif;font-size:16px;text-align:center}
+.slane h3{font-family:system-ui,sans-serif;font-size:var(--fs-md);text-align:center}
 .spile{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
-.spile .nc{width:calc(33.3% - 6px);min-width:120px;font-size:14px}
-#sstu .dock{justify-content:space-between;font-weight:600;font-size:15px}
+.spile .nc{width:calc(33.3% - 6px);min-width:120px;font-size:var(--fs-sm)}
+#sstu .dock{justify-content:space-between;font-weight:600;font-size:var(--fs-md)}
 #sstu .dock span+span{color:var(--mut);font-weight:500}
-.issue{font-size:14px;color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:var(--r-md);padding:8px 12px}
-.okmsg{font-size:14px;color:var(--c-good-strong);background:var(--c-good-soft);border-radius:var(--r-md);padding:8px 12px;font-weight:600}
+.issue{font-size:var(--fs-sm);color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:var(--r-md);padding:8px 12px}
+.okmsg{font-size:var(--fs-sm);color:var(--c-good-strong);background:var(--c-good-soft);border-radius:var(--r-md);padding:8px 12px;font-weight:600}
 @media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
 /* phones: the top bar wraps instead of pushing the page wider than the screen */
 @media(max-width:600px){
@@ -79,7 +79,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <div class="tb">
  <div class="grp">
   <a class="b dk" id="back" href="/teacher" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg><span id="backt">Today</span></a>
-  <div style="font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sname"></div>
+  <div style="font-weight:700;font-size:var(--fs-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sname"></div>
  </div>
  <div class="grp" style="position:relative">
   <button class="b dk" id="share">Share link</button>
@@ -90,7 +90,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
  <section class="col list">
   <div>
    <div class="lbl" id="cnt"></div>
-   <h2 style="font-size:24px;margin-top:2px">Questions</h2>
+   <h2 style="font-size:var(--fs-2xl);margin-top:2px">Questions</h2>
   </div>
   <div id="qlist" style="display:flex;flex-direction:column;gap:8px"></div>
   <button class="b" id="add">+ Add question</button>
@@ -99,7 +99,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
  <section class="col edit">
   <div>
    <div class="lbl" id="elbl"></div>
-   <h2 style="font-size:28px;margin-top:2px" id="etitle"></h2>
+   <h2 style="font-size:var(--fs-3xl);margin-top:2px" id="etitle"></h2>
   </div>
   <div id="ebody" style="display:flex;flex-direction:column;gap:14px">
    <div>
@@ -122,13 +122,13 @@ body{min-height:100vh;display:flex;flex-direction:column}
      <button class="b" id="addimg">Add a photo</button>
      <button class="b" id="rmimg" hidden>Remove photo</button>
      <input type="file" id="file" accept="image/*" hidden>
-     <span class="mut" style="font-size:14px;flex:1;min-width:140px">Or paste a screenshot with Ctrl+V.</span>
+     <span class="mut" style="font-size:var(--fs-sm);flex:1;min-width:140px">Or paste a screenshot with Ctrl+V.</span>
     </div>
    </div>
    <div id="sortopts" class="sec" hidden style="gap:14px">
-    <div class="sec"><div style="font-weight:700">Lanes <span class="mut" style="font-weight:400;font-size:14px">the boxes students drop cards into</span></div><div id="slanes"></div></div>
-    <div class="sec"><div style="font-weight:700">Cards <span class="mut" style="font-weight:400;font-size:14px">the sticky notes</span></div><div id="scards"></div></div>
-    <div class="sec"><div style="font-weight:700">Ideas <span class="mut" style="font-weight:400;font-size:14px">tag cards so results show what to reteach</span></div><div id="sideas" class="sec"></div></div>
+    <div class="sec"><div style="font-weight:700">Lanes <span class="mut" style="font-weight:400;font-size:var(--fs-sm)">the boxes students drop cards into</span></div><div id="slanes"></div></div>
+    <div class="sec"><div style="font-weight:700">Cards <span class="mut" style="font-weight:400;font-size:var(--fs-sm)">the sticky notes</span></div><div id="scards"></div></div>
+    <div class="sec"><div style="font-weight:700">Ideas <span class="mut" style="font-weight:400;font-size:var(--fs-sm)">tag cards so results show what to reteach</span></div><div id="sideas" class="sec"></div></div>
     <div class="sec"><div style="font-weight:700">Options</div><div id="sopts" class="sec"></div></div>
     <div id="sissues" class="sec"></div>
    </div>
@@ -140,22 +140,22 @@ body{min-height:100vh;display:flex;flex-direction:column}
     </div>
    </div>
   </div>
-  <div id="eempty" class="mut" hidden style="font-size:17px">Pick a question on the left, or add a new one.</div>
+  <div id="eempty" class="mut" hidden style="font-size:var(--fs-lg)">Pick a question on the left, or add a new one.</div>
  </section>
 
  <section class="col prev" id="prevcol">
   <div class="lbl" style="align-self:stretch" id="prevlbl">How it looks on a student's screen</div>
   <div id="sortprev" hidden style="align-self:stretch;display:flex;flex-direction:column;gap:12px">
    <div class="seg" id="stabs" role="group" aria-label="Right panel view" style="max-width:300px"><button data-v="key" class="on">Answer key</button><button data-v="stu">Student view</button></div>
-   <div id="skey"><div class="mut" style="font-size:15px;margin-bottom:10px">Drag each sticky note into the lane where it belongs. Students never see this.</div><div id="skeyb"></div></div>
+   <div id="skey"><div class="mut" style="font-size:var(--fs-md);margin-bottom:10px">Drag each sticky note into the lane where it belongs. Students never see this.</div><div id="skeyb"></div></div>
    <div id="sstu" hidden></div>
   </div>
   <div class="dev" id="drawprev">
    <div class="qb" id="pq"></div>
    <canvas id="pc" width="900" height="460"></canvas>
-   <div class="dock"><i style="background:#111"></i><i style="background:#2563EB"></i><i style="background:#DC2626"></i><i style="background:#059669"></i><span class="mut" style="margin-left:auto;font-weight:600;font-size:14px">Pen · Eraser · Text · Shapes</span></div>
+   <div class="dock"><i style="background:#111"></i><i style="background:#2563EB"></i><i style="background:#DC2626"></i><i style="background:#059669"></i><span class="mut" style="margin-left:auto;font-weight:600;font-size:var(--fs-sm)">Pen · Eraser · Text · Shapes</span></div>
   </div>
-  <div class="mut" style="font-size:15px" id="prevhint">Nothing is sent to students from this screen unless you press Send now.</div>
+  <div class="mut" style="font-size:var(--fs-md)" id="prevhint">Nothing is sent to students from this screen unless you press Send now.</div>
  </section>
 </div>
 <div id="toast" hidden></div>

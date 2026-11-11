@@ -183,7 +183,7 @@ const SR = (() => {
     pad.append(el('div', { className: 'card', style: 'padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px' },
       el('div', {}, T('div', 'lbl', 'Class average'), T('div', '', D.started.length ? avg.toFixed(1) + ' / ' + n : '–')),
       el('div', { style: 'text-align:right' }, T('div', 'lbl', 'Handed in'), T('div', '', D.finished + ' of ' + D.all.length))));
-    pad.lastChild.querySelectorAll('div > div:last-child').forEach(d => { d.style.cssText = 'font-family:var(--disp);font-weight:800;font-size:28px'; });
+    pad.lastChild.querySelectorAll('div > div:last-child').forEach(d => { d.style.cssText = 'font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl)'; });
     const rv = el('button', { className: 'b big' + (c.revealed ? ' good' : ' line2'), style: 'min-height:60px', onclick: c.reveal }, ...(c.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students']));
     pad.append(rv);
     if (D.ideas.length) {

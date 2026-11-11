@@ -11,29 +11,29 @@
 <link rel="stylesheet" href="/tstyle.css">
 <style>
 main{max-width:1320px;margin:0 auto;padding:28px 40px 40px;display:flex;flex-direction:column;gap:26px}
-h1{font-size:38px;letter-spacing:-.01em}
+h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 .sec{display:flex;flex-direction:column;gap:10px}
 .sech{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
 .cls{position:relative;padding:14px 18px;display:flex;flex-direction:column;gap:8px}
 .cls.live{border:2px solid var(--good)}
-.cls h3{font-size:21px}
+.cls h3{font-size:var(--fs-xl)}
 .cls .row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.cls .ln{font-size:15px;color:var(--mut);line-height:1.4;min-height:42px}
-.cls .go{margin-top:4px;min-height:48px;font-size:17px;font-weight:700}
-.dots{background:none;border:0;width:44px;height:44px;border-radius:var(--r-sm);font-size:20px;line-height:1;color:var(--mut)}
+.cls .ln{font-size:var(--fs-md);color:var(--mut);line-height:1.4;min-height:42px}
+.cls .go{margin-top:4px;min-height:48px;font-size:var(--fs-lg);font-weight:700}
+.dots{background:none;border:0;width:44px;height:44px;border-radius:var(--r-sm);font-size:var(--fs-xl);line-height:1;color:var(--mut)}
 .dots:hover{background:var(--c-bg)}
-.newc{border:2px dashed var(--c-control);border-radius:var(--r-xl);min-height:150px;background:transparent;font-weight:700;font-size:16px;color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.newc{border:2px dashed var(--c-control);border-radius:var(--r-xl);min-height:150px;background:transparent;font-weight:700;font-size:var(--fs-md);color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .fstack{display:flex;flex-direction:column;gap:18px}
 .fgroup{display:flex;flex-direction:column;gap:12px}
 .fhead{display:flex;align-items:center;gap:8px;position:relative}
-.ftog{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:0 14px;font-weight:700;font-size:17px;text-align:left}
+.ftog{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:0 14px;font-weight:700;font-size:var(--fs-lg);text-align:left}
 .ftog .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ftog small{color:var(--mut);font-weight:500;font-size:14px;white-space:nowrap}
+.ftog small{color:var(--mut);font-weight:500;font-size:var(--fs-sm);white-space:nowrap}
 .ftog .chev{display:inline-block;transition:transform .15s;color:var(--mut)}
 .ftog[aria-expanded=false] .chev{transform:rotate(-90deg)}
 .fgroup .grid{padding-left:14px;border-left:3px solid var(--line)}
-.fempty{color:var(--mut);font-size:15px;padding:2px 4px 6px}
+.fempty{color:var(--mut);font-size:var(--fs-md);padding:2px 4px 6px}
 .setc{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
 .setc .hd{display:flex;gap:12px;align-items:center}
 .tile{flex:none;width:44px;height:44px;border-radius:var(--r-lg)}
@@ -47,9 +47,9 @@ h1{font-size:38px;letter-spacing:-.01em}
 
 /* Classes / Teams tabs */
 .seg.tabs{align-self:flex-start;background:#fff}
-.seg.tabs button{min-height:52px;padding:0 30px;font-size:17px}
+.seg.tabs button{min-height:52px;padding:0 30px;font-size:var(--fs-lg)}
 .ta-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 18px}
-.ta-top h2{font-size:24px}
+.ta-top h2{font-size:var(--fs-2xl)}
 .ta-top .pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
 .ta-top select{width:auto;min-width:200px;max-width:100%;font-weight:700}
 .ta-cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
@@ -58,70 +58,70 @@ h1{font-size:38px;letter-spacing:-.01em}
 .ta-side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:var(--r-lg);padding:10px 12px;background:#fff}
-.tcard-ic{width:56px;height:56px;border-radius:var(--r-lg);border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
-.tcard-nm{font-weight:700;font-size:17px;min-height:44px}
+.tcard-ic{width:56px;height:56px;border-radius:var(--r-lg);border:1px solid var(--line2);background:#fff;font-size:var(--fs-3xl);line-height:1;padding:0}
+.tcard-nm{font-weight:700;font-size:var(--fs-lg);min-height:44px}
 .tcard-sub{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}
 .swrow{display:flex;gap:4px;flex-wrap:wrap}
 .swbtn{width:28px;height:28px;border-radius:var(--r-sm);border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
 .swbtn.on{box-shadow:0 0 0 3px var(--ink)}
 .tcard-score{display:flex;align-items:center;gap:8px;min-width:76px;justify-content:flex-end}
-.tcard-score b{font-family:var(--disp);font-weight:800;font-size:28px;min-width:34px;text-align:right}
-.tcard-score .rk{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);font-weight:800;font-size:14px}
+.tcard-score b{font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);min-width:34px;text-align:right}
+.tcard-score .rk{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);font-weight:800;font-size:var(--fs-sm)}
 .tcard-score .rk.top{background:var(--c-warn-soft);color:var(--c-warn-strong)}
 .tcard-move{display:flex;gap:4px}
 .tcard-move .b{min-width:36px;min-height:36px;padding:0}
 @media(any-pointer:coarse){.tcard-move .b{min-width:44px;min-height:44px}.swrow{gap:6px}.swbtn{width:44px;height:44px}}
 .ta-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
-.ta-empty{padding:20px 4px;color:var(--mut);font-size:16px}
+.ta-empty{padding:20px 4px;color:var(--mut);font-size:var(--fs-md)}
 .copywrap{position:relative;display:inline-flex} /* anchors the copy-teams picker menu */
 .pv{display:flex;flex-direction:column;gap:12px}
-.pv-lbl{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-.pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:var(--r-lg);background:#fff;padding:10px 14px;font-size:18px;font-weight:600;max-width:220px}
-.pvtile .em{font-size:30px;line-height:1}
+.pv-lbl{font-size:var(--fs-sm);font-weight:700;color:var(--mut)}
+.pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:var(--r-lg);background:#fff;padding:10px 14px;font-size:var(--fs-lg);font-weight:600;max-width:220px}
+.pvtile .em{font-size:var(--fs-3xl);line-height:1}
 .pvboard{display:grid;grid-template-columns:34px minmax(0,1fr) 44px;align-items:center;gap:10px}
-.pvboard .rk{font-size:20px;font-weight:800;text-align:center;color:var(--mut)}
-.pvboard .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvboard .rk{font-size:var(--fs-xl);font-weight:800;text-align:center;color:var(--mut)}
+.pvboard .nm{font-weight:700;font-size:var(--fs-md);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pvboard .bar{height:12px;border-radius:var(--r-pill);background:var(--tc);min-width:8px;margin-top:4px}
-.pvboard .pt{font-family:var(--disp);font-weight:800;font-size:24px;text-align:right}
+.pvboard .pt{font-family:var(--disp);font-weight:800;font-size:var(--fs-2xl);text-align:right}
 .icdlg{max-width:680px;width:calc(100% - 24px);max-height:calc(100dvh - 24px);padding:0;overflow:hidden}
 .icdlg[open]{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 24px))}
 .ic-top{display:flex;gap:12px;align-items:center;padding:4px 24px 10px}
-.ic-now{flex:none;width:56px;height:56px;border-radius:var(--r-lg);border:2px solid var(--pri);background:var(--pri-l);font-size:30px;display:flex;align-items:center;justify-content:center}
+.ic-now{flex:none;width:56px;height:56px;border-radius:var(--r-lg);border:2px solid var(--pri);background:var(--pri-l);font-size:var(--fs-3xl);display:flex;align-items:center;justify-content:center}
 .ic-top .inp{flex:1;min-width:0}
 .ic-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 24px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .ic-tabs::-webkit-scrollbar{display:none}
-.ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--line2);background:#fff;font-weight:600;font-size:var(--fs-md);white-space:nowrap;display:flex;align-items:center;gap:6px}
 .ic-tabs button.on{background:var(--dark);border-color:var(--dark);color:#fff}
 .ic-scroll{flex:1;min-height:180px;overflow:auto;border-top:1px solid var(--line);background:var(--c-surface-2)}
 .ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:14px 24px}
 .ic-empty{margin:0;padding:24px;text-align:center;color:var(--mut)}
 .ic-paste{display:flex;gap:8px;align-items:center}
 .ic-paste .inp{flex:1;min-width:0}
-.ic-prev{flex:none;width:44px;height:44px;border-radius:var(--r-md);border:1px solid var(--line2);background:#fff;font-size:26px;display:flex;align-items:center;justify-content:center}
-.ic-note{font-size:13px;color:var(--mut);min-height:18px}
+.ic-prev{flex:none;width:44px;height:44px;border-radius:var(--r-md);border:1px solid var(--line2);background:#fff;font-size:var(--fs-3xl);display:flex;align-items:center;justify-content:center}
+.ic-note{font-size:var(--fs-xs);color:var(--mut);min-height:18px}
 .ic-note.bad{color:var(--c-bad);font-weight:600}
 @media(max-width:560px){.ic-grid{grid-template-columns:repeat(5,1fr);gap:6px;padding:12px}.ic-top,.ic-tabs{padding-left:12px;padding-right:12px}.ic-custom{padding:12px!important}.ic-custom .f{flex:1 1 100%!important}}
-.ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:var(--r-lg);background:#fff;font-size:26px;line-height:1}
+.ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:var(--r-lg);background:#fff;font-size:var(--fs-3xl);line-height:1}
 .ic-grid button.on{border:3px solid var(--pri);background:var(--pri-l)}
 .ic-custom{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:12px 24px 18px;border-top:1px solid var(--line);flex:none;background:#fff}
 .ic-custom .f{display:flex;flex-direction:column;gap:6px;flex:1 1 260px}
 .stand{display:flex;flex-direction:column;gap:4px;margin-top:2px}
-.stand-r{display:grid;grid-template-columns:22px 24px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:15px}
-.stand-rk{font-weight:800;font-size:13px;color:var(--mut);text-align:center}
-.stand-em{font-size:17px;text-align:center}
+.stand-r{display:grid;grid-template-columns:22px 24px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:var(--fs-md)}
+.stand-rk{font-weight:800;font-size:var(--fs-xs);color:var(--mut);text-align:center}
+.stand-em{font-size:var(--fs-lg);text-align:center}
 .stand-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stand-pt{font-weight:800}
-.stand-more{align-self:flex-start;background:none;border:0;padding:0;min-height:28px;color:var(--pri-d);font-weight:700;font-size:14px;text-decoration:underline}
+.stand-more{align-self:flex-start;background:none;border:0;padding:0;min-height:28px;color:var(--pri-d);font-weight:700;font-size:var(--fs-sm);text-decoration:underline}
 @media(any-pointer:coarse){.stand-more{min-height:44px;display:inline-flex;align-items:center;padding:0 4px}}
 @media(max-width:760px){
  .tcard{grid-template-columns:48px minmax(0,1fr) auto}
  .tcard-score{grid-column:2;justify-content:flex-start;min-width:0}
  .tcard-move{grid-column:3;grid-row:2}
- .tcard-ic{width:48px;height:48px;font-size:22px}
+ .tcard-ic{width:48px;height:48px;font-size:var(--fs-xl)}
  .tcard>div:nth-child(2){grid-column:2/4} /* the name box gets the full width, not what is left beside the buttons */
  .ta-side{flex:1 1 100%}
 }
-@media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:30px}.tb{padding:0 12px}}
+@media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:var(--fs-3xl)}.tb{padding:0 12px}}
 @media(max-width:560px){.ta-top .pick{width:100%}.ta-top select{flex:1 1 160px;min-width:0}#taopen{flex:1 1 100%}}
 </style>
 </head>
@@ -133,7 +133,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 <main>
  <div>
   <h1>Today</h1>
-  <div class="mut" style="margin-top:4px;font-size:18px">Pick a class to start, or set up team names and icons.</div>
+  <div class="mut" style="margin-top:4px;font-size:var(--fs-lg)">Pick a class to start, or set up team names and icons.</div>
  </div>
 
  <div class="seg tabs" role="tablist" aria-label="Today sections">
@@ -146,7 +146,7 @@ h1{font-size:38px;letter-spacing:-.01em}
   <section class="sec">
    <div class="lbl">Your classes</div>
    <div class="grid" id="classes"></div>
-   <div class="mut" id="conn" style="font-size:14px"></div>
+   <div class="mut" id="conn" style="font-size:var(--fs-sm)"></div>
   </section>
 
   <section class="sec">
@@ -164,12 +164,12 @@ h1{font-size:38px;letter-spacing:-.01em}
 
   <section class="two">
    <div class="card">
-    <div class="sech" style="margin-bottom:12px"><h3 style="font-size:20px">Starter sets</h3><button class="b" id="allst">See all</button></div>
+    <div class="sech" style="margin-bottom:12px"><h3 style="font-size:var(--fs-xl)">Starter sets</h3><button class="b" id="allst">See all</button></div>
     <div class="shelf" id="shelf"></div>
    </div>
    <div class="card bk" id="bk">
-    <div class="t" style="font-weight:800;font-size:17px" id="bkt"></div>
-    <div class="mut" style="margin:6px 0 10px;font-size:15px" id="bkd"></div>
+    <div class="t" style="font-weight:800;font-size:var(--fs-lg)" id="bkt"></div>
+    <div class="mut" style="margin:6px 0 10px;font-size:var(--fs-md)" id="bkd"></div>
     <div style="display:flex;gap:8px"><button class="b pri" id="bkup" style="flex:1">Back up now</button><button class="b" id="rst" style="flex:1">Restore</button></div>
     <input type="file" id="restore" accept=".json,application/json" hidden>
    </div>
@@ -182,7 +182,7 @@ h1{font-size:38px;letter-spacing:-.01em}
    <div>
     <div class="lbl">Team names &amp; icons</div>
     <h2 id="taname">Teams</h2>
-    <div class="mut" id="tameta" style="margin-top:4px;font-size:15px"></div>
+    <div class="mut" id="tameta" style="margin-top:4px;font-size:var(--fs-md)"></div>
    </div>
    <div class="pick">
     <label class="lbl" for="taclass">Class</label>
@@ -193,7 +193,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 
   <div class="ta-cols">
    <section class="card ta-main">
-    <div class="sech"><h3 style="font-size:21px">Teams</h3><span class="mut" id="tacount" style="font-weight:600"></span></div>
+    <div class="sech"><h3 style="font-size:var(--fs-xl)">Teams</h3><span class="mut" id="tacount" style="font-weight:600"></span></div>
     <div class="ta-list" id="talist"></div>
     <div class="ta-foot">
      <button class="b" id="taadd">+ Add team</button>
@@ -216,7 +216,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     </section>
     <section class="card">
      <div class="lbl">Good to know</div>
-     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here. “Copy to another class…” reuses these teams in a second period; a team that is already there keeps its points.</div>
+     <div class="mut" style="font-size:var(--fs-md);line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here. “Copy to another class…” reuses these teams in a second period; a team that is already there keeps its points.</div>
     </section>
    </aside>
   </div>
@@ -282,7 +282,7 @@ function renderClasses() {
     }
     c.append(go); box.append(c);
   });
-  box.append(el('button', { className: 'newc', onclick: addClass }, el('span', { textContent: '+', style: 'font-size:28px;line-height:1' }), document.createTextNode('New class')));
+  box.append(el('button', { className: 'newc', onclick: addClass }, el('span', { textContent: '+', style: 'font-size:var(--fs-3xl);line-height:1' }), document.createTextNode('New class')));
 }
 function classMenu(p, card, e) {
   e.stopPropagation(); const had = menu; closeMenu(); if (had && had.dataset.code === p.code) return;
@@ -307,7 +307,7 @@ const fcoll = () => { try { return JSON.parse(store.do_fcollapsed || '{}') || {}
 function setCard(s) {
   const c = el('div', { className: 'card setc' });
   const tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
-  const hd = el('div', { className: 'hd' }, tile, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:17px;line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:14px' })));
+  const hd = el('div', { className: 'hd' }, tile, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:var(--fs-lg);line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:var(--fs-sm)' })));
   const mv = el('button', { className: 'b', title: 'Move to a folder', 'aria-label': 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' }, icoEl('folder'));
   mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
   const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
@@ -356,7 +356,7 @@ async function renderShelf() {
   if (!left.length) { box.append(el('div', { className: 'mut', textContent: 'You have added every starter set.' })); return; }
   left.slice(0, 3).forEach(st => {
     const tile = el('div', { className: 'tile' }); tile.style.background = tileOf({ id: st.id });
-    const t = el('div', {}, tile, el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: st.name, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: st.questions.length + ' questions · ' + st.subject, style: 'font-size:13px' })));
+    const t = el('div', {}, tile, el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: st.name, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: st.questions.length + ' questions · ' + st.subject, style: 'font-size:var(--fs-xs)' })));
     const b = el('button', { className: 'b line2', textContent: 'Add' }); b.onclick = () => { addSet(st.name, st.questions); toast('Added "' + st.name + '".'); renderSets(); renderShelf(); };
     t.append(b); box.append(t);
   });
@@ -492,7 +492,7 @@ function renderTeamsTab() {
     nm.setAttribute('aria-label', 'Team name');
     nm.oninput = () => { t.name = nm.value; editTeams(); };
     nm.onchange = () => { if (!nm.value.trim()) { t.name = 'Team'; nm.value = 'Team'; editTeams(); } };
-    const sub = el('div', { className: 'tcard-sub' }, el('span', { className: 'mut', textContent: members ? members + ' student' + (members === 1 ? '' : 's') : 'No students', style: 'font-size:14px' }));
+    const sub = el('div', { className: 'tcard-sub' }, el('span', { className: 'mut', textContent: members ? members + ' student' + (members === 1 ? '' : 's') : 'No students', style: 'font-size:var(--fs-sm)' }));
     const sw = el('div', { className: 'swrow' });
     TEAM_COLORS.forEach(col => {
       const b = el('button', { className: 'swbtn' + (col.toLowerCase() === t.color.toLowerCase() ? ' on' : ''), title: 'Use this colour', onclick: () => { t.color = col; editTeams(); renderTeamsTab(); } });
@@ -532,7 +532,7 @@ function renderPreview() {
       el('div', { className: 'pt', textContent: x.score }));
     board.append(r);
   });
-  if (ranked.length > 4) board.append(el('div', { className: 'mut', style: 'font-size:14px', textContent: '+' + (ranked.length - 4) + ' more on the projector' }));
+  if (ranked.length > 4) board.append(el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: '+' + (ranked.length - 4) + ' more on the projector' }));
 }
 const RECENT_KEY = 'do_recent_icons';
 const recentIcons = () => { try { return (JSON.parse(store[RECENT_KEY] || '[]') || []).filter(x => typeof x === 'string').slice(0, 14); } catch { return []; } };

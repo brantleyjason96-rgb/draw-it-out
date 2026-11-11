@@ -33,7 +33,7 @@ const SE = (() => {
     d.cards.forEach((k, i) => {
       const inp = el('input', { className: 'inp', value: k.text, maxLength: 60, placeholder: 'Card text' }); inp.setAttribute('aria-label', 'Card ' + (i + 1) + ' text');
       inp.oninput = () => { k.text = inp.value; touch(); };
-      const sel = el('select', { className: 'inp', style: 'flex:none;width:130px;font-size:14px' }); sel.setAttribute('aria-label', 'Idea for card ' + (i + 1));
+      const sel = el('select', { className: 'inp', style: 'flex:none;width:130px;font-size:var(--fs-sm)' }); sel.setAttribute('aria-label', 'Idea for card ' + (i + 1));
       [['', 'No idea'], ...d.ideas.map(x => [x, x])].forEach(([v, t]) => sel.append(el('option', { value: v, textContent: t }))); sel.value = d.ideas.includes(k.idea) ? k.idea : '';
       sel.onchange = () => { k.idea = sel.value; touch(); };
       const x = el('button', { className: 'b sq danger', title: 'Remove card' }, icoEl('x')); x.setAttribute('aria-label', 'Remove card ' + (i + 1));
@@ -49,7 +49,7 @@ const SE = (() => {
       x.onclick = () => { d.ideas.splice(i, 1); d.cards.forEach(k => { if (k.idea === n) k.idea = ''; }); touch(true); };
       chips.append(el('span', { className: 'ichip' }, document.createTextNode(n), x));
     });
-    if (!d.ideas.length) chips.append(el('span', { className: 'mut', textContent: 'No ideas yet. Add one, like “Vocabulary”, then tag cards with it.', style: 'font-size:14px' }));
+    if (!d.ideas.length) chips.append(el('span', { className: 'mut', textContent: 'No ideas yet. Add one, like “Vocabulary”, then tag cards with it.', style: 'font-size:var(--fs-sm)' }));
     const ni = el('input', { className: 'inp', maxLength: 30, placeholder: 'New idea' }); ni.setAttribute('aria-label', 'New idea name');
     const add = () => { const v = SK.str(ni.value, 30); if (!v || d.ideas.includes(v) || d.ideas.length >= 8) return; d.ideas.push(v); touch(true); const f = E.ideas.querySelector('input'); if (f) f.focus(); };
     ni.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); add(); } };
@@ -62,7 +62,7 @@ const SE = (() => {
     const fb = el('select', { className: 'inp' }); fb.setAttribute('aria-label', 'When students see if they are right');
     [['reveal', 'Only when I press Reveal answers'], ['now', 'Right away, as they place each card']].forEach(([v, t]) => fb.append(el('option', { value: v, textContent: t }))); fb.value = d.fb;
     fb.onchange = () => { d.fb = fb.value; touch(); };
-    E.opts.append(tg, el('div', { className: 'mut', textContent: 'Show students if they are right', style: 'font-size:14px;margin-top:2px' }), fb);
+    E.opts.append(tg, el('div', { className: 'mut', textContent: 'Show students if they are right', style: 'font-size:var(--fs-sm);margin-top:2px' }), fb);
   }
 
   // answer key board: drag each sticky note into the lane where it belongs
@@ -89,7 +89,7 @@ const SE = (() => {
     const pile = el('div', { className: 'spile' });
     SK.order(d.cards, 'preview', d.shuffle).forEach(k => pile.append(SK.note({ id: k.id, text: k.text || '(empty card)' }, 'still')));
     dev.append(qb, lanes, pile, el('div', { className: 'dock' }, el('span', { textContent: '0 of ' + d.cards.length + ' placed' }), el('span', { textContent: d.shuffle ? 'Cards are shuffled for each student' : 'Cards stay in this order' })));
-    box.append(dev, el('div', { className: 'mut', textContent: 'The answer key and the ideas are never sent to students.', style: 'font-size:15px;margin-top:10px' }));
+    box.append(dev, el('div', { className: 'mut', textContent: 'The answer key and the ideas are never sent to students.', style: 'font-size:var(--fs-md);margin-top:10px' }));
   }
   function setView(v) {
     view = v; c.el.key.hidden = v !== 'key'; c.el.stu.hidden = v !== 'stu';

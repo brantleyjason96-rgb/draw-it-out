@@ -1,5 +1,5 @@
 /* Sticky notes for sort questions. Used by the student page, the question editor and the projector. */
-.nc{background:var(--c-note);color:var(--c-note-ink);border-radius:var(--r-sm);padding:8px 10px;box-shadow:var(--sh-1);font-size:15px;line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:break-word;hyphens:manual}
+.nc{background:var(--c-note);color:var(--c-note-ink);border-radius:var(--r-sm);padding:8px 10px;box-shadow:var(--sh-1);font-size:var(--fs-md);line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:break-word;hyphens:manual}
 .nc small{display:block;font-size:var(--fs-xs);opacity:.85;margin-top:2px}
 .nc.still{cursor:default}
 .nc.ghost{position:fixed;z-index:1000;pointer-events:none;transform:rotate(-2deg);box-shadow:var(--sh-2);opacity:.95;margin:0}
@@ -9,6 +9,6 @@
 .nc .where{display:block;font-size:var(--fs-sm);font-weight:700;color:var(--c-bad-strong);margin-top:2px}
 /* right or wrong is never colour alone: a tick or a cross sits in the corner of the note */
 .nc.right,.nc.wrong{position:relative;padding-right:36px}
-.nc.right::after,.nc.wrong::after{position:absolute;top:6px;right:8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:800;line-height:1;color:#fff}
+.nc.right::after,.nc.wrong::after{position:absolute;top:6px;right:8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-sm);font-weight:800;line-height:1;color:#fff}
 .nc.right::after{content:'✓';background:var(--c-good)}
 .nc.wrong::after{content:'✕';background:var(--c-bad)}
