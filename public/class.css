@@ -111,7 +111,9 @@ body.scores-off #scores{display:none}
  .tb{padding:0 12px;gap:8px}.tb .grp{gap:6px}.tb .b{padding:0 10px;font-size:var(--fs-sm)}.cpick{font-size:var(--fs-md)}.stat{font-size:var(--fs-sm)}.code{font-size:var(--fs-lg)}
  #freeze{min-width:0}
 }
-@media(max-width:900px){#proj .lg{display:none}#stoggle{padding:0 8px}}
+.tsep{width:1px;height:28px;background:var(--c-dark-line);flex:none}
+.tb .code{margin-left:6px}
+@media(max-width:1000px){.tb .bl{display:none}#stoggle{padding:0 8px}}
 @media(max-width:1100px){
  #scores{position:fixed;top:68px;right:0;bottom:0;width:min(340px,88vw);z-index:30;box-shadow:var(--sh-3)}
  body:not(.scores-on) #scores{display:none}

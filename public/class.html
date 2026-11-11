@@ -18,17 +18,18 @@
  <!-- top bar -->
  <div class="tb">
   <div class="grp">
-   <a class="b dk" href="/teacher" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>Today</a>
+   <a class="b dk" href="/teacher" style="text-decoration:none" title="Back to Today" aria-label="Back to Today"><svg data-i="back"></svg><span class="bl">Today</span></a>
    <button class="b dk cpick" id="cpick">3rd Hour <svg data-i="chev" class="sm"></svg></button>
+   <span class="tsep" aria-hidden="true"></span>
+   <button class="b dk" id="join" title="Show the QR code students scan to join"><span class="bl">Join code</span><span class="code" id="code"></span></button>
    <div class="stat"><span class="dotc" id="dot"></span><span id="cnt">Connecting…</span></div>
   </div>
   <div class="grp">
    <span class="chip" id="qtag" hidden style="background:var(--c-warn-soft);color:var(--c-warn-strong)">Quick mode on</span>
-   <button class="b dk" id="join">Join <span class="code" id="code"></span></button>
    <button class="b dk" id="stoggle" aria-expanded="true" title="Show or hide team scores">Scores</button>
-   <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go"><svg data-i="snow"></svg> Freeze</button>
-   <button class="b sky" id="proj"><span class="lg">Open </span>Projector</button>
-   <button class="b dk" id="more">More <svg data-i="chev" class="sm"></svg></button>
+   <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go" aria-label="Freeze the class"><svg data-i="snow"></svg><span class="bl">Freeze</span></button>
+   <button class="b sky" id="proj" title="Open the projector view in a new window" aria-label="Open the projector view"><svg data-i="screen"></svg><span class="bl">Projector</span></button>
+   <button class="b dk" id="more" title="More" aria-label="More"><span class="bl">More</span><svg data-i="dots"></svg></button>
   </div>
  </div>
  <div id="frzbar" hidden role="status"><span><svg data-i="snow"></svg> Class is frozen — students can’t draw.</span><button class="b sm" id="frzoff">Unfreeze</button></div>
@@ -375,7 +376,7 @@ function freezeMenu(btn) {
 }
 function freezeUI() {
   const b = $('#freeze'); b.classList.toggle('on', S.frozen); b.setAttribute('aria-pressed', S.frozen ? 'true' : 'false');
-  b.replaceChildren(icoEl('snow'), S.frozen ? ' Frozen' : ' Freeze');
+  b.replaceChildren(icoEl('snow'), el('span', { className: 'bl', textContent: S.frozen ? 'Frozen' : 'Freeze' })); b.title = S.frozen ? 'Frozen. Press to unfreeze.' : 'Freeze the class: every student\'s screen stops until you let go';
   $('#frzbar').hidden = !S.frozen; $('#frzrow').hidden = !S.frozen;
   const p = $('#pfreeze'); if (p) { p.classList.toggle('on', S.frozen); p.replaceChildren(icoEl('snow'), ...(S.frozen ? [icoEl('x', 'sm')] : [])); }
 }
