@@ -10,8 +10,8 @@
 <style>
 /* join screen: one calm card, big code field, visible labels, clear focus ring */
 body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,var(--c-primary-tint) 0,var(--bg) 320px) no-repeat}
-#join .card{max-width:400px;margin:clamp(16px,8vh,72px) auto;padding:28px 24px 20px;text-align:center;border-radius:20px;border-color:var(--c-primary-line);box-shadow:var(--sh-2)}
-#join .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 18px;font-weight:700;font-size:15px;color:var(--c-question);letter-spacing:.02em}
+#join .card{max-width:400px;margin:clamp(12px,4vh,72px) auto;padding:28px 24px 20px;text-align:center;border-radius:20px;border-color:var(--c-primary-line);box-shadow:var(--sh-2)}
+#join .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 10px;font-weight:700;font-size:15px;color:var(--c-question);letter-spacing:.02em}
 #join .brand svg{width:32px;height:32px;flex:none}
 #join h1{margin:0 0 4px;font-size:28px;line-height:1.15}
 #join #jh{color:var(--c-muted);margin:0 0 16px;font-size:16px}
@@ -57,7 +57,9 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #pick button small{display:block;font-weight:400;color:var(--mut);font-size:13px}
 #pick button .em{font-size:30px;display:block}
 #pick button:disabled{opacity:.4;cursor:not-allowed}
-#pick .back{grid-column:1/-1;min-height:40px;font-size:15px;font-weight:400;border-style:dashed}
+#pick button.on{position:relative;background:var(--c-primary-soft);box-shadow:0 0 0 3px var(--c-ink)}
+#pick button.on::after{content:'✓';position:absolute;top:2px;right:8px;font-size:var(--fs-lg);font-weight:800;color:var(--c-ink)}
+#pick .back{grid-column:1/-1;min-height:44px;font-size:15px;font-weight:400;border-style:dashed}
 #tm{display:block;width:fit-content;border-radius:99px;padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:#fff;border:2px solid rgba(255,255,255,.4)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;flex-wrap:wrap}
 .seg button{border:0;background:#fff;color:var(--ink);padding:8px 12px;min-height:44px}
@@ -221,7 +223,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
    <h1>Join class</h1>
    <p id="jh">Type your class code</p>
    <label for="code">Class code</label>
-   <input id="code" maxlength="10" placeholder="e.g. ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <input id="code" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
    <label for="name">Nickname</label>
    <input id="name" maxlength="20" placeholder="Your nickname (no last names)" autocomplete="off" hidden>
    <div id="pick" hidden></div>
@@ -332,7 +334,7 @@ function renderPick(m) {
 // quick teams (no class list): tap a team, nickname optional
 function renderQuick() {
   const box = $('#pick'); box.innerHTML = ''; qteam = null;
-  quick.forEach(t => { const b = pickBtn([t.emoji, t.name], '', t.color, () => { qteam = t.id; [...box.children].forEach(x => (x.style.background = '#fff')); b.style.background = '#dbeafe'; $('#err').textContent = ''; }); box.append(b); });
+  quick.forEach(t => { const b = pickBtn([t.emoji, t.name], '', t.color, () => { qteam = t.id; [...box.children].forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); }); b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); $('#err').textContent = ''; }); box.append(b); });
 }
 let target0 = '';
 // A refresh (or the tab being closed and reopened by the browser) must not send a student back through the join steps.
