@@ -216,3 +216,13 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 #sres .sstats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 #sres .sstat .v{font-size:var(--fs-2xl)}
 #sres .sstat .v.sm{font-size:var(--fs-lg)}
+
+/* V17: the demo bar is one thin line */
+#demobar{flex-wrap:nowrap;padding:8px 16px;gap:16px;min-height:0}
+#demobar .dtitle{flex:none;font-size:var(--fs-sm)}
+#demobar .dsteps{display:flex;gap:8px;flex:1;justify-content:center;min-width:0}
+#demobar .dstep{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--c-dark-line);border-radius:var(--r-pill);font-size:var(--fs-sm);white-space:nowrap}
+#demobar .dstep b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--c-dark-2);font-size:var(--fs-xs)}
+#demobar .dstep.done{border-color:var(--c-good-on-dark);color:var(--c-good-on-dark)}
+#demobar .b{min-height:40px}
+@media(max-width:1000px){#demobar .dsteps{display:none}#demobar{justify-content:space-between}}

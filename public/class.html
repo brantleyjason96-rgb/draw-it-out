@@ -167,7 +167,8 @@
 </dialog>
 
 <div id="demobar" hidden>
- <span><b>Demo mode.</b> <span class="dlong">Eight practice students are drawing and tapping red, amber or green. Send a question, click a drawing (click up to three to show them side by side), press <svg data-i="check" class="sm"></svg>, try <b><svg data-i="snow" class="sm"></svg> Freeze</b>, then open <b>How the class felt</b> in More. Nothing here is saved.</span><span class="dshort">Practice students, nothing saved.</span></span>
+ <span class="dtitle"><b>Demo mode.</b> Practice students, nothing saved.</span>
+ <span class="dsteps" id="dsteps" aria-label="Things to try"></span>
  <a class="b pri" href="/teacher" style="text-decoration:none">Start my real class</a>
 </div>
 <div id="toast" hidden></div>
@@ -301,8 +302,15 @@ function onmsg(m) {
     case 'freeze': S.frozen = m.on; ui(); toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break;
   }
 }
+const DSTEPS = ['Send the next question', 'Click a drawing', 'Give a point'], DDONE = [false, false, false];
+function demoStep(i) { if (DDONE[i]) return; DDONE[i] = true; renderDemoSteps(); }
+function renderDemoSteps() {
+  $('#dsteps').replaceChildren(...DSTEPS.map((t, i) => el('span', { className: 'dstep' + (DDONE[i] ? ' done' : '') }, DDONE[i] ? icoEl('check', 'sm') : el('b', { textContent: i + 1 }), t)));
+}
+renderDemoSteps();
 function award(s) {
   if (!s.team) return toast('Put this student on a team first.');
+  demoStep(2);
   ws.send({ t: 'award', id: s.id, on: !s.aw });
 }
 function setTeam(s, team) { ws.send({ t: 'team', id: s.id, team }); } // the server updates the class list entry too, then tells everyone
@@ -348,6 +356,7 @@ function applyPulseFilter() {
 // ---- the drawings on the projector: click to add, up to 3 side by side ----
 function pick(id) {
   if (!S.stu.get(id)) return;
+  demoStep(1);
   let picks = S.picks.filter(x => S.stu.has(x));
   if (picks.includes(id)) picks = picks.filter(x => x !== id);
   else {
@@ -480,7 +489,7 @@ function renderScores() {
 // ---- question rail ----
 let cur = +store.do_cur; const qs = () => activeSet().questions;
 const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
-function go(i) { if (i < 0 || i >= qs().length) return; foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
+function go(i) { if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
   fillSetSelect($('#setsel'), activeSet().id);
