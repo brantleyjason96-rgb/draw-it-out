@@ -484,7 +484,7 @@ function pulseSummary() {
     const p = PULSES[k];
     const b = el('button', { className: 'pb' + (pulseFilter === k ? ' on' : ''), textContent: p.e + ' ' + c[k] });
     b.style.setProperty('--pc', p.c); b.style.setProperty('--pcs', p.soft);
-    b.title = c[k] + ' said ' + p.n.toLowerCase() + (pulseFilter === k ? ' — click to show the whole class again' : ' — click to show only these');
+    b.title = c[k] + ' said “' + p.n + '”' + (pulseFilter === k ? ' — click to show the whole class again' : ' — click to show only these');
     b.setAttribute('aria-pressed', pulseFilter === k ? 'true' : 'false');
     b.onclick = () => { pulseFilter = pulseFilter === k ? null : k; applyPulseFilter(); pulseSummary(); };
     box.append(b);
@@ -777,7 +777,7 @@ function drawReport() {
     el('div', { className: 'big', textContent: pct + '%' }),
     el('div', { style: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px' },
       el('div', { className: 'r', textContent: 'The class felt ' + readOf(pct) }),
-      el('div', { className: 'mut', style: 'font-size:14px', textContent: rows.length + (rows.length === 1 ? ' question' : ' questions') + ' · ' + S.stu.size + ' students · ' + tot.g + ' got it, ' + tot.y + ' getting there, ' + tot.r + ' stuck' }),
+      el('div', { className: 'mut', style: 'font-size:14px', textContent: rows.length + (rows.length === 1 ? ' question' : ' questions') + ' · ' + S.stu.size + ' students · ' + tot.g + ' understand, ' + tot.y + ' almost, ' + tot.r + ' need help' }),
       stackBar(tot)));
   box.append(head);
   if (rows.length > 1) {
@@ -786,7 +786,7 @@ function drawReport() {
   }
   const list = el('div', {}, el('div', { className: 'lbl', textContent: 'Question by question', style: 'margin-bottom:4px' }));
   rows.forEach(r => {
-    const meta = [r.g + ' got it', r.y + ' getting there', r.r + ' stuck'];
+    const meta = [r.g + ' understand', r.y + ' almost', r.r + ' need help'];
     if (r.none) meta.push(r.none + ' no answer');
     if (r.live) meta.push('in progress');
     list.append(el('div', { className: 'repq' },
@@ -811,7 +811,7 @@ function reportPeople(box, rows) {
   if (need.length) {
     const sec = el('div', {}, el('div', { className: 'lbl', textContent: 'Who to check in with', style: 'margin-bottom:6px' }));
     need.slice(0, 12).forEach(([id, t]) => {
-      const why = t.last === 'r' && t.r >= 2 ? 'stuck on ' + t.r + ' questions' : t.last === 'r' ? 'stuck on the last question' : 'wobbly on ' + (t.r + t.y);
+      const why = t.last === 'r' && t.r >= 2 ? 'needed help on ' + t.r + ' questions' : t.last === 'r' ? 'needed help on the last question' : 'wobbly on ' + (t.r + t.y);
       sec.append(el('div', { style: 'display:flex;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line)' },
         el('span', { className: 'pchip', textContent: PULSES[t.last].e + ' ' + PULSES[t.last].n, style: 'background:' + PULSES[t.last].soft + ';color:' + PULSES[t.last].c }),
         el('b', { textContent: nameOf(id), style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }),
@@ -841,7 +841,7 @@ function reportCSV() {
     ['Class', per().name], ['Code', code], ['Date', new Date().toISOString().slice(0, 16).replace('T', ' ')],
     ['Questions', rows.length], ['Students', S.stu.size], ['Overall confidence', pulsePct(tot.g, tot.y, tot.r) + '%'],
     [],
-    ['Question #', 'Question', 'Got it', 'Getting there', 'Stuck', 'No answer', 'Confident %'],
+    ['Question #', 'Question', 'I understand', 'Almost', 'I need help', 'No answer', 'Confident %'],
   ];
   rows.forEach(r => out.push([r.n, r.q, r.g, r.y, r.r, r.none, pulsePct(r.g, r.y, r.r) + '%']));
   out.push([], ['Student', 'Team', ...rows.map(r => 'Q' + r.n)]);
@@ -856,7 +856,7 @@ function reportCSV() {
 function reportText() {
   const rows = reportRows(), tot = reportTotal(rows), pct = pulsePct(tot.g, tot.y, tot.r);
   const lines = ['How the class felt — ' + per().name + ' (' + new Date().toLocaleDateString() + ')', 'Overall: ' + pct + '% (' + readOf(pct) + ') across ' + rows.length + ' question' + (rows.length === 1 ? '' : 's')];
-  rows.forEach(r => lines.push('  Q' + r.n + ': ' + pulsePct(r.g, r.y, r.r) + '% — ' + r.g + ' got it, ' + r.y + ' getting there, ' + r.r + ' stuck' + (r.none ? ', ' + r.none + ' no answer' : '') + ' — ' + r.q));
+  rows.forEach(r => lines.push('  Q' + r.n + ': ' + pulsePct(r.g, r.y, r.r) + '% — ' + r.g + ' understand, ' + r.y + ' almost, ' + r.r + ' need help' + (r.none ? ', ' + r.none + ' no answer' : '') + ' — ' + r.q));
   const tally = new Map();
   rows.forEach(r => Object.entries(r.by).forEach(([id, c]) => { const t = tally.get(id) || { r: 0, last: null }; t.r += c === 'r' ? 1 : 0; t.last = c; tally.set(id, t); }));
   const need = [...tally.entries()].filter(([, t]) => t.last === 'r' || t.r >= 2).map(([id, t]) => ((S.stu.get(id) ? disp(S.stu.get(id)) : 'A student') + ' (' + t.r + ' red)'));

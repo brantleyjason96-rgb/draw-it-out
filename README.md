@@ -29,8 +29,8 @@ Two kinds of question:
 Three things the teacher runs from the teaching screen (`/class`), all of which reach every student and the projector straight away.
 
 **Pulse — how is it going?**
-- On their drawing, a student taps **🙋 Stuck / 🙂 Getting there / 💡 Got it**. Tap again to clear it, or tap another to change it. Their page is not touched: no marks are added, nothing is handed in.
-- The three buttons live on the right edge of the student's page, clear of the tools. The **How's it going?** label is also the toggle: tapping it folds the three buttons into a slim chip (a dot in their chosen colour shows the last answer stays put), and tapping again brings them back. Each student's folded or open choice is remembered.
+- On their drawing, a student taps **🙋 I need help / 🙂 Almost / 💡 I understand**. Tap again to clear it, or tap another to change it. Their page is not touched: no marks are added, nothing is handed in.
+- The three buttons live on the right edge of the student's page, clear of the tools. The **How is your work?** label is also the toggle: tapping it folds the three buttons into a slim chip (a dot in their chosen colour shows the last answer stays put), and tapping again brings them back. Each student's folded or open choice is remembered.
 - The teacher's card for that student gets an **outline in that colour**, plus a chip that spells it out (never colour alone). The row above the grid shows the class at a glance — `🙋 4 · 🙂 2 · 💡 2 · 1 no answer` — and clicking a colour shows only those students, which is the "who do I go and help" button.
 - Pulse is for drawing questions. It clears when a new question is sent, so a colour always describes the drawing on screen.
 
