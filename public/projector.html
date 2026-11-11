@@ -21,36 +21,51 @@ body:has(#join:not([hidden])) .qbar{font-size:clamp(34px,min(3.6vw,6vh),64px)}
 #who{text-align:center;font-size:clamp(24px,2.4vw,36px);margin-top:10px;color:var(--c-stage-accent)}
 main{max-width:none;display:flex;flex-direction:column;flex:1;min-height:0;width:100%;padding:12px 4vw 8px;margin:0}
 canvas{border:0}
-#lb{display:flex;flex-direction:column;gap:14px;margin-top:10px}
-.lr{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;gap:14px;transition:transform .5s}
-.lr .nm{font-size:34px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lr .rk{font-size:44px;text-align:center;opacity:.8}
-.lr .bar{height:34px;border-radius:var(--r-md);min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
-.lr .pt{font-size:56px;font-weight:800;text-align:right}
-.lr.pop .pt{animation:pop .9s}
-@keyframes pop{30%{transform:scale(1.5);color:var(--c-note)}}
+/* leaderboard: one bar per team in its colour, length = points. Text sits on dark plates, so it reads on every team colour. */
+#lb{flex:1;min-height:0;position:relative;margin-top:.4vh}
+.lr{position:absolute;left:0;right:0;height:calc(100% / var(--n) - 1.4vh);top:calc(var(--i) * 100% / var(--n));display:flex;align-items:center;border-radius:14px;background:var(--c-stage-2);overflow:hidden;transition:top .7s cubic-bezier(.2,.9,.3,1)}
+.lr .fill{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:var(--tc);transition:width .7s cubic-bezier(.2,.9,.3,1)}
+.lr .in{position:relative;z-index:1;display:flex;align-items:center;width:100%;gap:1.4vw;padding:0 1.2vw}
+.lr .sp{flex:1}
+.plate{display:flex;align-items:center;gap:.7em;background:rgba(11,18,32,.92);color:#fff;border-radius:99px;padding:0 1.1em;height:78%;font-weight:800;font-size:clamp(34px,5.6vh,60px);line-height:1;white-space:nowrap;min-width:0}
+.plate .rk{display:grid;place-items:center;flex:none;width:1.25em;height:1.25em;border-radius:50%;background:#fff;color:var(--c-stage);font-size:.8em}
+.plate .tn{overflow:hidden;text-overflow:ellipsis}
+.plate.sc{font-family:var(--font-display);font-size:clamp(34px,6.4vh,68px);padding:0 .9em;font-variant-numeric:tabular-nums}
+.plate .crown{display:inline-flex;flex:none}
+.plate .crown svg{width:1em;height:1em;fill:none;stroke:var(--c-warn-on-dark);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#lb.even .lr .fill{width:100%;opacity:.28}
+.lr.pop .sc{animation:pop .9s}
+@keyframes pop{30%{transform:scale(1.25);color:var(--c-note)}}
+#lbnote{flex:none;text-align:center;font-size:clamp(28px,4vh,46px);font-weight:700;color:var(--c-stage-accent);padding:1.2vh 0 0}
 /* sort questions: one student's lanes, or the whole class's results */
 #sb{display:grid;gap:14px;margin-top:10px}
 #sb .slane{background:#fff;color:var(--c-ink);border-radius:var(--r-xl);padding:14px;display:flex;flex-direction:column;gap:10px;min-height:300px}
 #sb .slane h3{margin:0;font-size:30px;text-align:center}
 #sb .nc{font-size:26px;padding:12px 14px;cursor:default}
-#sm{display:flex;flex-direction:column;gap:12px;margin-top:6px}
-#sm h2{margin:10px 0 0;font-size:26px;color:var(--c-stage-accent)}
-.sr{display:grid;grid-template-columns:minmax(0,1fr) 110px;align-items:center;gap:6px 16px}
-.sr .nm{font-size:28px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr .bar{grid-column:1;height:30px;border-radius:var(--r-md);min-width:12px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
-.sr .pt{grid-column:2;grid-row:1/3;font-size:44px;font-weight:800;text-align:right}
-/* one drawing, or two or three side by side */
-#boards{display:grid;gap:18px;margin-top:8px;flex:1;min-height:200px;grid-auto-rows:100%}
-#boards .bp{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
-#boards .bph{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 12px;min-height:40px;font-size:clamp(22px,2.4vw,34px);color:var(--c-stage-accent)}
-#boards .bph b{font-weight:700;color:var(--c-stage-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#boards .bpc{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
-body.multi #boards .bpc{align-items:flex-start}
-body.multi #boards{padding-top:9vh}
-body:not(.multi) #boards .bpc{align-items:center}
-#boards canvas{display:block;border:0;border-radius:var(--r-lg);background:var(--c-canvas-gap)}
-body.multi #boards .bph{font-size:clamp(20px,1.9vw,28px)}
+#sm{flex:1;min-height:0;display:flex}
+/* class results: one neutral colour, no red or green on the screen the class is looking at */
+.res{flex:1;min-height:0;display:grid;gap:3vw}
+.res>div{display:flex;flex-direction:column;justify-content:space-evenly;min-height:0}
+.res h2{margin:0;font-size:clamp(30px,4.6vh,52px);font-weight:800;color:var(--c-stage-accent)}
+.rbar .t{display:flex;align-items:center;gap:.5em;font-size:clamp(26px,4.2vh,46px);font-weight:600;margin-bottom:.35vh}
+.rbar .t .ok{display:inline-grid;place-items:center;width:1.3em;height:1.3em;border-radius:50%;background:var(--c-stage-accent);color:var(--c-stage);flex:none}
+.rbar .t .ok svg{width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.rbar .trk{display:flex;align-items:center;gap:1vw}
+.rbar .b{flex:1;height:3.8vh;min-height:20px;border-radius:99px;background:var(--c-stage-3);overflow:hidden}
+.rbar .b i{display:block;height:100%;background:var(--c-stage-accent);border-radius:99px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.rbar.best .b i{background:#fff}
+.rbar .pct{width:3.2em;text-align:right;font-weight:800;font-size:clamp(32px,5.4vh,60px);font-variant-numeric:tabular-nums}
+/* one drawing, or two or three: tiles fill the height under the question, each name is a label attached to its tile.
+   Three drawings sit two over one, because student pages are wide and a third column would leave most of each tile empty. */
+#boards{display:grid;gap:1.6vw;margin-top:4px;flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
+#boards.three{grid-template-rows:repeat(2,minmax(0,1fr))}
+#boards .bp{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--c-stage-2);border:2px solid var(--c-stage-3);border-radius:14px;overflow:hidden}
+#boards .bp.c3{grid-column:1/-1;justify-self:center;width:calc(50% - .8vw)}
+#boards .bph{flex:none;display:flex;align-items:center;gap:.6em;padding:.4em .8em;background:var(--c-stage-3);font-size:clamp(20px,2.7vh,30px);color:#fff}
+#boards .bph b{font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#boards .bph .pchip{margin-left:auto;font-size:.82em}
+#boards .bpc{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--c-stage-3)}
+#boards canvas{display:block;border:0;border-radius:var(--r-xs);background:var(--c-canvas-gap)}
 .pchip{font-size:clamp(18px,1.8vw,28px);font-weight:700;border-radius:var(--r-pill);padding:2px 10px;white-space:nowrap}
 /* the footer is on every view: logo left, how to join right. The question keeps the full width. */
 #foot{flex:none;position:relative;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:2vw;padding:0 3vw;height:var(--fh);background:var(--c-stage-2);border-top:1px solid var(--c-stage-3);font-size:clamp(20px,2.7vh,30px)}
@@ -77,6 +92,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
 <main>
  <div class="qbar" id="q"></div>
  <div id="lb" hidden></div>
+ <div id="lbnote" hidden>First point wins the lead</div>
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
  <div id="boards" hidden></div>
@@ -140,19 +156,22 @@ function makeFlakes() {
 }
 // leaderboard: one persistent row per team so bars slide and rows reorder smoothly
 const rows = new Map(); let prev = {};
+const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg>';
 function board() {
-  const box = $('#lb'), ranked = rankTeams(S.teams, S.scores), max = scoreMax(ranked);
+  const box = $('#lb'), ranked = rankTeams(S.teams, S.scores), max = scoreMax(ranked), zero = ranked.every(x => !x.score);
   const here = new Set(ranked.map(x => x.team.id));
   rows.forEach((r, id) => { if (!here.has(id)) { r.el.remove(); rows.delete(id); } });
+  box.style.setProperty('--n', ranked.length); box.classList.toggle('even', zero); $('#lbnote').hidden = !zero;
   ranked.forEach((x, i) => {
     const t = x.team;
     let r = rows.get(t.id);
-    if (!r) { const el = document.createElement('div'); el.className = 'lr'; el.innerHTML = '<div class="rk"></div><div><div class="nm"></div><div class="bar"></div></div><div class="pt"></div>'; box.append(el); r = { el }; rows.set(t.id, r); }
-    r.el.style.order = i;
-    r.el.querySelector('.rk').textContent = x.leader ? '🏆' : x.rank;
-    r.el.querySelector('.nm').textContent = teamLabel(t);
-    const bar = r.el.querySelector('.bar'); bar.style.background = t.color; bar.style.width = Math.max(2, x.score / max * 100) + '%';
-    r.el.querySelector('.pt').textContent = x.score;
+    if (!r) { const el = document.createElement('div'); el.className = 'lr'; el.innerHTML = '<div class="fill"></div><div class="in"><div class="plate"><span class="rk"></span><span class="tn"></span><span class="crown" hidden>' + CROWN + '</span></div><span class="sp"></span><div class="plate sc"></div></div>'; box.append(el); r = { el }; rows.set(t.id, r); }
+    r.el.style.setProperty('--i', i); r.el.style.setProperty('--tc', t.color);
+    r.el.style.setProperty('--w', zero ? '100%' : Math.max(x.score ? 18 : 0, Math.round(x.score / max * 100)) + '%');
+    r.el.querySelector('.rk').textContent = x.rank;
+    r.el.querySelector('.tn').textContent = teamLabel(t);
+    r.el.querySelector('.crown').hidden = !x.leader;
+    r.el.querySelector('.sc').textContent = x.score;
     if (prev[t.id] !== undefined && x.score > prev[t.id]) { r.el.classList.remove('pop'); void r.el.offsetWidth; r.el.classList.add('pop'); }
     prev[t.id] = x.score;
   });
@@ -168,25 +187,29 @@ function sortBoard(s) {
   const left = sq.cards.filter(c => !s.sort[c.id]).length;
   return left ? left + ' card' + (left === 1 ? '' : 's') + ' still to place' : '';
 }
-// the whole class: how each idea and the hardest cards went
+// the whole class: which ideas are working, and the cards to look at again
 function sortSummary() {
   const box = $('#sm'), m = S.sum; box.textContent = '';
-  const h = t => { const e = document.createElement('h2'); e.textContent = t; return e; };
-  const row = (name, pct) => {
-    const r = document.createElement('div'); r.className = 'sr'; const n = document.createElement('div'); n.className = 'nm'; n.textContent = name;
-    const b = document.createElement('div'); b.className = 'bar'; b.style.width = Math.max(2, pct) + '%'; b.style.background = { good: 'var(--c-good-on-dark)', mid: 'var(--c-warn-on-dark)', bad: 'var(--c-bad-on-dark)' }[SK.tier(pct)];
-    const p = document.createElement('div'); p.className = 'pt'; p.textContent = pct + '%'; r.append(n, b, p); return r;
+  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const bar = (name, pct, best) => {
+    const r = document.createElement('div'); r.className = 'rbar' + (best ? ' best' : '');
+    r.innerHTML = '<div class="t">' + (best ? '<span class="ok" title="Best understood">' + CHECK + '</span>' : '') + '<span class="tx"></span></div><div class="trk"><div class="b"><i></i></div><span class="pct"></span></div>';
+    r.querySelector('.tx').textContent = name; r.querySelector('i').style.width = Math.max(2, pct) + '%'; r.querySelector('.pct').textContent = pct + '%'; return r;
   };
-  box.append(h('Class results · ' + m.n + ' student' + (m.n === 1 ? '' : 's')));
-  if (m.ideas.length) { box.append(h('Ideas')); m.ideas.forEach(i => box.append(row(i.name, i.pct))); }
-  box.append(h('Hardest cards')); m.cards.slice().sort((a, b) => a.pct - b.pct).slice(0, 3).forEach(c => box.append(row(c.text, c.pct)));
+  const col = (title, bars) => { const d = document.createElement('div'), h = document.createElement('h2'); h.textContent = title; d.append(h, ...bars); return d; };
+  const ideas = m.ideas.filter(i => i.pct != null).sort((a, b) => b.pct - a.pct);
+  const res = document.createElement('div'); res.className = 'res'; res.style.gridTemplateColumns = ideas.length ? '1fr 1fr' : '1fr';
+  if (ideas.length) res.append(col('Which ideas are working?', ideas.map((i, k) => bar(i.name, i.pct, k === 0))));
+  res.append(col('Let’s look at these again', m.cards.slice().sort((a, b) => a.pct - b.pct).slice(0, 3).map(c => bar(c.text, c.pct, false))));
+  box.append(res);
 }
 let raf = 0;
 function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
 addEventListener('resize', () => { S.stu.forEach(s => (s.d = true)); draw(); }); // panels grow or shrink with the window
 function paint() {
   raf = 0;
-  $('#q').innerHTML = S.q.question; // server-sanitized: only b/i/u/br
+  const lbOn = S.board && S.teams.length, waiting = !S.q.question && !S.picks.some(id => S.stu.get(id)) && !lbOn;
+  $('#q').innerHTML = S.q.question || (waiting ? 'The next question is coming up' : ''); // server-sanitized: only b/i/u/br
   const sort = S.q.kind === 'sort';
   const picks = S.picks.filter(id => S.stu.get(id));
   const drawings = sort ? [] : picks; // side by side is for drawings; a sort question shows one student
@@ -198,7 +221,7 @@ function paint() {
   $('#sb').hidden = !(one && sort);
   $('#sm').hidden = !sum;
   $('#join').hidden = !!picks.length || !!lb || !!sum;
-  $('#lb').hidden = !lb;
+  $('#lb').hidden = !lb; if (!lb) $('#lbnote').hidden = true;
   if (lb) board();
   if (sum) sortSummary();
   if (drawings.length) paintBoards(drawings);
@@ -236,10 +259,10 @@ function paintBoards(ids) {
       b = { el, wrap: el.querySelector('.bpc'), cv: el.querySelector('canvas'), nm: el.querySelector('b'), chip: el.querySelector('.pchip') };
       panels.set(id, b); S.stu.get(id).d = true;
     }
-    b.el.style.order = i;
+    b.el.style.order = i; b.el.classList.toggle('c3', ids.length === 3 && i === 2);
   });
   // columns first: the canvases are measured against their real width, so a two or three up never looks stretched
-  box.style.gridTemplateColumns = 'repeat(' + ids.length + ',minmax(0,1fr))';
+  box.classList.toggle('three', ids.length === 3); box.style.gridTemplateColumns = ids.length === 3 ? 'repeat(2,minmax(0,1fr))' : 'repeat(' + ids.length + ',minmax(0,1fr))';
   document.body.classList.toggle('multi', ids.length > 1);
   ids.forEach(id => {
     const s = S.stu.get(id), b = panels.get(id);
