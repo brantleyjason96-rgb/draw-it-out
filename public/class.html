@@ -489,7 +489,7 @@ function renderScores() {
 // ---- question rail ----
 let cur = +store.do_cur; const qs = () => activeSet().questions;
 const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
-function go(i) { if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
+function go(i) { if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
   fillSetSelect($('#setsel'), activeSet().id);

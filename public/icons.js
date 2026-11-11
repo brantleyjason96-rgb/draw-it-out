@@ -16,7 +16,7 @@ const ICONS = {
   move: 'M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3', hand: 'M8 13V5.5a1.5 1.5 0 013 0V11M11 10V4.5a1.5 1.5 0 013 0V11M14 10V6a1.5 1.5 0 013 0v7a6 6 0 01-6 6h-1a6 6 0 01-5-3l-2-4a1.5 1.5 0 012.5-1.5L8 13',
   line: 'M5 19L19 5', arrow: 'M5 19L19 5M10 5h9v9', rect: 'M4 6h16v12H4z', ellipse: 'M12 5c5 0 9 3 9 7s-4 7-9 7-9-3-9-7 4-7 9-7z',
   search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-5-5', pin: 'M9 4h6l-1 6 3 3H7l3-3zM12 13v8', folder: 'M3 6h6l2 2h10v11H3z', copy: 'M9 9h11v11H9zM5 15V4h11',
-  front: 'M12 19V5M6 11l6-6 6 6M5 21h14', tri: 'M12 4l9 16H3z', diamond: 'M12 3l9 9-9 9-9-9z', star: 'M12 3l2.7 5.7 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3 1.2-6.2L3 9.5l6.3-.8z', dup: 'M9 9h11v11H9zM5 15V4h11'
+  front: 'M12 19V5M6 11l6-6 6 6M5 21h14', grab: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01', tri: 'M12 4l9 16H3z', diamond: 'M12 3l9 9-9 9-9-9z', star: 'M12 3l2.7 5.7 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3 1.2-6.2L3 9.5l6.3-.8z', dup: 'M9 9h11v11H9zM5 15V4h11'
 };
 function ico(name, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"><path d="' + (ICONS[name] || '') + '"/></svg>'; }
 function icoEl(name, cls) { const t = document.createElement('template'); t.innerHTML = ico(name, cls); return t.content.firstChild; }

@@ -123,23 +123,61 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 }
 @media(max-width:700px){main{padding:20px 16px 32px}h1{font-size:var(--fs-3xl)}.tb{padding:0 12px}}
 @media(max-width:560px){.ta-top .pick{width:100%}.ta-top select{flex:1 1 160px;min-width:0}#taopen{flex:1 1 100%}}
+
+/* ===== V41-V44: top-bar tabs, class cards, question sets, teams ===== */
+.tb .tabs{display:flex;gap:4px;align-self:stretch;margin:0 auto 0 12px}
+.tb .tabs button{border:0;background:none;color:#fff;padding:0 18px;font-weight:600;font-size:var(--fs-md);border-bottom:4px solid transparent;opacity:.8;min-height:44px}
+.tb .tabs button:hover{opacity:1;background:var(--dark2)}
+.tb .tabs button[aria-selected=true]{opacity:1;border-bottom-color:var(--c-focus-on-dark)}
+@media(max-width:700px){.tb{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px 12px}.tb .tabs{order:3;width:100%;margin:0;overflow-x:auto}.tb .tabs button{white-space:nowrap}}
+.cls .row1>div:first-child{min-width:0}
+.codechip{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-pill);padding:2px 12px;background:var(--c-fill);color:var(--c-ink-2);font-weight:700;font-size:var(--fs-sm)}
+.codechip .code{font-family:var(--disp);letter-spacing:.16em;font-size:var(--fs-md)}
+.ticons{display:flex;gap:6px;align-items:center;min-height:36px;flex-wrap:wrap}
+.ticons i{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--c-surface-2);border:2px solid var(--tc);font-style:normal;font-size:var(--fs-md)}
+.link{background:none;border:0;padding:8px 0;min-height:44px;color:var(--c-primary-strong);font-weight:600;text-decoration:underline;cursor:pointer;font-size:var(--fs-sm)}
+.welcome{padding:32px 28px;text-align:center;max-width:560px;margin:8px auto 0;width:100%}
+.welcome h2{font-size:var(--fs-2xl)}
+.welform{display:flex;gap:10px;margin-top:20px}
+.welform .inp{flex:1;min-height:52px;font-size:var(--fs-lg)}
+.wsteps{margin-top:18px;font-size:var(--fs-sm)}
+.setc{padding:14px 18px;overflow:hidden}
+.setc .band{height:10px;margin:-14px -18px 2px}
+.mix{display:flex;gap:6px;flex-wrap:wrap}
+.mix .chip{font-size:var(--fs-xs)}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{min-height:44px;padding:0 16px;border-radius:var(--r-pill);border:1px solid var(--c-control);background:#fff;font-weight:600}
+.filters button[aria-pressed=true]{background:var(--c-ink);color:#fff;border-color:var(--c-ink)}
+.shelf>div{background:#fff;border:1px dashed var(--c-control);border-radius:var(--r-xl);padding:14px 16px}
+.bkrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:36px;padding:16px 0 8px;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.bkrow.stale b{color:var(--amber-d)}
+.ta-emptycard{max-width:560px;margin:8px auto;width:100%;text-align:center;padding:32px 28px}
+.ta-emptycard h2{font-size:var(--fs-3xl)}
+.counts{display:flex;justify-content:center;gap:8px;margin:20px 0 22px;flex-wrap:wrap}
+.counts button{width:56px;height:56px;border-radius:var(--r-lg);border:2px solid var(--c-control);background:#fff;font-weight:800;font-size:var(--fs-xl)}
+.counts button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tcard-move .grab{display:inline-grid;place-items:center;width:36px;height:44px;color:var(--mut);cursor:grab}
+.tcard.dragging{opacity:.4}
+.tcard.over{outline:3px dashed var(--c-focus);outline-offset:2px}
+#tab-sets .menu button,#tamw .menu button{justify-content:flex-start;gap:10px;text-align:left}
 </style>
 </head>
 <body>
 <div class="tb">
  <a class="logo" href="/teacher"><svg width="30" height="30" aria-hidden="true" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</a>
+ <nav class="tabs" role="tablist" aria-label="Today sections">
+  <button role="tab" data-tab="classes" aria-selected="true">Classes</button>
+  <button role="tab" data-tab="sets" aria-selected="false">Question sets</button>
+  <button role="tab" data-tab="teams" aria-selected="false">Teams</button>
+ </nav>
  <div class="grp"><a class="b dk" href="/class?demo=1" style="text-decoration:none">Try the demo</a><a class="b dk" href="/start" style="text-decoration:none">Help</a></div>
 </div>
 <main>
  <div>
-  <h1>Today</h1>
-  <div class="mut" style="margin-top:4px;font-size:var(--fs-lg)">Pick a class to start, or set up team names and icons.</div>
+  <h1 id="pgh">Today</h1>
+  <div class="mut" id="pgs" style="margin-top:4px;font-size:var(--fs-lg)">Pick a class to start, or set up team names and icons.</div>
  </div>
 
- <div class="seg tabs" role="tablist" aria-label="Today sections">
-  <button role="tab" data-tab="classes" aria-selected="true">Classes</button>
-  <button role="tab" data-tab="teams" aria-selected="false">Teams</button>
- </div>
 
  <!-- Classes: everything that is on Today today -->
  <div id="tab-classes" style="display:flex;flex-direction:column;gap:26px">
@@ -149,30 +187,20 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
    <div class="mut" id="conn" style="font-size:var(--fs-sm)"></div>
   </section>
 
+ </div>
+
+ <div id="tab-sets" hidden style="display:flex;flex-direction:column;gap:26px">
   <section class="sec">
    <div class="sech">
     <div class="lbl">Your question sets</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-     <button class="b" id="imp">Import a file</button>
-     <input type="file" id="impfile" accept=".json,application/json" hidden>
-     <button class="b" id="newfolder"><svg data-i="folder"></svg> New folder</button>
-     <button class="b" id="newset">+ New set</button>
-    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
+    <input type="file" id="impfile" accept=".json,application/json" hidden><button id="newfolder" hidden></button>
    </div>
    <div class="grid" id="sets"></div>
   </section>
-
-  <section class="two">
-   <div class="card">
-    <div class="sech" style="margin-bottom:12px"><h3 style="font-size:var(--fs-xl)">Starter sets</h3><button class="b" id="allst">See all</button></div>
-    <div class="shelf" id="shelf"></div>
-   </div>
-   <div class="card bk" id="bk">
-    <div class="t" style="font-weight:800;font-size:var(--fs-lg)" id="bkt"></div>
-    <div class="mut" style="margin:6px 0 10px;font-size:var(--fs-md)" id="bkd"></div>
-    <div style="display:flex;gap:8px"><button class="b pri" id="bkup" style="flex:1">Back up now</button><button class="b" id="rst" style="flex:1">Restore</button></div>
-    <input type="file" id="restore" accept=".json,application/json" hidden>
-   </div>
+  <section class="sec">
+   <div class="sech"><h2 style="font-size:var(--fs-2xl)">Starter sets</h2><div class="filters" id="sfilter" role="group" aria-label="Subject"></div></div>
+   <div class="shelf" id="shelf"></div>
   </section>
  </div>
 
@@ -191,19 +219,19 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
    </div>
   </section>
 
+  <section class="card ta-emptycard" id="taempty" hidden>
+   <h2>How many teams?</h2>
+   <p class="mut" style="margin:6px 0 0">Pick a number. You can rename them and change the icons next.</p>
+   <div class="counts" id="tacounts" role="group" aria-label="Number of teams"></div>
+   <button class="b pri" id="tacreate" style="min-height:52px;padding:0 28px;font-size:var(--fs-lg)">Create 4 teams</button>
+   <div style="position:relative;margin-top:12px"><button class="link" id="tacopyfrom">Copy teams from another class</button></div>
+  </section>
+
   <div class="ta-cols">
    <section class="card ta-main">
-    <div class="sech"><h3 style="font-size:var(--fs-xl)">Teams</h3><span class="mut" id="tacount" style="font-weight:600"></span></div>
+    <div class="sech"><h3 style="font-size:var(--fs-xl)">Teams</h3><span class="mut" id="tacount" style="font-weight:600"></span><span id="tamw" style="position:relative;margin-left:auto"><button class="b ter sq" id="tamenu" aria-haspopup="true" aria-label="More for teams" title="More"><svg data-i="dots"></svg></button></span></div>
     <div class="ta-list" id="talist"></div>
-    <div class="ta-foot">
-     <button class="b" id="taadd">+ Add team</button>
-     <span class="copywrap"><button class="b" id="tacopy" title="Copy the names, icons, colours and order of these teams to another class"><svg data-i="copy"></svg> Copy to another class…</button></span>
-     <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <select class="inp" id="tasize" aria-label="How many teams to create" style="width:auto;min-width:120px"></select>
-      <button class="b" id="tacreate">Create teams</button>
-     </span>
-     <button class="b danger" id="tareset">Reset all scores</button>
-    </div>
+    <div class="ta-foot"><button class="b" id="taadd">+ Add team</button></div>
    </section>
 
    <aside class="ta-side">
@@ -221,6 +249,8 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
    </aside>
   </div>
  </div>
+
+ <div class="bkrow" id="bk"><b id="bkt"></b><span class="mut" id="bkd"></span><span style="flex:1"></span><button class="b sm pri" id="bkup">Back up now</button><button class="b sm" id="rst">Restore</button><input type="file" id="restore" accept=".json,application/json" hidden></div>
 </main>
 
 <dialog id="icondlg" class="icdlg">
@@ -254,33 +284,36 @@ let menu = null;
 const closeMenu = () => { if (menu) { menu.remove(); menu = null; } };
 document.addEventListener('click', e => { if (menu && !menu.contains(e.target) && !e.target.closest('.dots')) closeMenu(); });
 
+function dayName(ms) {
+  const d = new Date(ms), now = new Date(), days = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (days <= 0) return 'today'; if (days === 1) return 'yesterday';
+  return days < 7 ? d.toLocaleDateString(undefined, { weekday: 'long' }) : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function welcomeCard(p) {
+  const f = el('form', { className: 'welform' }), inp = el('input', { className: 'inp', value: '', placeholder: '3rd Hour', maxLength: 40 });
+  inp.setAttribute('aria-label', 'Class name');
+  f.append(inp, el('button', { className: 'b pri', textContent: 'Start class', type: 'submit', style: 'min-height:52px' }));
+  f.onsubmit = e => { e.preventDefault(); const v = inp.value.trim().slice(0, 40); if (v) { p.name = v; savePeriods(); } try { store.do_welcomed = '1'; } catch {} location.href = '/class?code=' + p.code; };
+  return el('div', { className: 'card welcome', style: 'grid-column:1/-1' }, el('h2', { textContent: 'Welcome. Let’s set up your first class.' }), el('p', { className: 'mut', textContent: 'Give it a name your students will recognise.', style: 'margin:6px 0 0' }), f,
+    el('div', { className: 'mut wsteps', textContent: '1 Name your class · 2 Start it · 3 Share the code' }));
+}
 function renderClasses() {
   const box = $('#classes'); box.innerHTML = '';
-  const next = periods.find(p => !(live[p.code] && live[p.code].live)); // the first class that isn't running gets the blue button
+  const fresh = periods.length === 1 && !(store.do_welcomed === '1') && !lastSet(periods[0].code) && !loadTM(periods[0].code).teams.length && !loadTM(periods[0].code).roster.length;
+  if (fresh) { box.append(welcomeCard(periods[0])); return; }
   periods.forEach(p => {
     const tm = loadTM(p.code), st = live[p.code] || {}, c = el('div', { className: 'card cls' + (st.live ? ' live' : '') });
-    const top = el('div', { className: 'row1' }, el('h3', { textContent: p.name }), el('div', { style: 'display:flex;align-items:center;gap:4px' },
-      el('span', { className: 'chip' + (st.live ? ' live' : ''), textContent: st.live ? 'Live now' : 'Ready' }),
-      el('button', { className: 'dots', title: 'Rename or remove this class', 'aria-label': 'Rename or remove this class', onclick: e => classMenu(p, c, e) }, icoEl('dots'))));
-    const n = tm.roster.length, teams = tm.teams.length;
-    const l1 = (n ? n + ' students' : 'No class list') + ' · ' + (teams ? teams + ' teams' : 'no teams');
-    const l2 = st.live ? st.here + ' here now' + (lastSet(p.code) ? ' · ' + lastSet(p.code) : '') : (lastSet(p.code) ? 'Last: ' + lastSet(p.code) : 'Code ' + p.code);
-    const ln = el('div', { className: 'ln' }); ln.append(document.createTextNode(l1), document.createElement('br'), document.createTextNode(l2));
-    const go = el('button', { className: 'b go ' + (st.live ? 'good' : p === next ? 'pri' : ''), textContent: st.live ? 'Go back to class' : 'Start class', onclick: () => (location.href = '/class?code=' + p.code) });
-    c.append(top, ln);
-    // Standings: the top three by points, so a class card answers "who is winning?" at a glance.
-    const ranked = rankTeams(teamsFor(p.code), scoresFor(p.code));
-    if (ranked.length) {
-      const s = el('div', { className: 'stand' });
-      ranked.slice(0, 3).forEach(x => s.append(el('div', { className: 'stand-r' },
-        el('span', { className: 'stand-rk', textContent: x.rank }),
-        el('span', { className: 'stand-em', textContent: cleanIcon(x.team.emoji) }),
-        el('span', { className: 'stand-nm', textContent: x.team.name }),
-        el('span', { className: 'stand-pt', textContent: x.score }))));
-      s.append(el('button', { className: 'stand-more', textContent: ranked.length > 3 ? 'All ' + ranked.length + ' teams' : 'Edit teams', onclick: e => { e.stopPropagation(); goTeams(p.code); } }));
-      c.append(s);
-    }
-    c.append(go); box.append(c);
+    const day = +store['do_day_' + p.code];
+    const top = el('div', { className: 'row1' }, el('div', {}, el('h3', { textContent: p.name }),
+      el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: st.live ? st.here + ' here now' : day ? 'Last used ' + dayName(day) : 'Not used yet' })),
+      el('div', { style: 'display:flex;align-items:center;gap:4px' }, ...(st.live ? [el('span', { className: 'chip live', textContent: 'Live now' })] : []),
+        el('button', { className: 'dots', title: 'Rename or remove this class', 'aria-label': 'Rename or remove this class', onclick: e => classMenu(p, c, e) }, icoEl('dots'))));
+    const codeChip = el('div', {}, el('span', { className: 'chip codechip' }, 'Code ', el('span', { className: 'code', textContent: p.code })));
+    const icons = el('div', { className: 'ticons' });
+    if (tm.teams.length) tm.teams.forEach(t => { const i = el('i', { textContent: cleanIcon(t.emoji) || '•', title: t.name }); i.style.setProperty('--tc', t.color); icons.append(i); });
+    else icons.append(el('button', { className: 'link', textContent: 'No teams yet. Set them up', onclick: e => { e.stopPropagation(); goTeams(p.code); } }));
+    const go = el('button', { className: 'b go ' + (st.live ? 'good' : 'pri'), textContent: st.live ? 'Go back to class' : 'Start class', onclick: () => (location.href = '/class?code=' + p.code) });
+    c.append(top, codeChip, icons, go); box.append(c);
   });
   box.append(el('button', { className: 'newc', onclick: addClass }, el('span', { textContent: '+', style: 'font-size:var(--fs-3xl);line-height:1' }), document.createTextNode('New class')));
 }
@@ -306,12 +339,13 @@ function addClass() {
 const fcoll = () => { try { return JSON.parse(store.do_fcollapsed || '{}') || {}; } catch { return {}; } };
 function setCard(s) {
   const c = el('div', { className: 'card setc' });
-  const tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
-  const hd = el('div', { className: 'hd' }, tile, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:var(--fs-lg);line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:var(--fs-sm)' })));
+  const band = el('div', { className: 'band' }); band.style.background = tileOf(s);
+  const nSort = s.questions.filter(q => q.kind === 'sort').length, mix = el('div', { className: 'mix' }, ...(nSort < s.questions.length ? [el('span', { className: 'chip', textContent: (s.questions.length - nSort) + ' Draw' })] : []), ...(nSort ? [el('span', { className: 'chip', textContent: nSort + ' Sort' })] : []));
+  const hd = el('div', { className: 'hd' }, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:var(--fs-lg);line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:var(--fs-sm)' })));
   const mv = el('button', { className: 'b', title: 'Move to a folder', 'aria-label': 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' }, icoEl('folder'));
   mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
   const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
-  c.append(hd, btns); return c;
+  c.append(band, hd, mix, btns); return c;
 }
 function folderMenu(f, anchor) {
   if (menu) return closeMenu();
@@ -329,8 +363,7 @@ function folderMenu(f, anchor) {
 function renderSets() {
   closeMenu();
   const box = $('#sets'); box.innerHTML = ''; box.className = folders.length ? 'fstack' : 'grid';
-  $('#newfolder').replaceChildren(icoEl('folder'), ' New folder');
-  if (!folders.length) { sets.forEach(s => box.append(setCard(s))); return; }
+    if (!folders.length) { sets.forEach(s => box.append(setCard(s))); return; }
   const coll = fcoll();
   setGroups().forEach(g => {
     if (!g.folder && !g.sets.length) return;
@@ -348,31 +381,41 @@ function renderSets() {
     box.append(grp);
   });
 }
+let shelfSubject = 'All';
 async function renderShelf() {
   const box = $('#shelf'); box.textContent = '';
   try { await loadStarters(); } catch { box.textContent = 'Starter sets could not load. Check your connection.'; return; }
   const have = new Set(sets.map(s => s.name)), left = starters.filter(s => !have.has(s.name));
-  $('#allst').textContent = 'See all ' + starters.length;
-  if (!left.length) { box.append(el('div', { className: 'mut', textContent: 'You have added every starter set.' })); return; }
-  left.slice(0, 3).forEach(st => {
+  const subs = ['All', ...new Set(starters.map(s => s.subject))];
+  if (!subs.includes(shelfSubject)) shelfSubject = 'All';
+  const f = $('#sfilter'); f.textContent = '';
+  subs.forEach(sub => { const b = el('button', { textContent: sub, onclick: () => { shelfSubject = sub; renderShelf(); } }); b.setAttribute('aria-pressed', sub === shelfSubject ? 'true' : 'false'); f.append(b); });
+  const show = left.filter(s => shelfSubject === 'All' || s.subject === shelfSubject);
+  if (!show.length) { box.append(el('div', { className: 'mut', textContent: left.length ? 'No starter sets in this subject.' : 'You have added every starter set.' })); return; }
+  show.forEach(st => {
     const tile = el('div', { className: 'tile' }); tile.style.background = tileOf({ id: st.id });
-    const t = el('div', {}, tile, el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: st.name, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: st.questions.length + ' questions · ' + st.subject, style: 'font-size:var(--fs-xs)' })));
-    const b = el('button', { className: 'b line2', textContent: 'Add' }); b.onclick = () => { addSet(st.name, st.questions); toast('Added "' + st.name + '".'); renderSets(); renderShelf(); };
+    const t = el('div', {}, tile, el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: st.name, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: st.questions.length + ' questions · ' + st.subject, style: 'font-size:var(--fs-sm)' })));
+    const b = el('button', { className: 'b', textContent: 'Add' }); b.setAttribute('aria-label', 'Add ' + st.name + ' to my sets'); b.onclick = () => { addSet(st.name, st.questions); toast('Added "' + st.name + '".'); renderSets(); renderShelf(); };
     t.append(b); box.append(t);
   });
 }
 function renderBackup() {
   const stale = backupStale();
   $('#bk').classList.toggle('stale', stale);
-  $('#bkt').textContent = stale ? 'Class lists live only on this computer' : 'Your work is backed up';
+  $('#bkt').textContent = stale ? 'Class lists live only on this computer.' : 'Your work is backed up.';
   $('#bkd').textContent = backupText() + '. A backup file lets you move to another computer.';
 }
 
 $('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
 $('#newfolder').onclick = () => { const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
-$('#imp').onclick = () => $('#impfile').click();
+$('#newbtn').onclick = e => {
+  e.stopPropagation(); if (menu) return closeMenu();
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';
+  const add = (ic, t, fn) => menu.append(el('button', { onclick: () => { closeMenu(); fn(); } }, icoEl(ic, 'sm'), ' ' + t));
+  add('folder', 'New folder', () => $('#newfolder').click()); add('file', 'Import a file', () => $('#impfile').click());
+  $('#newbtn').parentElement.append(menu);
+};
 $('#impfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await importSetsFile(f)) { renderSets(); renderShelf(); } };
-$('#allst').onclick = () => showStarters(() => { renderSets(); renderShelf(); });
 $('#bkup').onclick = () => { doBackup(); renderBackup(); };
 $('#rst').onclick = () => $('#restore').click();
 $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doRestore(f, () => { renderClasses(); renderSets(); renderBackup(); }); };
@@ -380,7 +423,7 @@ $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''
 // ---- Teams tab: names, icons, colours and order, one class at a time ----
 // Points and class lists are not edited here; the tab only changes how a team is shown.
 const startTab = new URLSearchParams(location.search);
-let tab = startTab.get('tab') === 'teams' ? 'teams' : 'classes';
+let tab = ['teams', 'sets'].includes(startTab.get('tab')) ? startTab.get('tab') : 'classes';
 let taCode = periodOf((startTab.get('class') || '').toUpperCase()) ? startTab.get('class').toUpperCase() : currentCode();
 let working = []; // the team list being edited for taCode, saved on every change
 let iconTarget = null, editT = 0;
@@ -388,8 +431,10 @@ let iconTarget = null, editT = 0;
 function setTab(t) {
   tab = t;
   $$('.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); });
-  $('#tab-classes').hidden = t !== 'classes';
+  $('#tab-classes').hidden = t !== 'classes'; $('#tab-sets').hidden = t !== 'sets';
   $('#tab-teams').hidden = t !== 'teams';
+  const HD = { classes: ['Today', 'Pick a class to start, or set up team names and icons.'], sets: ['Question sets', 'Your sets are ready to send. Add a starter set to get going.'], teams: ['Teams', 'Names and icons are saved on this computer.'] }[t];
+  $('#pgh').textContent = HD[0]; $('#pgs').textContent = HD[1];
   const u = new URL(location.href);
   u.searchParams.set('tab', t);
   if (t === 'teams') u.searchParams.set('class', taCode); else u.searchParams.delete('class');
@@ -472,16 +517,8 @@ function renderTeamsTab() {
   const ranked = rankTeams(working, scoresFor(taCode)), rankOf = new Map(ranked.map(x => [x.team.id, x]));
   const roster = loadTM(taCode).roster, box = $('#talist');
   box.innerHTML = '';
-  if (!working.length) {
-    const e0 = el('div', { className: 'ta-empty', style: 'position:relative' }); // anchors the copy picker
-    e0.append(document.createTextNode('No teams yet. Use Create teams to start with four, or add them one at a time'));
-    if (periods.length > 1) {
-      e0.append(document.createTextNode(', or '));
-      e0.append(el('button', { className: 'link', textContent: 'copy teams from another class', onclick: ev => { ev.stopPropagation(); teamsPickMenu(taCode, e0, 'top:calc(100% + 8px);left:0', 'from'); } }));
-    }
-    e0.append(document.createTextNode('.'));
-    box.append(e0);
-  }
+  const none = !working.length; $('#taempty').hidden = !none; $('.ta-cols').hidden = none; renderCounts();
+  if (none) return;
   working.forEach((t, i) => {
     const r = rankOf.get(t.id) || { rank: i + 1, score: 0, leader: false };
     const members = roster.filter(e => e.team === t.id).length;
@@ -508,6 +545,12 @@ function renderTeamsTab() {
     };
     const mv = el('div', { className: 'tcard-move' }, move(-1, 'Move up', '↑', i === 0), move(1, 'Move down', '↓', i === working.length - 1),
       el('button', { className: 'b ter danger', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }, icoEl('x')));
+    const grab = el('span', { className: 'grab', draggable: true, title: 'Drag to reorder' }, icoEl('grab')); grab.setAttribute('aria-label', 'Drag ' + t.name + ' to reorder');
+    grab.ondragstart = ev => { ev.dataTransfer.setData('text/plain', String(i)); ev.dataTransfer.setDragImage(c, 20, 20); c.classList.add('dragging'); };
+    grab.ondragend = () => c.classList.remove('dragging');
+    c.ondragover = ev => { ev.preventDefault(); c.classList.add('over'); }; c.ondragleave = () => c.classList.remove('over');
+    c.ondrop = ev => { ev.preventDefault(); const from = +ev.dataTransfer.getData('text/plain'); if (from !== i && working[from]) { const [m] = working.splice(from, 1); working.splice(i, 0, m); editTeams(); renderTeamsTab(); } };
+    mv.prepend(grab);
     c.append(ic, el('div', {}, nm, sub), score, mv); box.append(c);
   });
   renderPreview();
@@ -596,22 +639,34 @@ $('#taadd').onclick = () => {
   if (working.length >= 12) return toast('12 teams is the most.');
   working.push(newTeam(working)); editTeams(); renderTeamsTab();
 };
-$('#tacopy').onclick = ev => { ev.stopPropagation(); teamsPickMenu(taCode, $('#tacopy').parentElement, 'bottom:calc(100% + 8px);left:0', 'to'); };
-$('#tasize').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + ' teams</option>').join('');
+let taN = 4;
+function renderCounts() {
+  const box = $('#tacounts'); box.textContent = '';
+  [2, 3, 4, 5, 6, 7, 8].forEach(n => { const b = el('button', { textContent: n, onclick: () => { taN = n; renderCounts(); } }); b.setAttribute('aria-pressed', n === taN ? 'true' : 'false'); b.setAttribute('aria-label', n + ' teams'); box.append(b); });
+  $('#tacreate').textContent = 'Create ' + taN + ' teams';
+}
+$('#tacopyfrom').onclick = ev => { ev.stopPropagation(); teamsPickMenu(taCode, $('#tacopyfrom').parentElement, 'top:calc(100% + 8px);left:0', 'from'); };
+$('#tamenu').onclick = ev => {
+  ev.stopPropagation(); if (menu) return closeMenu();
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:260px';
+  menu.append(el('button', { onclick: ev2 => { ev2.stopPropagation(); closeMenu(); teamsPickMenu(taCode, $('#tamw'), 'top:calc(100% + 4px);right:0', 'to'); } }, icoEl('copy', 'sm'), ' Copy to another class…'));
+  menu.append(el('hr'), el('button', { className: 'danger', onclick: () => { closeMenu(); resetScores(); } }, icoEl('reset', 'sm'), ' Reset all scores'));
+  $('#tamw').append(menu);
+};
 $('#tacreate').onclick = () => {
   if (working.length && !confirm('Replace your ' + working.length + ' teams? Their points will be lost.')) return;
-  const n = +$('#tasize').value;
+  const n = taN;
   working = []; for (let i = 0; i < n; i++) working.push(newTeam(working));
   editTeams(); renderTeamsTab();
 };
-$('#tareset').onclick = () => {
+function resetScores() {
   if (!confirm('Set every team in "' + (periodOf(taCode) || {}).name + '" back to 0 points?')) return;
   const zeros = Object.fromEntries(working.map(t => [t.id, 0]));
   const tm = loadTM(taCode); tm.scores = zeros; saveTM(taCode, tm);
   const li = liveInfo.get(taCode); if (li) markLive(taCode, { ...li, scores: zeros });
   if (isLive(taCode)) hostDo(taCode, [{ t: 'resetscores' }]);
   toast('Scores reset.'); renderTeamsTab();
-};
+}
 // a second tab (class screen or another Today) keeps in step with an edit made here
 onTeamsSaved(d => { if (d && d.code === taCode) { loadWorking(); if (tab === 'teams') renderTeamsTab(); renderClasses(); } });
 
