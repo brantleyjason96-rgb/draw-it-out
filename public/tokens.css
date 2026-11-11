@@ -1,0 +1,37 @@
+/* Design tokens for every page. Load this BEFORE style.css or tstyle.css. No rules here, only variables. */
+:root{
+/* text */
+--c-ink:#17212B;--c-ink-2:#394551;--c-muted:#5B6772;
+/* surfaces */
+--c-bg:#F3F5F7;--c-surface:#FFFFFF;--c-surface-2:#F8FAFB;--c-fill:#E8EDF2;--c-canvas-gap:#E5E7EB;--c-desk:#D1D5DB;--c-grid:#E4EEF7;--c-scrim:rgba(23,33,43,.6);
+/* lines: --c-line and --c-line-2 are decoration; --c-control is for text boxes, toggles and drop zones (3:1 on white) */
+--c-line:#E1E6EB;--c-line-2:#CBD3DA;--c-control:#76838F;
+/* primary */
+--c-primary:#0B6BCB;--c-primary-strong:#0B5CAD;--c-primary-soft:#F1F7FE;--c-primary-line:#BBD8F5;--c-primary-tint:#DCEBFB;--c-primary-glow:rgba(11,107,203,.2);
+--c-focus:#0B6BCB;--c-focus-on-dark:#7DB8F5;
+/* dark chrome (teacher top bar, student drawer) and the student question bar */
+--c-dark:#17212B;--c-dark-2:#2A3846;--c-dark-line:#3A4856;--c-sky:#2F8BEA;--c-on-sky:#0B1320;--c-question:#1E3A8A;
+/* status: every use must also carry a word or an icon */
+--c-good:#0E7C4A;--c-good-strong:#0A5A36;--c-good-soft:#E6F4EC;--c-good-on-dark:#3DD68C;
+--c-bad:#B3261E;--c-bad-strong:#8C1D18;--c-bad-soft:#FBE4E1;--c-bad-line:#E3B1AD;--c-bad-on-dark:#F87171;
+--c-warn:#8F5500;--c-warn-strong:#5E4300;--c-warn-soft:#FFF4DC;--c-warn-line:#F0D79A;--c-warn-fill:#D99A12;--c-warn-on-dark:#FBBF24;
+/* sticky notes (sort cards) */
+--c-note:#FDE68A;--c-note-ink:#422006;
+/* freeze */
+--c-frost:#0C4A6E;--c-frost-2:#0E5B85;--c-frost-soft:#E0F2FE;
+/* projector */
+--c-stage:#0B1220;--c-stage-accent:#93C5FD;--c-stage-ink:#E2E8F0;
+/* type */
+--font-system:system-ui,-apple-system,'Segoe UI',sans-serif;
+--font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+--font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
+--fs-xs:13px;--fs-sm:14px;--fs-md:16px;--fs-lg:18px;--fs-xl:21px;--fs-2xl:24px;--fs-3xl:30px;--fs-4xl:38px;
+/* spacing */
+--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+/* radius */
+--r-xs:4px;--r-sm:8px;--r-md:10px;--r-lg:12px;--r-xl:16px;--r-2xl:22px;--r-pill:99px;
+/* shadow */
+--sh-1:0 1px 3px rgba(23,33,43,.2);--sh-2:0 4px 14px rgba(23,33,43,.25);--sh-3:0 18px 40px rgba(23,33,43,.28);
+/* smallest touch target */
+--touch:44px;
+}
