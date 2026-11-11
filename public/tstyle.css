@@ -74,7 +74,7 @@ select.inp{padding-right:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media(max-width:480px){.logo{font-size:18px;gap:8px}}
 
-@media(pointer:coarse){.b.sm{min-height:44px;min-width:44px}}
+@media(any-pointer:coarse){.b.sm{min-height:44px;min-width:44px}}
 
 /* folders for question sets */
 .fplist{display:flex;flex-direction:column;gap:8px;padding:16px 24px 22px;max-height:60dvh;overflow:auto}
