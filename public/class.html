@@ -299,7 +299,7 @@ function onmsg(m) {
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
-    case 'freeze': S.frozen = m.on; ui(); toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break;
+    case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
 const DSTEPS = ['Send the next question', 'Click a drawing', 'Give a point'], DDONE = [false, false, false];
