@@ -42,8 +42,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     });
     await step('draw', async () => {
       const m = S.mouse; const cx = w / 2, cy = h / 2;
-      await S.click('#toolsbtn'); await sleep(500); await S.click('.tool[data-t=pen]'); await sleep(300); await shot(S, '15-student-tools-drawer');
-      await S.click('#dclose'); await sleep(500);
+      await S.click('.tool[data-t=pen]'); await sleep(500); await shot(S, '15-student-tools-drawer'); // Draw opens its options beside the rail
+      await S.keyboard.press('Escape'); await sleep(500);
       await m.move(cx - 80, cy); await m.down(); for (let i = 0; i <= 30; i++) await m.move(cx - 80 + Math.cos(i / 30 * 6.3) * 60 + 60 - 60, cy + Math.sin(i / 30 * 6.3) * 60); await m.up();
       await sleep(300); await shot(S, '14-student-draw');
       await S.click('#pulse .pb[data-p=y]'); await sleep(400); await shot(S, '16-student-pulse-on');
