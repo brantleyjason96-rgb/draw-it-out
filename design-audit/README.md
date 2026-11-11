@@ -1,5 +1,7 @@
 # Design audit — start here
 
+> **Building the redesign?** The current plan is `../DESIGN_PLAN_V2.md`; go to its **Build instructions** section. The specification mock-ups are `../mockups/teaching-screen.html` and `../mockups/student-draw.html`. Everything below describes the first, finished round (`../DESIGN_PLAN.md`), and `after/` is the starting point for the new work.
+
 This folder is the evidence behind `../DESIGN_PLAN.md`. If you are the model (or person) doing the work, read this page, then the plan.
 
 ## What is here
