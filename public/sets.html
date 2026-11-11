@@ -73,6 +73,27 @@ body{min-height:100vh;display:flex;flex-direction:column}
  #skey .zone .nc{hyphens:manual}
 }
 @media(any-pointer:coarse){.ichip{padding-top:0;padding-bottom:0}.ichip button{min-width:44px;min-height:44px}}
+
+/* ===== V45: editor ===== */
+.q .qtype{flex:none;color:var(--c-muted);display:inline-grid;place-items:center;width:28px;height:28px}
+.fmtbar{display:flex;gap:2px;padding:4px;border:2px solid var(--pri);border-bottom:1px solid var(--line);border-radius:var(--r-lg) var(--r-lg) 0 0;background:var(--c-surface-2)}
+.fmtbar .fmt{min-height:40px;width:40px}
+#qin{border-radius:0 0 var(--r-lg) var(--r-lg);border-top:0}
+#qin:focus-visible{outline:0}
+.savebar{position:sticky;bottom:0;z-index:5;margin:6px -20px -20px;padding:12px 20px 16px;background:#fff;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.dev .qb{display:flex;align-items:flex-start;gap:12px}
+.dev .tmchip{flex:none;background:#fff;color:var(--c-ink);border-radius:var(--r-pill);padding:2px 12px;font-size:var(--fs-sm);font-weight:600;white-space:nowrap}
+.dev .hidech{flex:none;border:1px solid rgba(255,255,255,.45);border-radius:var(--r-sm);padding:2px 10px;font-size:var(--fs-sm)}
+.dev .devsw{padding:8px 12px;background:var(--c-surface-2);border-bottom:1px solid var(--line)}
+.dev .pmid{display:flex;background:var(--c-desk)}
+.dev .prail{flex:none;width:68px;display:flex;flex-direction:column;gap:4px;padding:8px 4px;background:#fff;border-right:1px solid var(--line)}
+.dev .prail span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:var(--fs-xs);font-weight:600;color:var(--c-ink-2);min-height:48px;justify-content:center}
+.dev .pmid canvas{flex:1;min-width:0}
+.dev .dock{gap:14px;color:var(--c-ink-2)}
+.dev .dock .pf{margin:0 auto;font-size:var(--fs-lg)}
+.dev.phone{max-width:340px}
+.dev.phone .prail{display:none}
+.dev.phone .dock .zm{display:none}
 </style>
 </head>
 <body>
@@ -108,10 +129,10 @@ body{min-height:100vh;display:flex;flex-direction:column}
    </div>
    <div>
     <div style="font-weight:700;margin-bottom:8px">Question</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-     <button class="b sq fmt" data-cmd="bold" aria-label="Bold"><b>B</b></button>
-     <button class="b sq fmt" data-cmd="italic" aria-label="Italic"><i>I</i></button>
-     <button class="b sq fmt" data-cmd="underline" aria-label="Underline"><u>U</u></button>
+    <div class="fmtbar">
+     <button class="b sq ter fmt" data-cmd="bold" aria-label="Bold" title="Bold"><b>B</b></button>
+     <button class="b sq ter fmt" data-cmd="italic" aria-label="Italic" title="Italic"><i>I</i></button>
+     <button class="b sq ter fmt" data-cmd="underline" aria-label="Underline" title="Underline"><u>U</u></button>
     </div>
     <div id="qin" contenteditable="true" role="textbox" aria-label="Question" data-ph="Type the question students should answer…"></div>
    </div>
@@ -132,7 +153,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
     <div class="sec"><div style="font-weight:700">Options</div><div id="sopts" class="sec"></div></div>
     <div id="sissues" class="sec"></div>
    </div>
-   <div style="margin-top:6px;display:flex;flex-direction:column;gap:10px">
+   <div class="savebar">
     <button class="b pri big" id="save">Save question</button>
     <div style="display:flex;gap:10px">
      <button class="b" id="cancel" style="flex:1">Cancel</button>
@@ -151,9 +172,13 @@ body{min-height:100vh;display:flex;flex-direction:column}
    <div id="sstu" hidden></div>
   </div>
   <div class="dev" id="drawprev">
-   <div class="qb" id="pq"></div>
-   <canvas id="pc" width="900" height="460"></canvas>
-   <div class="dock"><i style="background:#111"></i><i style="background:#2563EB"></i><i style="background:#DC2626"></i><i style="background:#059669"></i><span class="mut" style="margin-left:auto;font-weight:600;font-size:var(--fs-sm)">Pen · Eraser · Text · Shapes</span></div>
+   <div class="devsw"><div class="seg" id="devseg" role="group" aria-label="Preview device"><button data-d="cb" class="on">Chromebook</button><button data-d="ph">Phone</button></div></div>
+   <div class="qb"><span class="tmchip">Granite · 0 pts</span><span id="pq" style="flex:1;min-width:0"></span><span class="hidech">Hide</span></div>
+   <div class="pmid">
+    <div class="prail" aria-hidden="true"><span><svg data-i="pen"></svg>Draw</span><span><svg data-i="eraser"></svg>Eraser</span><span><svg data-i="text"></svg>Text</span><span><svg data-i="shapes"></svg>Shapes</span><span><svg data-i="select"></svg>Select</span></div>
+    <canvas id="pc" width="900" height="460"></canvas>
+   </div>
+   <div class="dock" aria-hidden="true"><svg data-i="undo"></svg><svg data-i="redo"></svg><span class="pf">🙋 🙂 💡</span><span class="mut zm">100%</span></div>
   </div>
   <div class="mut" style="font-size:var(--fs-md)" id="prevhint">Nothing is sent to students from this screen unless you press Send now.</div>
  </section>
@@ -198,7 +223,7 @@ function renderAll() {
   set.questions.forEach((q, i) => {
     const row = el('div', { className: 'q' + (i === sel ? ' on' : '') }); row.tabIndex = 0; row.setAttribute('role', 'button');
     row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
-    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
+    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }), el('span', { className: 'qtype', title: q.kind === 'sort' ? 'Sort question' : 'Draw question' }, icoEl(q.kind === 'sort' ? 'shapes' : 'pen', 'sm')));
     const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
     const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ter ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
     m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
@@ -254,7 +279,8 @@ function preview() {
   readDraft();
   if (isSort()) { SE.preview(); refreshSave(); return; }
   $('#pq').innerHTML = draft.question || '<span style="opacity:.6">Your question appears here…</span>'; // cleaned: only b/i/u/br
-  const cv = $('#pc'), x = cv.getContext('2d');
+  const cv = $('#pc'), x = cv.getContext('2d'), phn = $('#drawprev').classList.contains('phone');
+  if (cv.width !== (phn ? 420 : 900)) { cv.width = phn ? 420 : 900; cv.height = phn ? 640 : 460; }
   const paint = () => paintBg(x, draft.bg, pim, cv.width, cv.height);
   if (draft.bg === 'photo' && draft.img) { if (!pim || pim.dataset.src !== draft.img) { pim = loadImg(draft.img, paint); pim.dataset.src = draft.img; } }
   paint();
@@ -272,6 +298,7 @@ function remove(i) {
 
 // editing
 $('#qin').addEventListener('input', () => { markDirty(); preview(); });
+$$('#devseg button').forEach(b => (b.onclick = () => { $('#drawprev').classList.toggle('phone', b.dataset.d === 'ph'); $$('#devseg button').forEach(x => x.classList.toggle('on', x === b)); preview(); }));
 $('#qin').addEventListener('paste', e => { // text pastes as plain text; images are handled by the page-level paste below
   if ([...e.clipboardData.files].some(f => f.type.startsWith('image/'))) return;
   e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
@@ -292,6 +319,7 @@ $('#save').onclick = () => {
   if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
   if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
   persistSets(); draft = JSON.parse(JSON.stringify(q)); dirty = false; renderAll(); toast('Saved.');
+  const sv = $('#save'); sv.replaceChildren(icoEl('check'), ' Saved'); clearTimeout(sv._t); sv._t = setTimeout(() => (sv.textContent = 'Save question'), 2000);
 };
 $('#cancel').onclick = () => { if (dirty && !confirm('Discard your changes to this question?')) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
 $('#add').onclick = () => pick(-1);
