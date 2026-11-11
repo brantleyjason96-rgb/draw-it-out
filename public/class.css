@@ -204,3 +204,6 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 #pulsesum{gap:6px;flex-wrap:nowrap}
 #pulsesum .pb{padding:0 10px;white-space:nowrap}
 @media(max-width:1200px){#pulsesum{flex-wrap:wrap}}
+
+/* V15: group headings in the More menu */
+.menu .mh{padding:8px 16px 2px;font-size:var(--fs-sm);font-weight:700;color:var(--mut)}

@@ -540,6 +540,7 @@ function openMenu(anchor, items, css) {
   menu = el('div', { className: 'menu' }); menu.anchor = anchor; menu.style.cssText = css;
   items.forEach(it => {
     if (it === '-') return menu.append(document.createElement('hr'));
+    if (it.h) return menu.append(el('div', { className: 'mh', textContent: it.h }));
     const b = el('button', { className: it.danger ? 'danger' : '', onclick: () => { if (!it.keep) closeMenu(); it.f(); } });
     const lab = el('span', {}, document.createTextNode(it.t)); if (it.sub) lab.append(el('small', { textContent: it.sub })); if (it.check) lab.prepend(icoEl('check', 'sm'), ' '); b.append(lab);
     if (it.tog !== undefined) { const t = el('span', { className: 'tog' + (it.tog ? ' on' : ''), style: 'min-height:0;padding:0;border:0;background:none' }); t.append(document.createElement('i')); b.append(t); }
@@ -557,20 +558,20 @@ function renameClass() { const v = (prompt('Rename this class:', per().name) || 
 $('#more').onclick = e => {
   e.stopPropagation();
   openMenu($('#more'), [
+    { h: 'This lesson' },
     { t: 'Quick mode', sub: 'Students get just a pen and 4 colors', tog: S.simple, keep: true, f: () => { ws.send({ t: 'mode', simple: !S.simple }); closeMenu(); } },
-    '-',
-    { t: 'Save all drawings as a picture (PNG)', f: savePng },
     { t: 'How the class felt (report)', sub: 'Confidence question by question, and who to check in with', f: openReport },
+    { t: 'Save all drawings as a picture (PNG)', f: savePng },
+    '-',
+    { h: 'Joining' },
     { t: 'Show QR code to join', f: showQR },
-    { t: 'Use my phone as a remote', sub: 'Scan once to control this class from your phone', f: showRemote },
     { t: 'Copy student link', f: copyLink },
+    { t: 'Use my phone as a remote', sub: 'Scan once to control this class from your phone', f: showRemote },
     '-',
-    { t: 'Back up everything', f: () => doBackup() },
-    { t: 'Restore a backup', f: () => $('#restore').click() },
-    '-',
-    { t: 'Teams & class list', sub: 'Points, class list, how many teams', f: () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); } },
-    { t: 'Rename teams & icons', sub: 'Opens the Teams tab on Today', f: () => window.open(teamAdminHref(code), '_blank') },
+    { h: 'Class' },
+    { t: 'Set up teams', sub: 'Teams, icons, class list and points', f: () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); } },
     { t: 'Rename this class', f: renameClass },
+    '-',
     { t: 'Clear class (send students back to join)', danger: true, f: () => { if (confirm('Send all students in "' + per().name + '" back to the join screen? Teams, the class list and scores are kept. Save the PNG first if you want their drawings.')) ws.send({ t: 'reset' }); } },
     { t: 'Remove this class', danger: true, f: () => { if (!confirm('Remove "' + per().name + '"? Its teams, class list and scores on this computer will be deleted, and students are sent back to the join screen.')) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
   ], 'top:52px;right:0;width:370px');
