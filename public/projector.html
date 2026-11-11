@@ -9,8 +9,12 @@
 <link rel="stylesheet" href="/sortkit.css">
 <style>
 body{background:var(--c-stage);color:#fff}
-.qbar{background:transparent;font-size:34px;text-align:center}
-#join{text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}
+.qbar{background:transparent;font-size:clamp(34px,min(3vw,5vh),54px);line-height:1.25;text-align:center}
+#join{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(24px,6vw,110px);text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}
+#qr{width:clamp(200px,min(26vw,46vh),440px);height:clamp(200px,min(26vw,46vh),440px);background:#fff;border-radius:var(--r-lg);padding:6px}
+.jcap{font-size:clamp(22px,2vw,32px);margin-top:10px;color:var(--c-stage-accent)}
+body:has(#join:not([hidden])) main{max-width:none;padding:12px 24px}
+body:has(#join:not([hidden])) .qbar{font-size:clamp(34px,min(3.6vw,6vh),64px)}
 #join b{font-size:clamp(64px,10vw,150px);letter-spacing:.2em;display:block;color:var(--c-stage-accent)}
 #who{text-align:center;font-size:clamp(24px,2.4vw,36px);margin-top:10px;color:var(--c-stage-accent)}
 main{max-width:1000px;display:flex;flex-direction:column;height:100vh;height:100dvh}
@@ -74,7 +78,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
  <div id="boards" hidden></div>
- <div id="join">Go to <span id="url"></span><b id="code"></b><div id="qr" role="img" aria-label="QR code to join" style="width:clamp(200px,22vw,340px);height:clamp(200px,22vw,340px);margin:20px auto 0;background:#fff;border-radius:var(--r-lg);padding:6px"></div><div style="font-size:clamp(22px,2vw,32px);margin-top:10px;color:#93c5fd">or scan to join</div></div>
+ <div id="join"><div class="jl">Go to <span id="url"></span><b id="code"></b></div><div class="jr"><div id="qr" role="img" aria-label="QR code to join"></div><div class="jcap">or scan to join</div></div></div>
  <div id="who"></div>
 </main>
 <div id="frz" role="alertdialog" aria-label="Class frozen">
