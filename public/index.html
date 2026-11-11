@@ -228,7 +228,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
    <label for="code">Class code</label>
    <input id="code" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
    <label for="name">Nickname</label>
-   <input id="name" maxlength="20" placeholder="Your nickname (no last names)" autocomplete="off" hidden>
+   <input id="name" maxlength="20" placeholder="Your nickname" autocomplete="off" hidden>
    <div id="pick" hidden></div>
    <p id="err" role="alert"></p>
    <button class="btn" id="go" style="width:100%">Next</button>
@@ -249,8 +249,8 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
    <div id="sbar"><div id="spile" data-zone="pile" class="lockable"></div><div id="sdone"></div></div>
    <div id="sortlive" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></div>
   </div>
-  <div id="smsg" hidden>Answer sent. Hold on for your teacher…</div>
-  <div id="lockmsg" hidden>Your work is on the projector. Hold on for a moment…</div>
+  <div id="smsg" hidden>Answer sent. Wait for your teacher.</div>
+  <div id="lockmsg" hidden>Your teacher is showing your work to the class. Please wait.</div>
   <div id="pulse" class="lockable" role="group" aria-label="How is your drawing going?">
    <button id="ptog" type="button" aria-expanded="true" aria-controls="pbtns"><span class="plb">How's it going?</span><span class="pdot" aria-hidden="true"></span><span class="pchev" aria-hidden="true">▸</span></button>
    <div id="pbtns">
@@ -282,7 +282,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
 
  <div id="frz" role="alertdialog" aria-label="Class frozen">
   <div id="frzflakes" aria-hidden="true"></div>
-  <div id="frzcard"><span class="fi" aria-hidden="true">✋</span><b>Frozen</b><p>Eyes up here. Your work is saved — you can carry on when your teacher says.</p></div>
+  <div id="frzcard"><span class="fi" aria-hidden="true">✋</span><b>Frozen</b><p>Look at your teacher. Your work is saved. You can start again soon.</p></div>
  </div>
 </main>
 <script src="/common.js"></script>
@@ -308,8 +308,8 @@ function jshow(st) {
   jstep = st; const pk = st === 'tiles' || st === 'ini';
   $('#name').hidden = st !== 'name'; $('#pick').hidden = !(pk || (st === 'name' && quick.length)); $('#go').hidden = pk; $('#code').readOnly = st !== 'code';
   $('#go').textContent = st === 'name' ? 'Join' : 'Next';
-  $('#jh').textContent = { code: 'Type your class code', name: quick.length ? 'Tap your team. A nickname is optional (no last names).' : 'Type a nickname (no last names)', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
-  $('#name').placeholder = quick.length ? 'Nickname (optional)' : 'Your nickname (no last names)';
+  $('#jh').textContent = { code: 'Type your class code', name: quick.length ? 'Tap your team. You can type a nickname too. Do not use your last name.' : 'Type a nickname. Do not use your last name.', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
+  $('#name').placeholder = quick.length ? 'Nickname (you can skip this)' : 'Your nickname';
   if (st === 'name') $('#name').focus();
 }
 function pickBtn(label, sub, color, fn, off) {
@@ -352,13 +352,13 @@ let resuming = false;
   target0 = c; id = sid;
   target = { code: c, name: localStorage.do_name || '', rid: srid || undefined, ...pageSize() };
   resuming = true;
-  $('#jh').textContent = 'Rejoining your class…';
+  $('#jh').textContent = 'Going back to your class…';
 })();
 $('#jf').onsubmit = e => {
   e.preventDefault(); $('#err').textContent = '';
   if (jstep === 'code') {
     target0 = $('#code').value.trim().toUpperCase(); if (!target0) return ($('#err').textContent = 'Type the class code');
-    if (!ws.open()) { waking = true; $('#err').textContent = 'Connecting… the class server may be waking up. This can take up to a minute. Stay on this page.'; return; }
+    if (!ws.open()) { waking = true; $('#err').textContent = 'Connecting… Please wait. This can take one minute. Stay on this page.'; return; }
     ws.send({ t: 'peek', code: target0 });
   } else if (jstep === 'name') {
     const name = $('#name').value.trim();
@@ -458,7 +458,7 @@ function onmsg(m) {
   else if (m.t === 'kicked') { // teacher cleared the class
     sessionStorage.removeItem('do_id_' + target.code); sessionStorage.removeItem('do_rid_' + target.code); resuming = false;
     target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
-    $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'Class ended. Join again when your teacher says so.' : m.why;
+    $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'This class has ended. Your teacher will tell you when to join again.' : m.why;
   } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
 }
 
@@ -752,13 +752,13 @@ function setProp(k,v,quiet){
 function setColor(hex){setProp('color',hex,true);const h=$('#hex'),c=$('#chip');if(h)h.value=hex;if(c)c.style.background=hex;drawWheel()}
 function renderOpts(){
  const o=sel,m=o?o.k:S.tool;let h='';
- if(m==='hand')return opts.innerHTML=hint('✋ Move view','Drag to slide around the page when zoomed in. Two fingers move and pinch with any tool.');
+ if(m==='hand')return opts.innerHTML=hint('✋ Move view','Drag to move the page. Use two fingers to move and zoom at any time.');
  if(m==='eraser')return opts.innerHTML=`<div class="sec"><h4>Eraser mode</h4><div class="grid">
-  <button class="opt${S.erase==='part'?' on':''}" data-k="erase" data-v="part"><b>◐</b>Partial</button>
-  <button class="opt${S.erase==='whole'?' on':''}" data-k="erase" data-v="whole"><b>▣</b>Whole object</button></div>
-  <p class="hint" style="margin:8px 0 0;font-size:13px">${S.erase==='part'?'Rub out just part of a pen line, line or arrow. Shapes and text can’t be cut: switch to Whole object for those.':'Touch anything to remove all of it: a pen line, shape, or text box.'}</p></div>`
+  <button class="opt${S.erase==='part'?' on':''}" data-k="erase" data-v="part"><b>◐</b>Part</button>
+  <button class="opt${S.erase==='whole'?' on':''}" data-k="erase" data-v="whole"><b>▣</b>All</button></div>
+  <p class="hint" style="margin:8px 0 0;font-size:13px">${S.erase==='part'?'Erase one part of a line or arrow. To erase a shape or text, tap All.':'Tap a line, shape or text to erase all of it.'}</p></div>`
   +(S.erase==='part'?`<div class="sec"><h4>Eraser size <span id="esv">${S.esize}</span></h4><input type="range" id="esize" min="8" max="80" value="${S.esize}"></div>`:'');
- if(m==='select')return opts.innerHTML=hint('⬚ Select','Tap anything to select it. Drag it to move. Drag the white circles to resize. Then change its color, shape or thickness here.');
+ if(m==='select')return opts.innerHTML=hint('⬚ Select','Tap something to choose it. Drag it to move it. Drag the white circles to change its size. You can change its color here.');
  const col=o?o.c:S.color,isShape=m==='shape',isLine=m==='line',isText=m==='text',isStroke=m==='stroke'||m==='pen';
  h+=`<div class="sec" data-pin="2"><h4>Color</h4><div class="sw">${COLORS.map(c=>`<button class="swb${c==col?' on':''}" style="background:${c}" data-k="color" data-v="${c}" aria-label="${CNAME[c]||c}"></button>`).join('')}<button class="swb wheelbtn${S.wheel?' on':''}" data-act="wheel" aria-label="Color wheel"></button></div>`;
  if(S.wheel)h+=`<div class="wheelbox"><canvas id="wheel" width="180" height="180"></canvas><label>Brightness <input type="range" id="val" min="5" max="100" value="${Math.round(S.hsv[2]*100)}"></label><div class="hexrow"><span id="chip" style="background:${col}"></span><input id="hex" value="${col}" maxlength="7" aria-label="Hex color"></div></div>`;

@@ -35,7 +35,7 @@ Three things the teacher runs from the teaching screen (`/class`), all of which 
 - Pulse is for drawing questions. It clears when a new question is sent, so a colour always describes the drawing on screen.
 
 **Freeze — the whole class's attention**
-- **❄ Freeze** in the top bar (and in the phone header) stops every student's page: the drawing is blurred behind a frosted card — *Frozen. Eyes up here. Your work is saved.* — with a little frost and falling snow. The projector shows a matching **Class frozen** screen.
+- **❄ Freeze** in the top bar (and in the phone header) stops every student's page: the drawing is blurred behind a frosted card — *Frozen. Look at your teacher. Your work is saved.* — with a little frost and falling snow. The projector shows a matching **Class frozen** screen.
 - Nothing gets through while frozen: drawing, text, sorting and colours are all held on the server, not just hidden in the browser. Joining still works, so a late arrival lands on the frozen screen instead of an error.
 - From the button's menu: freeze now, or for 30 seconds / 1 minute / 2 minutes. A timed freeze lets go on its own. Sending a new question, or **Clear class**, also unfreezes.
 

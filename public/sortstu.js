@@ -17,7 +17,7 @@ const SS = (() => {
   function note(c, extra) {
     const cls = [extra, sel === c.id ? 'sel' : '', fb && c.id in fb.ok ? (fb.ok[c.id] ? 'right' : 'wrong') : ''].filter(Boolean).join(' ');
     const n = SK.note(c, cls);
-    if (fb && fb.where && fb.where[c.id]) n.append(mk('span', 'where', 'Belongs in ' + laneName(fb.where[c.id])));
+    if (fb && fb.where && fb.where[c.id]) n.append(mk('span', 'where', 'Goes in ' + laneName(fb.where[c.id])));
     if (!done) { // reachable and operable by keyboard or screen reader: Enter or Space picks the card up
       n.tabIndex = 0; n.setAttribute('role', 'button'); n.setAttribute('aria-pressed', String(sel === c.id));
       n.setAttribute('aria-label', c.text + '. ' + (map[c.id] ? 'In ' + laneName(map[c.id]) + '.' : 'Not placed yet.') + (sel === c.id ? ' Picked up. Choose a lane, or press 1 to ' + q.sort.lanes.length + '.' : ' Press Enter to pick it up.'));
@@ -45,7 +45,7 @@ const SS = (() => {
     const un = ord.filter(c => !map[c.id]), pile = $('#spile'); pile.textContent = '';
     pile.append(target(mk('h4', '', done ? 'Cards' : 'Cards to sort (' + un.length + ')'), 'the pile'));
     un.forEach(c => pile.append(note(c)));
-    if (!un.length) pile.append(mk('div', 'sempty', done ? 'Your answer is in.' : '✓ Every card is placed. Check your work, then press “I’m done”.'));
+    if (!un.length) pile.append(mk('div', 'sempty', done ? 'Your answer was sent.' : '✓ All cards are placed. Check your work. Then press “I’m done”.'));
     const n = s.cards.length, placed = n - un.length, right = fb ? s.cards.filter(c => fb.ok[c.id]).length : 0;
     const dn = $('#sdone'); dn.textContent = '';
     dn.append(mk('b', '', fb && placed === n ? 'You got ' + right + ' of ' + n + ' right' : placed + ' of ' + n + ' placed'));
