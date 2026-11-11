@@ -234,10 +234,11 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="chip proj" hidden>On projector</span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
+    c.querySelector('.badge').append(icoEl('screen', 'sm'), 'On projector');
+    c.querySelector('.tchip').append(icoEl('chev', 'sm'));
     c.onclick = () => pick(s.id); // up to 3 drawings side by side on the projector
-    c.querySelector('.tsel').onclick = e => e.stopPropagation();
-    c.querySelector('.tsel').onchange = e => setTeam(s, e.target.value || null);
+    c.querySelector('.tchip').onclick = e => { e.stopPropagation(); openMenuFixed(e.currentTarget, [{ t: 'No team', check: !s.team, f: () => setTeam(s, null) }, ...TM.teams.map(t => ({ t: teamLabel(t), check: s.team === t.id, f: () => setTeam(s, t.id) }))], 200); };
     c.querySelector('.ok').onclick = e => { e.stopPropagation(); award(s); };
     $('#grid').append(c); s.el = c; s.cv = c.querySelector('canvas'); S.stu.set(d.id, s);
   }
@@ -310,7 +311,7 @@ function pulseCard(s) {
   const p = pulseOf(s.pulse), chip = s.el.querySelector('.pchip');
   if (p) s.el.dataset.pulse = p.k; else delete s.el.dataset.pulse;
   chip.hidden = !p;
-  if (p) { chip.textContent = p.e + ' ' + p.n; chip.style.background = p.soft; chip.style.color = p.c; chip.title = 'Said: ' + p.n; }
+  if (p) { chip.replaceChildren(p.e + ' ', el('span', { className: 'pw', textContent: p.n })); chip.style.background = p.soft; chip.style.color = p.c; chip.title = 'Said: ' + p.n; }
   s.el.setAttribute('aria-label', disp(s) + (p ? ' — ' + p.n : ' — no confidence picked yet'));
 }
 let pulseFilter = null;
@@ -410,14 +411,15 @@ function ui() {
   const want = TM.teams.map(t => t.id + t.name + (t.emoji || '')).join('|');
   S.stu.forEach(s => {
     s.el.querySelector('.nm').textContent = disp(s);
-    const tm = teamOf(s.team), sel = s.el.querySelector('.tsel'), ok = s.el.querySelector('.ok');
+    const tm = teamOf(s.team), tch = s.el.querySelector('.tchip'), ok = s.el.querySelector('.ok');
     s.el.style.setProperty('--tc', tm ? tm.color : 'var(--c-line)');
-    sel.hidden = !TM.teams.length; ok.hidden = !TM.teams.length;
-    if (sel.dataset.k !== want) { sel.dataset.k = want; sel.innerHTML = ''; [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); }
-    sel.value = s.team || '';
+    tch.hidden = !TM.teams.length; ok.hidden = !TM.teams.length;
+    tch.querySelector('.td').style.background = tm ? tm.color : 'var(--c-line-2)';
+    tch.querySelector('.tn').textContent = tm ? teamLabel(tm) : 'No team';
+    tch.setAttribute('aria-label', 'Team: ' + (tm ? tm.name : 'none') + '. Change team.');
     ok.classList.toggle('on', !!s.aw); ok.replaceChildren(icoEl('check', 'sm'), s.aw ? ' Given' : ' +1'); ok.title = s.aw ? 'Click to take the point back' : 'Give this team a point';
     const up = S.picks.includes(s.id);
-    s.el.querySelector('.chip').hidden = !up;
+    s.el.querySelector('.badge').hidden = !up;
     s.el.classList.toggle('spot', up);
     pulseCard(s);
   });
@@ -433,6 +435,11 @@ function qActions() {
   const award = !isSort && sp && TM.teams.length;
   $('#sendnext').hidden = isSort || award || cur + 1 >= n || !n;
   $('#qlbl').textContent = !n ? 'No questions yet' : cur < 0 ? 'No question sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
+}
+function openMenuFixed(anchor, items, minw) {
+  minw = minw || 190;
+  const r = anchor.getBoundingClientRect(), up = r.bottom + items.length * 46 + 20 > innerHeight; // fixed, so a scrolling list cannot clip it
+  openMenu(anchor, items, 'position:fixed;min-width:' + minw + 'px;' + (r.left + minw > innerWidth ? 'right:' + (innerWidth - r.right) + 'px;' : 'left:' + r.left + 'px;') + (up ? 'bottom:' + (innerHeight - r.top + 4) + 'px' : 'top:' + (r.bottom + 4) + 'px'));
 }
 function setCpick(name) { const c = $('#cpick'); c.textContent = name + ' '; c.append(icoEl('chev', 'sm')); }
 // Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
@@ -480,12 +487,10 @@ function renderSet() {
     const nextUnsent = i === cur + 1 || (cur < 0 && i === 0);
     const more = el('button', { className: 'b sq ter', title: 'More for question ' + (i + 1) }, icoEl('dots')); more.setAttribute('aria-label', 'More for question ' + (i + 1));
     more.onclick = e => { e.stopPropagation();
-      const r = more.getBoundingClientRect(), up = r.bottom + 190 > innerHeight; // fixed, so the scrolling list cannot clip it
-      const where = 'position:fixed;min-width:190px;right:' + (innerWidth - r.right) + 'px;' + (up ? 'bottom:' + (innerHeight - r.top + 4) + 'px' : 'top:' + (r.bottom + 4) + 'px');
-      openMenu(more, [
+      openMenuFixed(more, [
       { t: 'Edit', f: () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code) },
       { t: 'Move up', f: () => mv(i, -1) }, { t: 'Move down', f: () => mv(i, 1) }, '-',
-      { t: 'Delete', danger: true, f: () => rm(i) }], where); };
+      { t: 'Delete', danger: true, f: () => rm(i) }], 190); };
     const main = i === cur
       ? el('div', { className: 'live', textContent: 'Students are answering' })
       : (() => { const b = el('button', { className: 'b' + (nextUnsent ? ' pri' : ' line2'), onclick: () => go(i) }, icoEl('send', 'sm'), 'Send'); b.setAttribute('aria-label', 'Send question ' + (i + 1) + ' to students'); return b; })();
@@ -589,7 +594,7 @@ function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Stud
 function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return toast('Could not make a QR code here.'); } $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal(); }
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
 $('#proj').onclick = $('#pproj').onclick = () => window.open('/projector?code=' + code, 'projector');
-function setCardSize(w, keep) { $('#grid').style.setProperty('--cw', w + 'px'); document.querySelectorAll('#csize button').forEach(b => b.setAttribute('aria-pressed', b.dataset.z === String(w) ? 'true' : 'false')); if (!keep) try { store.do_csize = String(w); } catch (e) { } }
+function setCardSize(w, keep) { $('#grid').style.setProperty('--cw', w + 'px'); $('#grid').dataset.size = w === '170' ? 's' : w === '320' ? 'l' : 'm'; document.querySelectorAll('#csize button').forEach(b => b.setAttribute('aria-pressed', b.dataset.z === String(w) ? 'true' : 'false')); if (!keep) try { store.do_csize = String(w); } catch (e) { } }
 document.querySelectorAll('#csize button').forEach(b => (b.onclick = () => setCardSize(b.dataset.z)));
 try { setCardSize(['170', '230', '320'].includes(store.do_csize) ? store.do_csize : '230', true); } catch (e) { setCardSize('230', true); }
 $('#hide').onclick = () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide });

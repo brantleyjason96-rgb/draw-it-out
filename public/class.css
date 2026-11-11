@@ -38,10 +38,17 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .qbar>div:first-child{flex:1 1 320px}
 .qbar .q{font-family:var(--disp);font-weight:600;font-size:var(--fs-2xl);line-height:1.2;overflow-wrap:anywhere}
 .grid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cw,230px),1fr));grid-auto-rows:minmax(250px,1fr);gap:14px;align-content:start}
-.stu{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0;cursor:pointer;border-left:8px solid var(--tc,var(--line))}
-.stu.spot{border-color:var(--pri);border-left-color:var(--pri);box-shadow:0 0 0 4px var(--c-primary-tint)}
+.stu{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0;cursor:pointer;border-top:4px solid var(--pc,var(--line))}
+.stu.spot{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri)}
 .stu .top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;font-weight:700;font-size:var(--fs-md)}
 .stu .top .pchip,.stu .top .chip{margin-left:auto} /* chips drop to their own line in a narrow card instead of running off its edge */
+.stu .thumbw{position:relative;flex:1;min-height:0;display:flex}
+.stu .badge{position:absolute;left:6px;top:6px;display:inline-flex;align-items:center;gap:4px;background:var(--pri);color:#fff;font-size:var(--fs-xs);font-weight:700;border-radius:var(--r-pill);padding:2px 9px}
+.stu.spot .thumbw canvas{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri)}
+.stu .tchip{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--c-control);border-radius:var(--r-md);background:#fff;font-weight:600;font-size:var(--fs-sm);color:var(--c-ink-2)}
+.stu .tchip .td{width:12px;height:12px;border-radius:50%;flex:none}
+.stu .tchip .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+#grid[data-size=s] .pchip .pw{display:none}
 .stu canvas{flex:1;min-height:0;width:100%;height:auto;object-fit:contain;border:1px solid var(--c-line-2);border-radius:var(--r-sm);background:var(--c-canvas-gap)}
 .stu .r2{display:flex;gap:6px}
 .stu .tsel{flex:1;min-width:0;min-height:44px;padding:0 8px;border:1px solid var(--line2);border-radius:var(--r-md);background:#fff;font-weight:600;font-size:var(--fs-sm)}
@@ -53,8 +60,6 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .stu[data-pulse=r]{--pc:var(--c-bad);--pcs:var(--c-bad-soft)}
 .stu[data-pulse=y]{--pc:var(--c-warn);--pcs:var(--c-warn-soft)}
 .stu[data-pulse=g]{--pc:var(--c-good);--pcs:var(--c-good-soft)}
-.stu[data-pulse]{outline:3px solid var(--pc);outline-offset:-3px}
-.stu[data-pulse] .nm:after{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pc);margin-left:8px;vertical-align:middle}
 .pchip{font-size:var(--fs-xs);font-weight:700;border-radius:var(--r-pill);padding:2px 9px;white-space:nowrap;flex:none}
 #pulsesum{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #pulsesum .pb{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:var(--r-pill);border:2px solid var(--pc,var(--c-line-2));background:var(--pcs,#fff);color:var(--pc,var(--c-ink-2));font-weight:700;font-size:var(--fs-sm)}
