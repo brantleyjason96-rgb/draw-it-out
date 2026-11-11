@@ -226,3 +226,4 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 #demobar .dstep.done{border-color:var(--c-good-on-dark);color:var(--c-good-on-dark)}
 #demobar .b{min-height:40px}
 @media(max-width:1000px){#demobar .dsteps{display:none}#demobar{justify-content:space-between}}
+@media(max-width:700px){#demobar .dsub{display:none}#demobar{gap:8px}}
