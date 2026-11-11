@@ -238,7 +238,11 @@ body.playing #play{position:fixed;inset:0;display:flex;flex-direction:column;bac
 #qbox.min #q{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #qbox.min #q:after{content:''}
 #qbox.proj{background:var(--c-good)}
-#projnote{display:block;font-weight:700;font-size:var(--fs-md);margin-bottom:2px}
+#projnote,#sortscore{display:block;font-weight:700;font-size:var(--fs-md);margin-bottom:2px}
+#sortscore[hidden],#projnote[hidden]{display:none}
+#sortview.allplaced #spile{flex:0 0 auto;min-height:0;max-height:96px}
+#sortview.allplaced #sdone{flex:1;width:auto;flex-direction:row;align-items:center;justify-content:space-between}
+#sortview.allplaced #sdone .btn{min-height:64px;min-width:200px;font-size:var(--fs-xl);font-weight:700}
 #tm{display:flex;align-items:center;gap:6px;min-height:44px;margin:0;flex:none;cursor:pointer;border-radius:var(--r-pill);padding:0 14px;max-width:46vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #tm[hidden]{display:none}
 #tmenu{position:absolute;z-index:30;top:60px;left:16px;width:280px;background:#fff;color:var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-2);padding:8px}
@@ -326,7 +330,7 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
  </div>
 
  <div id="play" hidden>
-  <div id="qbox"><button id="tm" type="button" aria-haspopup="true" hidden></button><div class="qtx"><small id="projnote" hidden>Your work is on the projector. You cannot draw now.</small><span id="q"></span></div><button id="qt" aria-label="Show or hide the question"></button></div>
+  <div id="qbox"><button id="tm" type="button" aria-haspopup="true" hidden></button><div class="qtx"><small id="sortscore" hidden></small><small id="projnote" hidden>Your work is on the projector. You cannot draw now.</small><span id="q"></span></div><button id="qt" aria-label="Show or hide the question"></button></div>
   <div id="tmenu" hidden>
    <button type="button" class="mi" id="tmleave"><svg data-i="leave"></svg> Leave this class</button>
    <div id="tmask" hidden><p>Leave this class? You can join again with your class code.</p><div class="rowb"><button type="button" class="btn" id="stay">Stay</button><button type="button" class="btn red" id="leave">Leave</button></div></div>

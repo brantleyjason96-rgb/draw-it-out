@@ -5,7 +5,7 @@
 .nc.ghost{position:fixed;z-index:1000;pointer-events:none;transform:rotate(-2deg);box-shadow:var(--sh-2);opacity:.95;margin:0}
 .nc.drag-src{opacity:.3}
 .nc.right{outline:3px solid var(--c-good)}
-.nc.wrong{outline:3px solid var(--c-bad)}
+.nc.wrong{outline:0;box-shadow:inset 6px 0 0 var(--c-bad),var(--sh-1)} /* a red left edge, with the cross and the Goes in line, not a red outline */
 .nc .where{display:block;font-size:var(--fs-sm);font-weight:700;color:var(--c-bad-strong);margin-top:2px}
 /* right or wrong is never colour alone: a tick or a cross sits in the corner of the note */
 .nc.right,.nc.wrong{position:relative;padding-right:36px}

@@ -38,7 +38,7 @@ const SS = (() => {
     const s = q.sort, ord = SK.order(s.cards, seed, s.shuffle);
     const st = $('#sstage'); st.textContent = ''; st.style.gridTemplateColumns = 'repeat(' + s.lanes.length + ',minmax(0,1fr))';
     s.lanes.forEach(l => {
-      const d = mk('div', 'slane'); d.dataset.zone = l.id; d.append(target(mk('h3', '', l.name), l.name));
+      const d = mk('div', 'slane'); d.dataset.zone = l.id; d.append(target(mk('h3', '', l.name + ' · ' + ord.filter(c => map[c.id] === l.id).length), l.name));
       ord.filter(c => map[c.id] === l.id).forEach(c => d.append(note(c)));
       st.append(d);
     });
@@ -48,10 +48,12 @@ const SS = (() => {
     if (!un.length) { const e = mk('div', 'sempty', done ? 'Your answer was sent.' : 'All cards are placed. Check your work. Then press “I’m done”.'); if (!done) e.prepend(icoEl('check', 'sm'), ' '); pile.append(e); }
     const n = s.cards.length, placed = n - un.length, right = fb ? s.cards.filter(c => fb.ok[c.id]).length : 0;
     const dn = $('#sdone'); dn.textContent = '';
-    dn.append(mk('b', '', fb && placed === n ? 'You got ' + right + ' of ' + n + ' right' : placed + ' of ' + n + ' placed'));
+    dn.append(mk('b', '', placed + ' of ' + n + ' placed'));
+    const sn = $('#sortscore'); if (sn) { sn.hidden = !(fb && placed === n); sn.textContent = 'You got ' + right + ' of ' + n; } // the score sits in the question bar
     const b = mk('button', 'btn', done ? 'Done' : 'I’m done'); if (done) b.append(' ', icoEl('check', 'sm')); b.disabled = done || placed < n; b.onclick = () => { done = true; send({ t: 'sort', p: map, done: true }); sel = null; render(); };
     dn.append(b);
     $('#smsg').hidden = !(done && !fb);
+    $v().classList.toggle('allplaced', !un.length && !done); // the tray shrinks and I’m done becomes the one large button
     $v().classList.toggle('sdone', done); $('#spile').classList.toggle('lockable', true);
     const r = refocus || keep; refocus = null;
     if (r) {
