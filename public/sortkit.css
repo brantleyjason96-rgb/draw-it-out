@@ -1,5 +1,5 @@
 /* Sticky notes for sort questions. Used by the student page, the question editor and the projector. */
-.nc{background:var(--c-note);color:var(--c-note-ink);border-radius:6px;padding:8px 10px;box-shadow:var(--sh-1);font-size:15px;line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:break-word;hyphens:manual}
+.nc{background:var(--c-note);color:var(--c-note-ink);border-radius:var(--r-sm);padding:8px 10px;box-shadow:var(--sh-1);font-size:15px;line-height:1.25;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow-wrap:break-word;hyphens:manual}
 .nc small{display:block;font-size:var(--fs-xs);opacity:.85;margin-top:2px}
 .nc.still{cursor:default}
 .nc.ghost{position:fixed;z-index:1000;pointer-events:none;transform:rotate(-2deg);box-shadow:var(--sh-2);opacity:.95;margin:0}

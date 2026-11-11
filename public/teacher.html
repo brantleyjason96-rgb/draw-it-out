@@ -20,13 +20,13 @@ h1{font-size:38px;letter-spacing:-.01em}
 .cls .row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .cls .ln{font-size:15px;color:var(--mut);line-height:1.4;min-height:42px}
 .cls .go{margin-top:4px;min-height:48px;font-size:17px;font-weight:700}
-.dots{background:none;border:0;width:44px;height:44px;border-radius:8px;font-size:20px;line-height:1;color:var(--mut)}
+.dots{background:none;border:0;width:44px;height:44px;border-radius:var(--r-sm);font-size:20px;line-height:1;color:var(--mut)}
 .dots:hover{background:var(--c-bg)}
-.newc{border:2px dashed var(--c-control);border-radius:16px;min-height:150px;background:transparent;font-weight:700;font-size:16px;color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.newc{border:2px dashed var(--c-control);border-radius:var(--r-xl);min-height:150px;background:transparent;font-weight:700;font-size:16px;color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .fstack{display:flex;flex-direction:column;gap:18px}
 .fgroup{display:flex;flex-direction:column;gap:12px}
 .fhead{display:flex;align-items:center;gap:8px;position:relative}
-.ftog{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 14px;font-weight:700;font-size:17px;text-align:left}
+.ftog{flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:0 14px;font-weight:700;font-size:17px;text-align:left}
 .ftog .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ftog small{color:var(--mut);font-weight:500;font-size:14px;white-space:nowrap}
 .ftog .chev{display:inline-block;transition:transform .15s;color:var(--mut)}
@@ -35,7 +35,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 .fempty{color:var(--mut);font-size:15px;padding:2px 4px 6px}
 .setc{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
 .setc .hd{display:flex;gap:12px;align-items:center}
-.tile{flex:none;width:44px;height:44px;border-radius:12px}
+.tile{flex:none;width:44px;height:44px;border-radius:var(--r-lg)}
 .two{display:flex;gap:16px;flex-wrap:wrap}
 .two>.card{padding:16px 18px;flex:1 1 420px}
 .two .bk{flex:0 1 420px}
@@ -56,12 +56,12 @@ h1{font-size:38px;letter-spacing:-.01em}
 .ta-main{flex:2 1 520px;min-width:0}
 .ta-side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .ta-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:14px;padding:10px 12px;background:#fff}
-.tcard-ic{width:56px;height:56px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
+.tcard{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:var(--r-lg);padding:10px 12px;background:#fff}
+.tcard-ic{width:56px;height:56px;border-radius:var(--r-lg);border:1px solid var(--line2);background:#fff;font-size:26px;line-height:1;padding:0}
 .tcard-nm{font-weight:700;font-size:17px;min-height:44px}
 .tcard-sub{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}
 .swrow{display:flex;gap:4px;flex-wrap:wrap}
-.swbtn{width:28px;height:28px;border-radius:7px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
+.swbtn{width:28px;height:28px;border-radius:var(--r-sm);border:2px solid #fff;box-shadow:0 0 0 1px var(--line2);padding:0}
 .swbtn.on{box-shadow:0 0 0 3px var(--ink)}
 .tcard-score{display:flex;align-items:center;gap:8px;min-width:76px;justify-content:flex-end}
 .tcard-score b{font-family:var(--disp);font-weight:800;font-size:28px;min-width:34px;text-align:right}
@@ -75,32 +75,32 @@ h1{font-size:38px;letter-spacing:-.01em}
 .copywrap{position:relative;display:inline-flex} /* anchors the copy-teams picker menu */
 .pv{display:flex;flex-direction:column;gap:12px}
 .pv-lbl{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-.pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:14px;background:#fff;padding:10px 14px;font-size:18px;font-weight:600;max-width:220px}
+.pvtile{display:flex;align-items:center;gap:10px;border:3px solid var(--tc);border-radius:var(--r-lg);background:#fff;padding:10px 14px;font-size:18px;font-weight:600;max-width:220px}
 .pvtile .em{font-size:30px;line-height:1}
 .pvboard{display:grid;grid-template-columns:34px minmax(0,1fr) 44px;align-items:center;gap:10px}
 .pvboard .rk{font-size:20px;font-weight:800;text-align:center;color:var(--mut)}
 .pvboard .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pvboard .bar{height:12px;border-radius:99px;background:var(--tc);min-width:8px;margin-top:4px}
+.pvboard .bar{height:12px;border-radius:var(--r-pill);background:var(--tc);min-width:8px;margin-top:4px}
 .pvboard .pt{font-family:var(--disp);font-weight:800;font-size:24px;text-align:right}
 .icdlg{max-width:680px;width:calc(100% - 24px);max-height:calc(100dvh - 24px);padding:0;overflow:hidden}
 .icdlg[open]{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 24px))}
 .ic-top{display:flex;gap:12px;align-items:center;padding:4px 24px 10px}
-.ic-now{flex:none;width:56px;height:56px;border-radius:14px;border:2px solid var(--pri);background:var(--pri-l);font-size:30px;display:flex;align-items:center;justify-content:center}
+.ic-now{flex:none;width:56px;height:56px;border-radius:var(--r-lg);border:2px solid var(--pri);background:var(--pri-l);font-size:30px;display:flex;align-items:center;justify-content:center}
 .ic-top .inp{flex:1;min-width:0}
 .ic-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 24px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .ic-tabs::-webkit-scrollbar{display:none}
-.ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:99px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ic-tabs button{flex:none;min-height:44px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--line2);background:#fff;font-weight:600;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .ic-tabs button.on{background:var(--dark);border-color:var(--dark);color:#fff}
 .ic-scroll{flex:1;min-height:180px;overflow:auto;border-top:1px solid var(--line);background:var(--c-surface-2)}
 .ic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;padding:14px 24px}
 .ic-empty{margin:0;padding:24px;text-align:center;color:var(--mut)}
 .ic-paste{display:flex;gap:8px;align-items:center}
 .ic-paste .inp{flex:1;min-width:0}
-.ic-prev{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line2);background:#fff;font-size:26px;display:flex;align-items:center;justify-content:center}
+.ic-prev{flex:none;width:44px;height:44px;border-radius:var(--r-md);border:1px solid var(--line2);background:#fff;font-size:26px;display:flex;align-items:center;justify-content:center}
 .ic-note{font-size:13px;color:var(--mut);min-height:18px}
 .ic-note.bad{color:var(--c-bad);font-weight:600}
 @media(max-width:560px){.ic-grid{grid-template-columns:repeat(5,1fr);gap:6px;padding:12px}.ic-top,.ic-tabs{padding-left:12px;padding-right:12px}.ic-custom{padding:12px!important}.ic-custom .f{flex:1 1 100%!important}}
-.ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:12px;background:#fff;font-size:26px;line-height:1}
+.ic-grid button{min-height:56px;border:1px solid var(--line2);border-radius:var(--r-lg);background:#fff;font-size:26px;line-height:1}
 .ic-grid button.on{border:3px solid var(--pri);background:var(--pri-l)}
 .ic-custom{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:12px 24px 18px;border-top:1px solid var(--line);flex:none;background:#fff}
 .ic-custom .f{display:flex;flex-direction:column;gap:6px;flex:1 1 260px}

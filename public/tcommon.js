@@ -269,7 +269,7 @@ async function showStarters(onAdd) {
   box.innerHTML = ''; let last = '';
   starters.forEach(st => {
     if (st.subject !== last) { last = st.subject; box.append(el('h3', { textContent: st.subject, style: 'margin:14px 0 4px;font-size:18px' })); }
-    const row = el('div', {}); row.style.cssText = 'display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--line);border-radius:12px;margin:6px 0';
+    const row = el('div', {}); row.style.cssText = 'display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-lg);margin:6px 0';
     const t = el('div', { textContent: st.name }); t.append(el('small', { textContent: st.questions.length + ' questions · grades ' + st.grade, style: 'display:block;color:var(--mut)' }));
     const b = el('button', { className: 'b line2', textContent: 'Add' });
     b.onclick = () => { const s = addSet(st.name, st.questions); b.textContent = 'Added ✓'; b.disabled = true; toast('Added "' + st.name + '" to your sets.'); onAdd && onAdd(s); };
