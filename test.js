@@ -514,5 +514,11 @@ await test('leaving on purpose removes the student instead of leaving a ghost ca
   st.ws.close();
 });
 
+await test('the Figtree font file is served as woff2', async () => {
+  const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('content-type'), 'font/woff2');
+});
+
 console.log(pass + ' passed'); srv.kill();
 

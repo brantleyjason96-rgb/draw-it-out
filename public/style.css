@@ -1,7 +1,7 @@
 /* Student, projector and landing pages. Colours and sizes come from tokens.css, which must load first. */
 :root{--ink:var(--c-ink);--mut:var(--c-muted);--line:var(--c-line);--pri:var(--c-primary);--bg:var(--c-bg)}
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.4 var(--font-system);color:var(--ink);background:var(--bg)}
+body{margin:0;font:16px/1.4 var(--font-body);color:var(--ink);background:var(--bg)}
 button,select,input,textarea{font:inherit}
 :focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}
 main{padding:16px;max-width:1200px;margin:auto}
