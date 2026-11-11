@@ -60,13 +60,14 @@
   <main>
    <div id="frzrow" hidden role="status"><span><svg data-i="snow"></svg> Class is frozen. Students can’t draw.</span><button class="b sm" id="frzoff2">Unfreeze</button></div>
    <div class="qbar">
-    <div style="min-width:0"><div class="lbl">Students are answering</div><div class="q" id="curq"></div></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="b line2 big" id="revbtn" hidden></button><button class="b good big" id="awbig" hidden></button></div>
+    <div style="min-width:0;flex:1"><div class="lbl" id="qlbl">Question</div><div class="q" id="curq"></div><div class="mut" id="sub"></div></div>
+    <div class="act"><button class="b line2 big" id="revbtn" hidden></button><button class="b good big" id="awbig" hidden></button><button class="b line2 big" id="sendnext" hidden><svg data-i="send" class="sm"></svg>Send next question</button></div>
    </div>
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div class="mut" id="sub" style="font-size:var(--fs-md);font-weight:500"></div>
+   <div class="toolrow">
     <div id="pulsesum" hidden></div>
-    <button class="tog blue" id="hide"><span id="hidet">Names hidden on projector</span><i></i></button>
+    <span class="sp"></span>
+    <span class="seg" role="group" aria-label="Card size" id="csize"><button data-z="170" aria-pressed="false" title="Small cards">S</button><button data-z="230" aria-pressed="true" title="Medium cards">M</button><button data-z="320" aria-pressed="false" title="Large cards">L</button></span>
+    <button class="tog blue" id="hide"><span id="hidet">Names on projector</span><i></i></button>
    </div>
    <div id="pstrip" hidden></div>
    <div class="grid" id="grid"></div>
@@ -321,7 +322,7 @@ function pulseSummary() {
   box.innerHTML = '';
   PULSE_ORDER.forEach(k => {
     const p = PULSES[k];
-    const b = el('button', { className: 'pb' + (pulseFilter === k ? ' on' : ''), textContent: p.e + ' ' + c[k] });
+    const b = el('button', { className: 'pb' + (pulseFilter === k ? ' on' : ''), textContent: p.e + ' ' + (p.short || p.n) + ' ' + c[k] });
     b.style.setProperty('--pc', p.c); b.style.setProperty('--pcs', p.soft);
     b.title = c[k] + ' said “' + p.n + '”' + (pulseFilter === k ? ' — click to show the whole class again' : ' — click to show only these');
     b.setAttribute('aria-pressed', pulseFilter === k ? 'true' : 'false');
@@ -329,7 +330,7 @@ function pulseSummary() {
     box.append(b);
   });
   if (none) box.append(el('span', { className: 'mut', textContent: none + ' no answer', style: 'font-size:var(--fs-sm);font-weight:600' }));
-  box.append(el('button', { className: 'b sm', title: 'How the class felt, question by question', onclick: openReport }, icoEl('report', 'sm'), ' Report'));
+  box.append(el('button', { className: 'b ter', title: 'How the class felt, question by question', onclick: openReport }, icoEl('report', 'sm'), 'Report'));
 }
 function applyPulseFilter() {
   let shown = 0;
@@ -356,16 +357,18 @@ function pick(id) {
 function renderPicks() {
   const box = $('#pstrip'), ids = S.picks.filter(id => S.stu.has(id));
   box.hidden = !ids.length; box.innerHTML = ''; if (!ids.length) return;
-  box.append(el('span', { className: 'lbl', textContent: 'On projector (' + ids.length + '/3)' }));
+  box.append(el('span', { className: 'lbl', textContent: 'On projector ' + ids.length + ' of 3' }));
   ids.forEach(id => {
     const s = S.stu.get(id);
     const b = el('button', { className: 'pk', title: 'Take ' + disp(s) + ' off the projector' });
     b.setAttribute('aria-label', 'Take ' + disp(s) + ' off the projector');
-    b.append(el('span', { textContent: disp(s) }), el('span', {}, icoEl('x', 'sm')));
+    const th = el('canvas', { width: 64, height: 40, className: 'pth' }), src = s.el.querySelector('canvas');
+    try { th.getContext('2d').drawImage(src, 0, 0, 64, 40); } catch (e) { }
+    b.append(th, el('span', { textContent: disp(s) }), el('span', {}, icoEl('x', 'sm')));
     b.onclick = () => pick(id);
     box.append(b);
   });
-  box.append(el('button', { className: 'b sm', textContent: 'Clear', onclick: () => ws.send({ t: 'spot', ids: [], hide: S.hide }) }));
+  box.append(el('button', { className: 'b sm ter', textContent: 'Clear', onclick: () => ws.send({ t: 'spot', ids: [], hide: S.hide }) }));
 }
 
 // ---- freeze ----
@@ -396,10 +399,10 @@ function ui() {
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
   const isSort = S.q.kind === 'sort';
   $('#grid').hidden = isSort; $('#sres').hidden = !isSort;
-  const rb = $('#revbtn'); rb.hidden = !isSort; rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
+  const rb = $('#revbtn'); rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
   const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
   $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
-  $('#hidet').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector'; $('#hide').classList.toggle('on', S.hide);
+  $('#hide').classList.toggle('on', !S.hide); $('#hide').setAttribute('role', 'switch'); $('#hide').setAttribute('aria-checked', S.hide ? 'false' : 'true');
   $('#lbproj').classList.toggle('on', S.board);
   const gridEmpty = $('#grid .empty:not(.filtered)');
   if (!n && !gridEmpty) $('#grid').append(el('div', { className: 'empty', textContent: 'No students yet. Share the code ' + code + ' or show the QR code.' }));
@@ -419,10 +422,17 @@ function ui() {
     pulseCard(s);
   });
   applyPulseFilter(); pulseSummary(); renderPicks(); freezeUI();
-  const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
+  const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = isSort || !(sp && TM.teams.length);
   if (sp) { ab.replaceChildren(icoEl('check'), sp.aw ? ' Point given (undo)' : ' Give ' + (teamNm(sp.team) || 'a team') + ' a point'); ab.onclick = () => award(sp); }
-  renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
+  qActions(); renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
   if (ph.matches) renderPhone(); else if (isSort) SR.update();
+}
+function qActions() {
+  const isSort = S.q.kind === 'sort', sp = S.stu.get(S.spot), set = typeof activeSet === 'function' && activeSet(), n = set && set.questions ? set.questions.length : 0;
+  $('#revbtn').hidden = !isSort;
+  const award = !isSort && sp && TM.teams.length;
+  $('#sendnext').hidden = isSort || award || cur + 1 >= n || !n;
+  $('#qlbl').textContent = !n ? 'No questions yet' : cur < 0 ? 'No question sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
 }
 function setCpick(name) { const c = $('#cpick'); c.textContent = name + ' '; c.append(icoEl('chev', 'sm')); }
 // Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
@@ -484,6 +494,7 @@ function renderSet() {
   });
   if (!n) box.append(el('div', { className: 'mut', textContent: 'This set has no questions yet. Use + Add question, or Starter sets.', style: 'padding:12px 4px' }));
   $('#pos').textContent = !n ? '' : (cur < 0 ? '–' : cur + 1) + ' of ' + n;
+  if (typeof qActions === 'function') qActions();
   $('#prev').disabled = cur <= 0; $('#next').disabled = !n || cur >= n - 1;
   if (ph.matches) renderPhone();
 }
@@ -501,6 +512,7 @@ $('#setsel').onchange = e => { store.do_active = e.target.value; cur = -1; store
 function foldRail(on) { $('#rail').classList.toggle('shut', on); try { store.do_qfold = on ? '1' : '0'; } catch (e) { } }
 try { if (store.do_qfold === '1') $('#rail').classList.add('shut'); } catch (e) { }
 $('#qopen').onclick = () => foldRail(false); $('#qshut').onclick = () => foldRail(true);
+$('#sendnext').onclick = () => go(cur + 1);
 $('#prev').onclick = () => go(cur - 1);
 $('#next').onclick = () => go(cur + 1);
 $('#addq').onclick = () => (location.href = '/sets?id=' + activeSet().id + '&q=new&code=' + code);
@@ -577,6 +589,9 @@ function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Stud
 function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return toast('Could not make a QR code here.'); } $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal(); }
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
 $('#proj').onclick = $('#pproj').onclick = () => window.open('/projector?code=' + code, 'projector');
+function setCardSize(w, keep) { $('#grid').style.setProperty('--cw', w + 'px'); document.querySelectorAll('#csize button').forEach(b => b.setAttribute('aria-pressed', b.dataset.z === String(w) ? 'true' : 'false')); if (!keep) try { store.do_csize = String(w); } catch (e) { } }
+document.querySelectorAll('#csize button').forEach(b => (b.onclick = () => setCardSize(b.dataset.z)));
+try { setCardSize(['170', '230', '320'].includes(store.do_csize) ? store.do_csize : '230', true); } catch (e) { setCardSize('230', true); }
 $('#hide').onclick = () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide });
 SR.mount($('#sres'), sortCtx);
 $('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
