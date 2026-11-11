@@ -1,0 +1,302 @@
+<title>Student Draw Frame</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one fixed frame. Question bar docked on top, tool rail on the left, paper in the middle, one bottom bar. Nothing floats over the paper.
+   Colours are copied from public/tokens.css. Single light look on purpose: it is a mock-up of the app. */
+:root{color-scheme:light;
+--ink:#17212B;--ink2:#394551;--mut:#5B6772;--bg:#F3F5F7;--surface:#fff;--fill:#E8EDF2;--desk:#D1D5DB;
+--line:#E1E6EB;--control:#76838F;--pri:#0B6BCB;--pri-soft:#F1F7FE;--pri-line:#BBD8F5;--question:#1E3A8A;
+--good:#0E7C4A;--good-soft:#E6F4EC;--bad:#B3261E;--bad-soft:#FBE4E1;--warn:#8F5500;--warn-soft:#FFF4DC;--warn-line:#F0D79A;--warn-strong:#5E4300;
+--frost:#0C4A6E;--frost-soft:#E0F2FE;--scrim:rgba(23,33,43,.6);
+--font:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+--r-sm:8px;--r-md:10px;--r-lg:12px;--r-xl:16px;--sh-2:0 4px 14px rgba(23,33,43,.25);--touch:44px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;font:16px/1.4 var(--font);color:var(--ink);background:var(--desk);overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+.q :focus-visible{outline-color:#fff}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* mock-up controls: not part of the design */
+.mock{flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:6px;background:var(--warn-soft);border-bottom:2px dashed var(--warn-line);color:var(--warn-strong);font-size:14px}
+.mock b{font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--control);border-radius:var(--r-sm);overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:6px 12px;min-height:36px;font-weight:600;font-size:14px;color:var(--ink)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+
+/* question bar */
+.q{flex:none;display:flex;align-items:flex-start;gap:12px;padding-block:10px;background:var(--question);color:#fff;position:relative}
+.q.proj{background:var(--good)}
+.team{flex:none;display:flex;align-items:center;gap:8px;min-height:var(--touch);padding:0 12px;border:0;border-radius:99px;background:#fff;color:var(--ink);font-weight:700;font-size:15px}
+.team .sw{width:12px;height:12px;border-radius:50%;background:#475569}
+.team svg{width:16px;height:16px}
+.qt{flex:1;min-width:0;font-size:21px;line-height:1.3;padding-top:7px;overflow-wrap:anywhere}
+.qt small{display:block;font-size:16px;font-weight:700;margin-bottom:2px}
+.q.shut .qt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qhide{flex:none;display:flex;align-items:center;gap:6px;min-height:var(--touch);padding:0 12px;border:1px solid rgba(255,255,255,.45);border-radius:var(--r-md);background:rgba(255,255,255,.12);color:#fff;font-weight:600;font-size:15px}
+.qhide svg{width:18px;height:18px}
+.menu{position:absolute;z-index:30;top:calc(100% - 4px);left:max(16px,env(safe-area-inset-left,0px));width:260px;background:#fff;color:var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-2);padding:8px}
+.menu p{margin:6px 8px 10px;font-size:15px}
+.menu .rowb{display:flex;gap:8px}
+.mi{display:flex;align-items:center;gap:10px;width:100%;min-height:var(--touch);padding:0 10px;border:0;background:none;border-radius:var(--r-sm);font-weight:600;text-align:left}
+.mi:hover{background:var(--fill)}
+.mi.danger{color:var(--bad)}
+.btn{flex:1;min-height:var(--touch);border-radius:var(--r-md);border:1px solid var(--control);background:#fff;font-weight:700}
+.btn.red{background:var(--bad);border-color:var(--bad);color:#fff}
+
+/* middle */
+.mid{flex:1;min-height:0;display:flex;position:relative}
+.rail{flex:none;width:80px;display:flex;flex-direction:column;gap:4px;padding:8px 6px;background:var(--surface);border-right:1px solid var(--line);overflow-y:auto}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;border:0;border-radius:var(--r-md);background:none;font-size:13px;font-weight:600;color:var(--ink2)}
+.tool:hover{background:var(--fill)}
+.tool[aria-pressed=true]{background:var(--ink);color:#fff}
+.rsep{height:1px;background:var(--line);margin:4px 6px}
+.cur{width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--control)}
+.qcols{display:none;flex-direction:column;align-items:center;gap:8px;padding:4px 0}
+.dot{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);padding:0}
+.dot[aria-pressed=true]{box-shadow:0 0 0 3px var(--ink)}
+body.quick .full{display:none}
+body.quick .qcols{display:flex}
+
+.stage{flex:1;min-width:0;display:flex;overflow:auto;padding:16px;touch-action:none}
+.paper{margin:auto;flex:none;position:relative;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(23,33,43,.2)}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.paper input{position:absolute;border:2px dashed var(--pri);border-radius:4px;background:rgba(255,255,255,.9);padding:2px 6px;min-width:120px;font-weight:500}
+body.locked canvas{cursor:not-allowed}
+body.pan canvas{cursor:grab}
+
+/* options panel beside the rail */
+.pop{position:absolute;z-index:20;left:88px;top:8px;width:288px;max-height:calc(100% - 16px);overflow:auto;background:#fff;border-radius:var(--r-xl);box-shadow:var(--sh-2);padding:14px}
+.pop h3{margin:0 0 8px;font-size:15px;font-weight:700}
+.pop h3:not(:first-child){margin-top:16px}
+.cols{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;justify-items:center}
+.cols .dot{width:40px;height:40px}
+.kinds{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kind{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:56px;border:1px solid var(--control);border-radius:var(--r-md);background:#fff;font-size:14px;font-weight:600}
+.kind i{display:block;width:70%;border-radius:99px;background:var(--ink)}
+.kind[aria-pressed=true]{background:var(--pri-soft);border-color:var(--pri);box-shadow:0 0 0 2px var(--pri)}
+.thick{display:flex;align-items:center;gap:10px}
+.thick input{flex:1;min-height:var(--touch)}
+.thick output{width:28px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* bottom bar */
+.bar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;background:var(--surface);border-top:1px solid var(--line)}
+.grp{display:flex;align-items:center;gap:6px}
+.ib{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:var(--touch);min-height:var(--touch);padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;font-weight:600}
+.ib:hover{background:var(--fill)}
+.ib:disabled{opacity:.4;cursor:default}
+.ib[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.zv{min-width:64px;font-variant-numeric:tabular-nums}
+.pulse{display:flex;align-items:center;gap:8px;min-width:0}
+.pulse .lab{font-weight:700;font-size:15px;color:var(--ink2);white-space:nowrap}
+.pb{display:inline-flex;align-items:center;gap:8px;min-height:var(--touch);padding:0 14px;border:2px solid var(--line);border-radius:var(--r-md);background:#fff;font-weight:700;font-size:15px;white-space:nowrap}
+.pb .e{font-size:20px;line-height:1}
+.pb svg{width:18px;height:18px;display:none}
+.pb[aria-pressed=true] svg{display:block}
+.pb[data-p=help][aria-pressed=true]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.pb[data-p=almost][aria-pressed=true]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn-strong)}
+.pb[data-p=ok][aria-pressed=true]{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.conn{width:10px;height:10px;border-radius:50%;background:var(--good);margin-left:4px}
+
+/* frozen */
+.frozen{position:absolute;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(224,242,254,.75);backdrop-filter:blur(6px)}
+.frozen div{max-width:420px;background:#fff;border-radius:22px;box-shadow:var(--sh-2);padding:28px 32px;text-align:center}
+.frozen h2{margin:8px 0 6px;font-size:30px;color:var(--frost)}
+.frozen p{margin:0;font-size:18px;color:var(--ink2)}
+.toast{position:absolute;z-index:50;left:50%;top:12px;transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:#fff;border-radius:var(--r-md);padding:10px 16px;font-weight:600;box-shadow:var(--sh-2)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+/* phone: rail becomes a row under the paper, pulse shows faces only */
+@media (max-width:700px){
+ .qt{font-size:17px;padding-top:9px}
+ .qhide span,.team .nm{display:none}
+ .mid{flex-direction:column-reverse}
+ .rail{width:auto;flex-direction:row;align-items:center;border-right:0;border-top:1px solid var(--line);overflow-x:auto;padding:4px max(8px,env(safe-area-inset-left,0px))}
+ .tool{min-width:48px;min-height:48px;flex:none}
+ .tool span{display:none}
+ .rsep{width:1px;height:28px;margin:0 2px;flex:none}
+ .qcols{flex-direction:row}
+ .stage{padding:8px}
+ .pop{left:8px;right:8px;top:auto;bottom:64px;width:auto}
+ .pulse .lab,.pb span:not(.e){display:none}
+ .pb{padding:0 10px}
+ .bar{gap:6px}
+ .grp{gap:4px}
+ .zv{min-width:52px;padding:0 4px}
+ .hand,#zin,#zout{display:none}
+ .pulse{flex:1;justify-content:center}
+}
+@media (prefers-reduced-motion:no-preference){.pop,.menu{animation:in .12s ease-out}@keyframes in{from{opacity:0;transform:translateY(4px)}}}
+</style>
+
+<div class="mock gut" role="group" aria-label="Mock-up controls">
+ <span><b>Mock-up.</b> Draw on the page, tap the tools, then try each state:</span>
+ <span class="seg" id="states">
+  <button data-s="normal" aria-pressed="true">Normal</button>
+  <button data-s="quick" aria-pressed="false">Quick mode</button>
+  <button data-s="proj" aria-pressed="false">On projector</button>
+  <button data-s="frozen" aria-pressed="false">Frozen</button>
+ </span>
+</div>
+
+<header class="q gut" id="q">
+ <button class="team" id="team" aria-haspopup="true" aria-expanded="false"><span class="sw"></span>🪨 <span class="nm">Granite · 0 pts</span><svg class="i" data-i="down"></svg></button>
+ <div class="qt" id="qt"><small id="qnote" hidden>Your work is on the projector. You cannot draw now.</small>Draw a cross-section of Earth and <b>label the four layers</b>: crust, mantle, outer core, inner core.</div>
+ <button class="qhide" id="qhide" aria-expanded="true"><span>Hide</span><svg class="i" data-i="up"></svg></button>
+ <div class="menu" id="tmenu" hidden>
+  <div id="tm1"><button class="mi danger" id="leave"><svg class="i" data-i="leave"></svg>Leave this class</button></div>
+  <div id="tm2" hidden><p>Leave this class? You can join again with your class code.</p><div class="rowb"><button class="btn" id="stay">Stay</button><button class="btn red" id="go">Leave</button></div></div>
+ </div>
+</header>
+
+<div class="mid" id="mid">
+ <nav class="rail" aria-label="Tools">
+  <button class="tool" data-t="draw" aria-pressed="true"><svg class="i" data-i="pen"></svg><span>Draw</span></button>
+  <button class="tool" data-t="erase" aria-pressed="false"><svg class="i" data-i="eraser"></svg><span>Eraser</span></button>
+  <button class="tool" data-t="text" aria-pressed="false"><svg class="i" data-i="text"></svg><span>Text</span></button>
+  <button class="tool full" data-t="shape" aria-pressed="false"><svg class="i" data-i="shapes"></svg><span>Shapes</span></button>
+  <button class="tool full" data-t="select" aria-pressed="false"><svg class="i" data-i="select"></svg><span>Select</span></button>
+  <div class="rsep"></div>
+  <button class="tool full" id="colbtn" aria-haspopup="true"><i class="cur" id="cur" style="background:#111111"></i><span>Color</span></button>
+  <div class="qcols" id="qcols" role="group" aria-label="Color"></div>
+ </nav>
+ <div class="stage" id="stage"><div class="paper" id="paper"><canvas id="cv" width="1600" height="900" aria-label="Your drawing page"></canvas></div></div>
+
+ <div class="pop" id="pop" hidden></div>
+ <div class="frozen" id="frozen" hidden><div><svg class="i" data-i="snow" style="width:44px;height:44px;color:var(--frost)"></svg><h2>Frozen</h2><p>Look at your teacher. Your work is saved. You can start again soon.</p></div></div>
+ <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<footer class="bar gut">
+ <div class="grp">
+  <button class="ib" id="undo" aria-label="Undo" title="Undo" disabled><svg class="i" data-i="undo"></svg></button>
+  <button class="ib" id="redo" aria-label="Redo" title="Redo" disabled><svg class="i" data-i="redo"></svg></button>
+ </div>
+ <div class="pulse" role="group" aria-label="How is your work?">
+  <span class="lab">How is your work?</span>
+  <button class="pb" data-p="help" aria-pressed="false"><span class="e">🙋</span><span>I need help</span><svg class="i" data-i="check"></svg></button>
+  <button class="pb" data-p="almost" aria-pressed="false"><span class="e">🙂</span><span>Almost</span><svg class="i" data-i="check"></svg></button>
+  <button class="pb" data-p="ok" aria-pressed="false"><span class="e">💡</span><span>I understand</span><svg class="i" data-i="check"></svg></button>
+ </div>
+ <div class="grp">
+  <button class="ib hand" id="hand" aria-pressed="false" aria-label="Move the page" title="Move the page"><svg class="i" data-i="move"></svg></button>
+  <button class="ib" id="zout" aria-label="Zoom out" title="Zoom out"><svg class="i" data-i="minus"></svg></button>
+  <button class="ib zv" id="zfit" title="Fit the page">100%</button>
+  <button class="ib" id="zin" aria-label="Zoom in" title="Zoom in"><svg class="i" data-i="plus"></svg></button>
+  <span class="conn" title="Connected"></span><span class="sr">Connected</span>
+ </div>
+</footer>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const ICON={pen:'M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z',eraser:'M9 20h11M5.5 13.5l8-8a2 2 0 012.8 0l3.2 3.2a2 2 0 010 2.8L12 20H9l-3.5-3.7a2 2 0 010-2.8z',text:'M5 7V4h14v3M12 4v16M9 20h6',shapes:'M3 13h8v8H3zM17 3a4.5 4.5 0 110 9 4.5 4.5 0 010-9z',select:'M4 4h3M10.5 4h3M17 4h3v3M20 10.5v3M20 17v3h-3M13.5 20h-3M7 20H4v-3M4 13.5v-3M4 7V4',undo:'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',redo:'M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3',up:'M6 15l6-6 6 6',down:'M6 9l6 6 6-6',check:'M5 12.5l4.5 4.5L19 7.5',minus:'M5 12h14',plus:'M12 5v14M5 12h14',leave:'M14 4h5v16h-5M10 8l-4 4 4 4M6 12h9',move:'M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3',snow:'M12 2v20M3.5 7l17 10M20.5 7l-17 10',line:'M5 19L19 5',arrow:'M5 19L19 5M10 5h9v9',rect:'M4 6h16v12H4z',ellipse:'M12 5c5 0 9 3 9 7s-4 7-9 7-9-3-9-7 4-7 9-7z'};
+function icons(root){root.querySelectorAll('svg[data-i]').forEach(s=>{s.setAttribute('viewBox','0 0 24 24');s.setAttribute('aria-hidden','true');s.innerHTML='<path d="'+ICON[s.dataset.i]+'"/>'})}
+icons(document);
+
+const COLORS=[['#111111','Black'],['#6b7280','Gray'],['#dc2626','Red'],['#f97316','Orange'],['#facc15','Yellow'],['#22c55e','Light green'],['#059669','Green'],['#06b6d4','Light blue'],['#2563eb','Blue'],['#7c3aed','Purple'],['#db2777','Pink'],['#92400e','Brown']];
+const KINDS={pen:{n:'Pen',w:4,a:1,h:4},pencil:{n:'Pencil',w:2,a:.75,h:2},marker:{n:'Marker',w:12,a:1,h:9},hi:{n:'Highlighter',w:26,a:.35,h:14}};
+const S={tool:'draw',color:'#111111',kind:'pen',w:4,shape:'line',zoom:1,state:'normal',items:[],redo:[],cur:null};
+const cv=$('#cv'),cx=cv.getContext('2d'),paper=$('#paper'),stage=$('#stage'),pop=$('#pop');
+
+/* ---------- paper size and zoom ---------- */
+function fit(){const w=stage.clientWidth-32,h=stage.clientHeight-32;const pw=Math.max(200,Math.min(w,h*16/9))*S.zoom;paper.style.width=pw+'px';paper.style.height=pw*9/16+'px';$('#zfit').textContent=Math.round(S.zoom*100)+'%'}
+addEventListener('resize',fit);
+$('#zin').onclick=()=>{S.zoom=Math.min(3,S.zoom+.25);fit()};
+$('#zout').onclick=()=>{S.zoom=Math.max(.5,S.zoom-.25);fit()};
+$('#zfit').onclick=()=>{S.zoom=1;fit()};
+$('#hand').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';e.currentTarget.setAttribute('aria-pressed',on);document.body.classList.toggle('pan',on)};
+
+/* ---------- drawing ---------- */
+function draw(){cx.clearRect(0,0,1600,900);for(const it of S.cur?[...S.items,S.cur]:S.items)paint(it)}
+function paint(it){cx.save();cx.lineCap='round';cx.lineJoin='round';cx.globalAlpha=it.a||1;cx.strokeStyle=cx.fillStyle=it.c;cx.lineWidth=it.w;
+ if(it.erase)cx.globalCompositeOperation='destination-out';
+ if(it.t==='pen'){cx.beginPath();const p=it.pts;cx.moveTo(p[0][0],p[0][1]);if(p.length===1)cx.lineTo(p[0][0]+.1,p[0][1]);for(let i=1;i<p.length;i++)cx.lineTo(p[i][0],p[i][1]);cx.stroke()}
+ else if(it.t==='text'){cx.font='500 40px Figtree,system-ui,sans-serif';cx.textBaseline='top';cx.fillText(it.s,it.x,it.y)}
+ else{const{x0,y0,x1,y1}=it;cx.beginPath();
+  if(it.sh==='rect')cx.rect(x0,y0,x1-x0,y1-y0);
+  else if(it.sh==='ellipse')cx.ellipse((x0+x1)/2,(y0+y1)/2,Math.abs(x1-x0)/2,Math.abs(y1-y0)/2,0,0,7);
+  else{cx.moveTo(x0,y0);cx.lineTo(x1,y1);if(it.sh==='arrow'){const an=Math.atan2(y1-y0,x1-x0),L=18+it.w*2;for(const d of[-.45,.45]){cx.moveTo(x1,y1);cx.lineTo(x1-L*Math.cos(an+d),y1-L*Math.sin(an+d))}}}
+  cx.stroke()}
+ cx.restore()}
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*1600,(e.clientY-r.top)/r.height*900]}
+function commit(it){S.items.push(it);S.redo=[];S.cur=null;hist();draw()}
+function hist(){$('#undo').disabled=!S.items.length;$('#redo').disabled=!S.redo.length}
+$('#undo').onclick=()=>{if(S.items.length){S.redo.push(S.items.pop());hist();draw()}};
+$('#redo').onclick=()=>{if(S.redo.length){S.items.push(S.redo.pop());hist();draw()}};
+const locked=()=>S.state==='proj'||S.state==='frozen';
+let panFrom=null;
+cv.addEventListener('pointerdown',e=>{
+ closePop();if(locked())return;
+ cv.setPointerCapture(e.pointerId);
+ if(document.body.classList.contains('pan')){panFrom=[e.clientX,e.clientY,stage.scrollLeft,stage.scrollTop];return}
+ const[x,y]=pos(e);
+ if(S.tool==='draw'){const k=KINDS[S.kind];S.cur={t:'pen',c:S.color,w:S.w,a:k.a,pts:[[x,y]]}}
+ else if(S.tool==='erase')S.cur={t:'pen',c:'#000',w:36,erase:1,pts:[[x,y]]};
+ else if(S.tool==='shape')S.cur={t:'shape',sh:S.shape,c:S.color,w:Math.max(3,S.w),x0:x,y0:y,x1:x,y1:y};
+ else if(S.tool==='text'){e.preventDefault();typeAt(x,y)}
+ else toast('Select works as it does today: drag around your work to move or resize it.');
+ draw()});
+cv.addEventListener('pointermove',e=>{
+ if(panFrom){stage.scrollLeft=panFrom[2]-(e.clientX-panFrom[0]);stage.scrollTop=panFrom[3]-(e.clientY-panFrom[1]);return}
+ if(!S.cur)return;const[x,y]=pos(e);
+ if(S.cur.t==='pen')S.cur.pts.push([x,y]);else{S.cur.x1=x;S.cur.y1=y}
+ draw()});
+const end=()=>{panFrom=null;if(S.cur)commit(S.cur)};
+cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+function typeAt(x,y){const old=paper.querySelector('input');if(old)old.blur();
+ const r=cv.getBoundingClientRect(),sc=r.width/1600,inp=document.createElement('input');
+ inp.id='typing';inp.setAttribute('aria-label','Type your text');inp.style.cssText=`left:${x/16}%;top:${y/9}%;font-size:${40*sc}px;color:${S.color}`;
+ paper.append(inp);setTimeout(()=>inp.focus());
+ let done=false;const fin=()=>{if(done)return;done=true;const s=inp.value.trim();inp.remove();if(s)commit({t:'text',c:S.color,s,x:x+8,y:y+4})};
+ inp.onblur=fin;inp.onkeydown=e=>{if(e.key==='Enter')fin();if(e.key==='Escape'){inp.value='';fin()}}}
+
+/* ---------- tools and option panels ---------- */
+function setTool(t){S.tool=t;$$('.tool[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));if(t!=='draw'&&t!=='shape')closePop()}
+function closePop(){pop.hidden=true;pop.dataset.for=''}
+function swatches(){return '<div class="cols">'+COLORS.map(([c,n])=>`<button class="dot" data-c="${c}" style="background:${c}" aria-label="${n}" title="${n}" aria-pressed="${c===S.color}"></button>`).join('')+'</div>'}
+function openPop(which){
+ if(S.state==='quick'){closePop();return}
+ if(!pop.hidden&&pop.dataset.for===which){closePop();return}
+ let h='';
+ if(which==='draw')h='<h3>Pen type</h3><div class="kinds">'+Object.entries(KINDS).map(([k,v])=>`<button class="kind" data-k="${k}" aria-pressed="${k===S.kind}"><i style="height:${v.h}px;opacity:${v.a<1?.4:1}"></i>${v.n}</button>`).join('')+'</div><h3>Thickness</h3><div class="thick"><input type="range" id="thick" min="1" max="30" value="'+S.w+'" aria-label="Thickness"><output id="thv">'+S.w+'</output></div><h3>Color</h3>'+swatches();
+ else if(which==='shape')h='<h3>Shape</h3><div class="kinds">'+[['line','Line'],['arrow','Arrow'],['rect','Rectangle'],['ellipse','Circle']].map(([k,n])=>`<button class="kind" data-sh="${k}" aria-pressed="${k===S.shape}"><svg class="i" data-i="${k}"></svg>${n}</button>`).join('')+'</div><h3>Color</h3>'+swatches();
+ else h='<h3>Color</h3>'+swatches();
+ pop.innerHTML=h;icons(pop);pop.dataset.for=which;pop.hidden=false}
+$$('.tool[data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t,same=S.tool===t;setTool(t);if(t==='draw'||t==='shape'){if(same||pop.hidden||pop.dataset.for!==t)openPop(t)}});
+$('#colbtn').onclick=()=>openPop('color');
+function setColor(c){S.color=c;$('#cur').style.background=c;$$('.dot').forEach(d=>d.setAttribute('aria-pressed',d.dataset.c===c));if(S.tool==='erase'||S.tool==='select')setTool('draw')}
+pop.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.c)setColor(b.dataset.c);
+ if(b.dataset.k){S.kind=b.dataset.k;S.w=KINDS[S.kind].w;pop.querySelectorAll('[data-k]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#thick').value=S.w;$('#thv').textContent=S.w}
+ if(b.dataset.sh){S.shape=b.dataset.sh;pop.querySelectorAll('[data-sh]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
+pop.addEventListener('input',e=>{if(e.target.id==='thick'){S.w=+e.target.value;$('#thv').textContent=S.w}});
+$('#qcols').innerHTML=[0,8,2,6].map(i=>`<button class="dot" data-c="${COLORS[i][0]}" style="background:${COLORS[i][0]}" aria-label="${COLORS[i][1]}" aria-pressed="${i===0}"></button>`).join('');
+$('#qcols').onclick=e=>{const b=e.target.closest('button');if(b)setColor(b.dataset.c)};
+
+/* ---------- question bar, team menu, pulse ---------- */
+$('#qhide').onclick=e=>{const shut=$('#q').classList.toggle('shut');e.currentTarget.setAttribute('aria-expanded',!shut);e.currentTarget.firstElementChild.textContent=shut?'Show':'Hide';e.currentTarget.lastElementChild.dataset.i=shut?'down':'up';icons(e.currentTarget);fit()};
+const tmenu=$('#tmenu');
+function teamMenu(open){tmenu.hidden=!open;$('#team').setAttribute('aria-expanded',open);$('#tm1').hidden=false;$('#tm2').hidden=true}
+$('#team').onclick=()=>teamMenu(tmenu.hidden);
+$('#leave').onclick=()=>{$('#tm1').hidden=true;$('#tm2').hidden=false};
+$('#stay').onclick=()=>teamMenu(false);
+$('#go').onclick=()=>{teamMenu(false);toast('In the real app, this goes back to the join screen.')};
+document.addEventListener('pointerdown',e=>{if(!tmenu.hidden&&!e.target.closest('#tmenu,#team'))teamMenu(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){teamMenu(false);closePop()}});
+$$('.pb').forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';$$('.pb').forEach(x=>x.setAttribute('aria-pressed',x===b&&on))});
+
+/* ---------- states ---------- */
+$('#states').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.state=b.dataset.s;$$('#states button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ document.body.classList.toggle('quick',S.state==='quick');document.body.classList.toggle('locked',locked());
+ $('#q').classList.toggle('proj',S.state==='proj');$('#qnote').hidden=S.state!=='proj';$('#frozen').hidden=S.state!=='frozen';
+ closePop();if(S.state==='quick'&&(S.tool==='shape'||S.tool==='select'))setTool('draw');fit()};
+let tt;function toast(s){const t=$('#toast');t.textContent=s;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3500)}
+
+fit();
+</script>

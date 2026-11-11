@@ -1,6 +1,6 @@
 # Draw It Out — Design Plan 2: a professional, intuitive app
 
-**Status: proposal. Nothing in the app has been changed.** This plan needs your answers to the four questions in [Decisions for you](#decisions-for-you) before any work starts.
+**Status: approved, not yet built.** All four recommendations under [Decisions](#decisions-for-you) were accepted. Clickable mock-ups of the two big layouts are in `mockups/student-draw.html` and `mockups/teaching-screen.html`; no app file in `public/` has been changed.
 
 The first plan (`DESIGN_PLAN.md`, tasks T00–T23) is finished: one set of colours, visible keyboard focus, readable contrast, plain-English student wording. It made the app *consistent and accessible*. It did not change layout, navigation or the look of any screen. This plan does.
 
@@ -19,6 +19,8 @@ Evidence: the 110 screenshots in `design-audit/after/` (37 screens at 1440×900,
 ---
 
 ## Decisions for you
+
+**Decided: the recommendation in every row.**
 
 | # | Question | My recommendation |
 |---|---|---|
