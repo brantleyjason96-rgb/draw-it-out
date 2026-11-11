@@ -23,7 +23,16 @@ body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,var(--
 #join input{width:100%;padding:12px;font-size:var(--fs-xl);margin:0 0 14px;border:2px solid var(--c-control);border-radius:var(--r-lg);text-align:center;background:#fff;transition:border-color .15s,box-shadow .15s}
 #join input:focus-visible{outline:0;border-color:var(--pri);box-shadow:0 0 0 4px var(--c-primary-glow)}
 #join input[readonly]{background:var(--c-bg);color:var(--c-ink-2)}
-#join #code{letter-spacing:.3em;text-transform:uppercase;font-size:var(--fs-4xl);font-weight:700;padding:16px 12px}
+#codewrap{position:relative;margin:0 0 14px}
+#join #code{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;text-transform:uppercase;border:0;cursor:text}
+.cboxes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cboxes span{height:72px;display:grid;place-items:center;border:2px solid var(--c-control);border-radius:var(--r-lg);background:#fff;font-size:var(--fs-4xl);font-weight:700;line-height:1;transition:border-color .15s,box-shadow .15s}
+.cboxes span.on{border-color:var(--pri);box-shadow:0 0 0 4px var(--c-primary-glow)}
+#codewrap.bad .cboxes span{border-color:var(--c-bad)}
+#cline{margin:0 0 14px;font-size:var(--fs-md);color:var(--c-ink-2)}
+#cline b{letter-spacing:.2em;font-size:var(--fs-lg)}
+#cline .tlink{margin:0;padding:8px 4px;background:none;border:0;font:inherit;color:var(--c-primary-strong);cursor:pointer;text-decoration:underline}
+#join #go{position:sticky;bottom:12px}
 #join .btn{width:100%;min-height:52px;font-size:var(--fs-lg);font-weight:600;border-radius:var(--r-lg);transition:background-color .15s,transform .1s}
 #join .btn:hover{background:var(--c-primary-strong)}
 #join .btn:active{transform:scale(.98)}
@@ -55,12 +64,13 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 @media(any-pointer:coarse){#sortview .nc[data-card]{min-height:44px;display:flex;flex-direction:column;justify-content:center}}
 #sortview.sdone #sstage{opacity:.85}
 @media(max-width:700px){#spile .nc{width:calc(50% - 4px)}#sbar{flex-direction:column}#sdone{width:auto;flex-direction:row;align-items:center;justify-content:space-between}#smsg{font-size:var(--fs-md);white-space:normal;text-align:center;width:calc(100% - 24px)}}
-#pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:0 0 12px}
+#pick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 12px}
+@media(min-width:700px){#pick{grid-template-columns:repeat(4,1fr)}#join .card{max-width:560px}}
 #pick button{border:3px solid var(--line);background:#fff;border-radius:var(--r-lg);padding:12px 6px;font-size:var(--fs-lg);font-weight:600;cursor:pointer;min-height:64px;line-height:1.2}
 #pick button small{display:block;font-weight:400;color:var(--mut);font-size:var(--fs-xs)}
 #pick button .em{font-size:var(--fs-3xl);display:block}
 #pick button:disabled{opacity:.4;cursor:not-allowed}
-#pick button.on{position:relative;background:var(--c-primary-soft);box-shadow:0 0 0 3px var(--c-ink)}
+#pick button.on{position:relative;background:var(--c-primary-soft);background:color-mix(in srgb,var(--tc,#0B6BCB) 16%,#fff);box-shadow:0 0 0 3px var(--c-ink)}
 #pick button.on::after{content:'';position:absolute;top:6px;right:8px;width:20px;height:20px;background:var(--c-ink);-webkit-mask:var(--ic-check) center/contain no-repeat;mask:var(--ic-check) center/contain no-repeat}
 #pick .back{grid-column:1/-1;min-height:44px;font-size:var(--fs-md);font-weight:400;border-style:dashed}
 #tm{display:block;width:fit-content;border-radius:var(--r-sm);padding:2px 12px;font-size:var(--fs-md);font-weight:600;margin-bottom:6px;color:var(--c-ink);background:#fff;border:0;border-left:10px solid var(--tc,var(--c-muted))}
@@ -229,7 +239,8 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
    <h1>Join class</h1>
    <p id="jh">Type your class code</p>
    <label for="code">Class code</label>
-   <input id="code" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <div id="codewrap"><div class="cboxes" aria-hidden="true"><span></span><span></span><span></span><span></span></div><input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text"></div>
+   <p id="cline" hidden>Class <b id="cl"></b> · <button type="button" id="cchg" class="tlink">Change</button></p>
    <label for="name">Nickname</label>
    <input id="name" maxlength="20" placeholder="Your nickname" autocomplete="off" hidden>
    <div id="pick" hidden></div>
@@ -295,7 +306,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
 <script>
 let target = null, id = null;
 const sp = new URLSearchParams(location.search);
-$('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase();
+$('#code').value = (sp.get('code') || localStorage.do_code || '').toUpperCase(); paintCode();
 $('#name').value = localStorage.do_name || '';
 let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null, quick = [], qteam = null;
 
@@ -308,16 +319,24 @@ function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name,
 
 // Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
 const pageSize = () => ({ bw: Math.min(3000, Math.max(300, Math.round(innerWidth - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - 140))) }); // the page is the size of this screen
+function paintCode() {
+  const v = $('#code').value.toUpperCase(), on = document.activeElement === $('#code') && jstep === 'code';
+  document.querySelectorAll('#codewrap .cboxes span').forEach((b, i) => { b.textContent = v[i] || ''; b.classList.toggle('on', on && i === Math.min(v.length, 3)); });
+  $('#codewrap').classList.toggle('bad', !!$('#err').textContent && jstep === 'code');
+}
+['input', 'focus', 'blur'].forEach(ev => $('#code').addEventListener(ev, paintCode));
+new MutationObserver(paintCode).observe($('#err'), { childList: true, characterData: true, subtree: true });
+$('#cchg').onclick = () => { $('#err').textContent = ''; jshow('code'); $('#code').focus(); };
 function jshow(st) {
   jstep = st; const pk = st === 'tiles' || st === 'ini';
-  $('#name').hidden = st !== 'name'; $('#pick').hidden = !(pk || (st === 'name' && quick.length)); $('#go').hidden = pk; $('#code').readOnly = st !== 'code';
+  $('#name').hidden = st !== 'name'; $('#pick').hidden = !(pk || (st === 'name' && quick.length)); $('#go').hidden = pk; $('#code').readOnly = st !== 'code'; $('#codewrap').hidden = st !== 'code'; $('#cline').hidden = st === 'code'; $('#cl').textContent = $('#code').value.trim().toUpperCase(); paintCode();
   $('#go').textContent = st === 'name' ? 'Join' : 'Next';
   $('#jh').textContent = { code: 'Type your class code', name: quick.length ? 'Tap your team. You can type a nickname too. Do not use your last name.' : 'Type a nickname. Do not use your last name.', tiles: 'Tap your team', ini: 'Tap your initials' }[st];
   $('#name').placeholder = quick.length ? 'Nickname (you can skip this)' : 'Your nickname';
   if (st === 'name') $('#name').focus();
 }
 function pickBtn(label, sub, color, fn, off) {
-  const b = document.createElement('button'); b.type = 'button'; b.disabled = !!off; b.onclick = fn; if (color) b.style.borderColor = color;
+  const b = document.createElement('button'); b.type = 'button'; b.disabled = !!off; b.onclick = fn; if (color) { b.style.borderColor = color; b.style.setProperty('--tc', color); }
   const em = document.createElement('span'); em.className = 'em'; em.textContent = label[0]; b.append(em, label[1]);
   if (sub) { const sm = document.createElement('small'); sm.textContent = sub; b.append(sm); }
   return b;
