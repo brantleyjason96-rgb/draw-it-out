@@ -166,6 +166,15 @@
  </div>
 </dialog>
 
+<dialog id="nl">
+ <div class="dh"><div><div class="lbl" id="nllbl"></div><h2>Next lesson</h2></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="b" id="nlref">Refresh</button><button class="b pri big" id="nlclose">Done</button></div></div>
+ <div id="nlbody" style="padding:16px 24px 18px;display:flex;flex-direction:column;gap:22px;max-height:calc(100dvh - 230px);overflow:auto"></div>
+ <div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 24px;border-top:1px solid var(--line);flex-wrap:wrap">
+  <button class="b" id="nlcopy">Copy summary</button>
+  <button class="b pri" id="nlsave">Save as text file</button>
+ </div>
+</dialog>
+
 <div id="demobar" hidden>
  <span class="dtitle"><b>Demo mode.</b><span class="dsub"> Practice students, nothing saved.</span></span>
  <span class="dsteps" id="dsteps" aria-label="Things to try"></span>
@@ -177,6 +186,7 @@
 <script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
+<script src="/nextlesson.js"></script>
 <script src="/tcommon.js"></script>
 <script src="/sortres.js"></script>
 <script>
@@ -299,7 +309,7 @@ function onmsg(m) {
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
-    case 'export': if (wantExport) { const k = wantExport; wantExport = null; saveSession(k, m.rec); } break;
+    case 'export': nlRec = m.rec; if (wantNL) { wantNL = false; const d = $('#nl'); drawNL(); if (!d.open) d.showModal(); } else if ($('#nl').open) drawNL(); break;
     case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
@@ -572,9 +582,8 @@ $('#more').onclick = e => {
     { h: 'This lesson' },
     { t: 'Quick mode', sub: 'Students get just a pen and 4 colors', tog: S.simple, keep: true, f: () => { ws.send({ t: 'mode', simple: !S.simple }); closeMenu(); } },
     { t: 'How the class felt (report)', sub: 'Confidence question by question, and who to check in with', f: openReport },
+    { t: 'End-of-lesson report', sub: 'What to cover next: confidence vs accuracy, mix-ups, vocabulary, projector', f: openNL },
     { t: 'Save all drawings as a picture (PNG)', f: savePng },
-    { t: 'Save lesson data (spreadsheet)', sub: 'One row per student per question. Includes student names', f: () => pullSession('csv') },
-    { t: 'Save lesson data (JSON)', sub: 'Everything the lesson collected, for your own analysis', f: () => pullSession('json') },
     '-',
     { h: 'Joining' },
     { t: 'Show QR code to join', f: showQR },
@@ -764,50 +773,116 @@ $('#repcopy').onclick = () => {
 };
 
 
-// ---- lesson data: ask the server for what each question collected, join names here, and save a file ----
-// The server only knows initials or nicknames. Real names come from the class list on this computer and go into the file, nowhere else.
-let wantExport = null;
-function pullSession(kind) {
+// ---- end-of-lesson report: what to cover next time ----
+// The server sends the lesson's record (initials only); names are joined here from the class list on this computer.
+let nlRec = null, wantNL = false, nlAn = null;
+const nlTerms = () => NL.parseTerms(store['do_terms_' + code]);
+function openNL() {
   if (!S.conn) return toast('Not connected yet.');
-  wantExport = kind; ws.send({ t: 'export' });
+  wantNL = true; ws.send({ t: 'export' });
 }
-const median = a => { a = a.filter(x => x != null).sort((x, y) => x - y); return a.length ? a[Math.floor((a.length - 1) / 2)] : ''; };
-function saveSession(kind, rec) {
-  if (!rec.questions.length) return toast('No questions have been sent yet, so there is nothing to save.');
-  const nm = x => disp({ rid: x.rid, name: x.ini }), day = new Date().toISOString().slice(0, 10), tmName = id => (teamOf(id) || {}).name || '';
-  let blob, ext;
-  if (kind === 'json') {
-    const out = { ...rec, class: per().name, saved: new Date().toISOString(), questions: rec.questions.map(q => ({ ...q, students: q.students.map(x => ({ ...x, name: nm(x) })) })) };
-    blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }); ext = 'json';
-  } else {
-    const laneName = (q, id) => ((q.sort.lanes.find(l => l.id === id) || {}).name) || id;
-    const out = [['Draw It Out — lesson data'], ['Class', per().name], ['Date', day], [],
-      ['Question #', 'Question', 'Type', 'Seconds on question', 'Students', 'Active students', 'Median first mark (s)', 'Median last mark (s)', 'Freezes', 'Seconds frozen', 'Sort: % right']];
-    rec.questions.forEach(q => {
-      const act = q.students.filter(x => x.first != null), sc = q.sort ? q.sort.cards.reduce((a, c) => ({ p: a.p + c.placed, r: a.r + c.right }), { p: 0, r: 0 }) : null;
-      out.push([q.n, q.q, q.kind, q.elapsed, q.students.length, act.length, median(q.students.map(x => x.first)), median(q.students.map(x => x.last)), q.freezes, q.frozenSecs, sc && sc.p ? Math.round(100 * sc.r / sc.p) + '%' : '']);
-    });
-    out.push([], ['Question #', 'Question', 'Type', 'Student', 'Team', 'Joined late', 'Final colour', 'First colour at (s)', 'Colour changes', 'First mark at (s)', 'Last mark at (s)', 'Undo/delete count',
-      'Objects', 'Strokes', 'Lines', 'Arrows', 'Shapes', 'Labels', 'Label text', 'Ink length (px)', 'Colours used', 'Page covered %', 'Shown on projector', 'Point awarded', 'Cards placed', 'Cards correct', 'Finished sort']);
-    rec.questions.forEach(q => q.students.forEach(x => {
-      const d = x.drawing, so = x.sort, yn = v => (v ? 'yes' : 'no');
-      out.push([q.n, q.q, q.kind, nm(x), tmName(x.team), yn(x.late), x.pulse ? PULSES[x.pulse].n : '', x.trail.length ? x.trail[0][0] : '', Math.max(0, x.trail.length - 1), x.first == null ? '' : x.first, x.last == null ? '' : x.last, so ? '' : x.revisions,
-        d ? d.n : '', d ? d.stroke : '', d ? d.line : '', d ? d.arrow : '', d ? d.shape : '', d ? d.text : '', d ? d.labels.join(' | ') : '', d ? d.ink : '', d ? d.colors : '', d ? Math.round(d.cover * 100) + '%' : '',
-        yn(x.shown), yn(x.awarded), so ? so.placed : '', so && so.correct != null ? so.correct : '', so ? yn(so.done) : '']);
-    }));
-    const cards = rec.questions.filter(q => q.sort);
-    if (cards.length) {
-      out.push([], ['Question #', 'Card', 'Belongs in', 'Idea', 'Placed', 'Right', '% right', 'Most common wrong lane']);
-      cards.forEach(q => q.sort.cards.forEach(c => {
-        const w = Object.entries(c.wrong).sort((a, b) => b[1] - a[1])[0];
-        out.push([q.n, c.text, laneName(q, c.lane), c.idea || '', c.placed, c.right, c.placed ? Math.round(100 * c.right / c.placed) + '%' : '', w ? laneName(q, w[0]) + ' (' + w[1] + ')' : '']);
-      }));
-    }
-    blob = new Blob([SK.csv(out)], { type: 'text/csv' }); ext = 'csv';
+const chip = (text, extra = '') => el('span', { textContent: text, style: 'padding:2px 10px;border-radius:99px;background:var(--c-fill);font-weight:600;font-size:var(--fs-sm);' + extra });
+function meter(parts, total) {
+  const box = el('div', { className: 'stack' });
+  if (!total) { box.style.opacity = '.45'; return box; }
+  parts.forEach(([v, c, title]) => { if (!v) return; const i = el('i'); i.style.width = (v / total * 100) + '%'; i.style.background = c; i.title = title; box.append(i); });
+  return box;
+}
+const nlSec = (title, sub, ...kids) => el('section', { style: 'display:flex;flex-direction:column;gap:8px' }, el('div', {}, el('div', { className: 'lbl', textContent: title }), sub ? el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: sub }) : ''), ...kids);
+const nlNote = t => el('div', { className: 'mut', style: 'font-size:var(--fs-md)', textContent: t });
+function drawNL() {
+  const box = $('#nlbody'); if (!box || !nlRec) return;
+  $('#nllbl').textContent = per().name + ' · ' + new Date().toLocaleDateString();
+  const a = nlAn = NL.analyze(nlRec, { terms: nlTerms(), nameOf: s => disp({ rid: s.rid, name: s.ini }) });
+  box.innerHTML = '';
+  if (!nlRec.questions.length) return box.append(nlNote('No questions have been sent yet. This fills in as the lesson goes.'));
+
+  // 1. the short list
+  box.append(nlSec('Cover next time', 'The first ten minutes of tomorrow, from what this class did',
+    ...(a.priorities.length ? a.priorities.map(p => el('div', { style: 'display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 12px;padding:8px 0;border-top:1px solid var(--line)' },
+      el('b', { textContent: p.h }), el('div', { textContent: p.t, style: 'overflow-wrap:anywhere' })))
+      : [nlNote('Nothing stood out yet. Confidence vs accuracy needs a sort question, and vocabulary needs a drawing question and the words you want to see.')])));
+
+  // 2. confidence vs accuracy
+  if (!a.sortQs) box.append(nlSec('Confidence vs accuracy', '', nlNote('This needs a sort question, because that is where the right answer is known. Students now tap their colour on sort questions too.')));
+  else {
+    const t = a.totals, tiles = [['Confident and right', t.solid, PULSES.g.c, 'Moving on is safe'], ['Confident but missed some', t.over, PULSES.r.c, 'They will not ask for help'], ['Unsure and wrong', t.aware, PULSES.y.c, 'They know they need help'], ['Unsure but right', t.under, 'var(--c-muted)', 'Know more than they think']];
+    const rows = a.calib.map(r => el('div', { style: 'padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-md)' },
+      el('b', { textContent: 'Q' + r.n + ' ' }), r.q,
+      el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: r.skipped ? 'Instant feedback was on, so confidence is not compared here.' :
+        [r.solid + ' confident and right', r.over + ' confident but missed some', r.aware + ' unsure and wrong', r.under + ' unsure but right', r.mixed ? r.mixed + ' in between' : '', r.none ? r.none + ' gave no colour' : '', r.noAnswer ? r.noAnswer + ' did not answer' : ''].filter(Boolean).join(' · ') })));
+    const who = [];
+    if (a.watch.length) who.push(el('div', {}, el('div', { className: 'lbl', textContent: 'Check in with', style: 'margin-bottom:4px' }),
+      ...a.watch.slice(0, 12).map(w => el('div', { style: 'display:flex;gap:10px;padding:5px 0;border-top:1px solid var(--line)' }, el('b', { textContent: w.name, style: 'flex:1;min-width:0' }),
+        el('span', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: w.over.length ? 'said “I understand” but ' + w.over.map(x => 'got ' + x.got + ' of ' + x.of + ' on Q' + x.n).join(', ') : 'knew they needed help' })))));
+    if (a.boost.length) who.push(nlNote('Know more than they think: ' + a.boost.join(', ')));
+    box.append(nlSec('Confidence vs accuracy', 'Sort questions only. The colour counted is the one they had when they handed in.',
+      el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px' },
+        ...tiles.map(([l, n, c, note]) => el('div', { style: 'border:1px solid var(--line);border-left:6px solid ' + c + ';border-radius:var(--r-lg);padding:10px 12px' },
+          el('div', { className: 'big', textContent: n, style: 'font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);line-height:1' }), el('div', { textContent: l, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: note, style: 'font-size:var(--fs-xs)' })))),
+      el('div', {}, ...rows), ...who));
+
+    // 3. mix-ups
+    const bar = (name, p, sub) => el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) 140px 48px;gap:4px 12px;align-items:center;padding:6px 0;border-top:1px solid var(--line)' },
+      el('div', {}, el('b', { textContent: name }), sub ? el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: sub }) : ''),
+      meter([[p, p < NL.T.shaky * 100 ? PULSES.r.c : PULSES.g.c, p + '% right']], 100), el('b', { textContent: p + '%', style: 'text-align:right' }));
+    const mix = [];
+    a.ideas.forEach(i => mix.push(bar(i.name, i.pct, [i.worst && i.worst.mix ? NL.mixText(i.worst) : '', i.confWrong ? i.confWrong + ' wrong from students who said “I understand”' : ''].filter(Boolean).join(' · '))));
+    if (!a.ideas.length) a.shaky.slice(0, 10).forEach(c => mix.push(bar('“' + c.text + '”', c.pct, NL.mixText(c))));
+    box.append(nlSec('What was mixed up', a.ideas.length ? 'By idea tag, weakest first. Under ' + NL.T.shaky * 100 + '% is shaky.' : 'Cards under ' + NL.T.shaky * 100 + '% right. Tag cards with an idea when you write a sort question to see this by idea.',
+      ...(mix.length ? mix : [nlNote('No card was under ' + NL.T.shaky * 100 + '% right.')]),
+      ...(a.ideas.length ? a.shaky.slice(0, 6).map(c => el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: 'Q' + c.n + ' “' + c.text + '” ' + c.pct + '% right. ' + NL.mixText(c) + '.' })) : [])));
   }
-  el('a', { href: URL.createObjectURL(blob), download: 'lesson-' + code + '-' + day + '.' + ext }).click();
-  toast('Saved ' + rec.questions.length + ' question' + (rec.questions.length === 1 ? '' : 's') + '. The file has student names in it.');
+
+  // 4. vocabulary
+  const v = a.vocab, vk = [];
+  if (!a.drawQs) vk.push(nlNote('No drawing questions yet, so there are no labels to read.'));
+  else {
+    vk.push(nlTermsBox());
+    if (!v.terms.length) vk.push(nlNote('Here is what students typed most:'));
+    v.terms.forEach(r => vk.push(el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:4px 12px;align-items:center;padding:6px 0;border-top:1px solid var(--line)' },
+      el('div', {}, el('b', { textContent: r.term }), el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: r.exact + ' used it' + (r.close ? ' · ' + r.close + ' spelled it differently' : '') + ' · ' + r.none + ' did not' })),
+      meter([[r.exact, PULSES.g.c, r.exact + ' used it'], [r.close, PULSES.y.c, r.close + ' spelled differently']], v.drawers))));
+    if (v.top.length) vk.push(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;padding-top:4px' }, ...v.top.map(x => chip(x.label + (x.n > 1 ? ' ×' + x.n : '')))));
+    if (v.confidentNoWords.length) vk.push(nlNote('Said “I understand” but used none of your words: ' + v.confidentNoWords.join(', ') + '. They may still know it, so look at their drawing.'));
+  }
+  box.append(nlSec('Vocabulary', a.drawQs ? 'Words typed on drawing questions · ' + v.drawers + ' students' : '', ...vk));
+
+  // 5. projector
+  const pr = a.projector, pk = [];
+  if (!pr.total) pk.push(nlNote('Nobody’s work has been put on the projector yet.'));
+  else {
+    pk.push(nlNote(pr.total + (pr.total === 1 ? ' showing' : ' showings') + ': ' + pr.colours.g + ' from students on green, ' + pr.colours.y + ' amber, ' + pr.colours.r + ' red, ' + pr.colours.none + ' with no colour.'));
+    pk.push(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, ...pr.rows.map(r => chip(r.name + (r.times > 1 ? ' ×' + r.times : '')))));
+  }
+  if (pr.never.length) pk.push(el('div', {}, el('div', { className: 'lbl', textContent: 'Not yet shown', style: 'margin-bottom:4px' }), el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, ...pr.never.map(n => chip(n, 'background:var(--c-warn-soft);color:var(--c-warn-strong)')))));
+  box.append(nlSec('On the projector', 'Whose work the class has seen', ...pk));
 }
+// The words box is built once and moved into each fresh render, so typing in it is never interrupted.
+let nlTimer = null, nlBox = null;
+function nlTermsBox() {
+  if (nlBox) return nlBox;
+  const ta = el('textarea', { id: 'nlterms', rows: 2, placeholder: 'magma, crust, convection', value: store['do_terms_' + code] || '', style: 'width:100%;font:inherit;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;resize:vertical' });
+  ta.setAttribute('aria-labelledby', 'nltl');
+  ta.oninput = () => {
+    store['do_terms_' + code] = ta.value.slice(0, 600); clearTimeout(nlTimer);
+    nlTimer = setTimeout(() => { const at = ta.selectionStart; drawNL(); ta.focus(); ta.setSelectionRange(at, at); }, 300);
+  };
+  return (nlBox = el('div', { style: 'display:flex;flex-direction:column;gap:4px' }, el('label', { id: 'nltl', className: 'lbl', textContent: 'Words you wanted students to use (optional)' }), ta,
+    el('div', { className: 'mut', style: 'font-size:var(--fs-xs)', textContent: 'Separate with commas. Plurals, capitals, accents and small spelling slips still count. Kept on this computer for this class.' })));
+}
+$('#nlclose').onclick = () => $('#nl').close();
+$('#nlref').onclick = () => ws.send({ t: 'export' });
+const nlText = () => NL.text(nlAn, { cls: per().name, date: new Date().toLocaleDateString() });
+$('#nlcopy').onclick = () => {
+  if (!nlAn) return;
+  const t = nlText();
+  navigator.clipboard.writeText(t).then(() => toast('Summary copied.'), () => prompt('Copy this summary:', t));
+};
+$('#nlsave').onclick = () => {
+  if (!nlAn) return;
+  el('a', { href: URL.createObjectURL(new Blob([nlText()], { type: 'text/plain' })), download: 'next-lesson-' + code + '-' + new Date().toISOString().slice(0, 10) + '.txt' }).click();
+};
 
 // ---- thumbnails: refresh at most every 150ms + 15ms per student, 3 per frame, longest-waiting first ----
 (function loop() {
@@ -996,6 +1071,7 @@ function phoneQuestions(box) {
   const tg = (label, sub, on, f) => { const b = el('button', { className: 'tog' + (on ? ' on' : ''), style: 'width:100%;justify-content:space-between;min-height:60px;text-align:left', onclick: f }); b.append(el('span', {}, document.createTextNode(label), el('small', { textContent: sub, style: 'display:block;font-weight:500;color:var(--mut)' })), document.createElement('i')); return b; };
   pad.append(tg('Leaderboard on projector', 'Shows when no drawing is up', S.board, () => ws.send({ t: 'board', on: !S.board })), tg('Names hidden on projector', 'Projector says “A student’s work”', S.hide, () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide })), tg('Quick mode', 'Students get a pen and 4 colors', S.simple, () => ws.send({ t: 'mode', simple: !S.simple })));
   pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', onclick: openReport }, icoEl('report'), ' How the class felt (report)'));
+  pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', onclick: openNL }, icoEl('report'), ' End-of-lesson report'));
   pad.append(el('div', { className: 'mut', textContent: 'To write or edit questions, use a computer.', style: 'font-size:var(--fs-sm);text-align:center' }));
   box.append(pad);
 }

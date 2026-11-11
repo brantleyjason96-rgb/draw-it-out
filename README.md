@@ -32,7 +32,7 @@ Three things the teacher runs from the teaching screen (`/class`), all of which 
 - On their drawing, a student taps **🙋 I need help / 🙂 Almost / 💡 I understand**. Tap again to clear it, or tap another to change it. Their page is not touched: no marks are added, nothing is handed in.
 - The three buttons live on the right edge of the student's page, clear of the tools. The **How is your work?** label is also the toggle: tapping it folds the three buttons into a slim chip (a dot in their chosen colour shows the last answer stays put), and tapping again brings them back. Each student's folded or open choice is remembered.
 - The teacher's card for that student gets an **outline in that colour**, plus a chip that spells it out (never colour alone). The row above the grid shows the class at a glance — `🙋 4 · 🙂 2 · 💡 2 · 1 no answer` — and clicking a colour shows only those students, which is the "who do I go and help" button.
-- Pulse is for drawing questions. It clears when a new question is sent, so a colour always describes the drawing on screen.
+- Pulse works on drawing and sort questions. It clears when a new question is sent, so a colour always describes the question on screen. On a sort question the colour that counts is the one they had when they handed in.
 
 **Freeze — the whole class's attention**
 - **❄ Freeze** in the top bar (and in the phone header) stops every student's page: the drawing is blurred behind a frosted card — *Frozen. Look at your teacher. Your work is saved.* — with a little frost and falling snow. The projector shows a matching **Class frozen** screen.
@@ -49,7 +49,7 @@ Three things the teacher runs from the teaching screen (`/class`), all of which 
 - One number for the lesson — green counts 100, amber 50, red 0 — with a plain reading (*"The class felt mostly comfortable"*), a stacked bar per question, the number who answered nothing, and how confidence moved from the first question to the last.
 - **Who to check in with**: students who ended the last question on red, or were red twice or more, by name. **By team** for the same view against your team points.
 - **Save report (CSV)** writes the per-question table and a student × question grid in one file; **Copy summary** puts the same thing on the clipboard for a doc or an email home.
-- **More → Save lesson data** goes further than the report: one row per student per question (timing, drawing numbers, sort answers, points, projector), as a spreadsheet or JSON. See [SESSION_DATA.md](SESSION_DATA.md) for every field and what can be worked out from it.
+- **More → End-of-lesson report** is the one to open when planning the next lesson: confidence vs accuracy on sort questions, what was mixed up (by card and idea), vocabulary students typed against the words you wanted, and whose work reached the projector, with a short "Cover next time" list. See [NEXT_LESSON_REPORT.md](NEXT_LESSON_REPORT.md).
 - The server keeps the last 40 questions' colours (never names — those are joined in on your computer), so a refresh of the teaching screen doesn't lose the report. **Clear class** starts a fresh one.
 
 

@@ -181,7 +181,7 @@ button{cursor:pointer}
 /* confidence pulse: red / amber / green on the right edge, clear of the tools on the left.
    The label is the toggle, so the three buttons can be folded into a slim chip while drawing. */
 #pulse{position:fixed;right:10px;top:50%;transform:translateY(-50%);z-index:12;display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--line);border-radius:var(--r-xl);padding:8px;box-shadow:var(--sh-2)}
-body.playing:not(.sorting) #pulse{display:flex}
+body.playing #pulse{display:flex}
 #pulse[data-on=r]{--pc:var(--c-bad)}
 #pulse[data-on=y]{--pc:var(--c-warn)}
 #pulse[data-on=g]{--pc:var(--c-good)}
@@ -283,7 +283,7 @@ body.simple #quick .qsep{width:32px;height:1px;margin:4px 0}
 #zoom{margin-left:auto}
 #zoom .tool{min-height:44px;width:44px;flex-direction:row;padding:0;gap:0}
 #zoom #zv{width:auto;min-width:64px;padding:0 10px}
-body.sorting #mid,body.sorting #bbar{display:none!important}
+body.sorting #mid{display:none!important}
 #sortview{position:static;left:auto;right:auto;top:auto;bottom:auto;flex:1;min-height:0;padding:12px}
 body.locked #qbox #qt{background:rgba(255,255,255,.2)}
 @media(max-width:700px){

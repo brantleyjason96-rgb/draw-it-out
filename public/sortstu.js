@@ -75,6 +75,7 @@ const SS = (() => {
   function show(nq) {
     q = nq; const on = active();
     document.body.classList.toggle('sorting', on); $v().hidden = !on;
+    const pl = $('#pulse .plb'); if (pl) pl.textContent = on ? 'How sure are you?' : 'How is your work?'; // the colour buttons stay on a sort screen: confidence is compared with the answer
     if (on) { render(); layout(); }
   }
 

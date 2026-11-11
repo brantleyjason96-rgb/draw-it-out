@@ -1,6 +1,7 @@
 // Server tests: node test.js  (starts its own server on a spare port)
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import WebSocket from 'ws';
 
 const PORT = 4100 + Math.floor(Math.random() * 500);
@@ -421,22 +422,20 @@ const xh = client(); await xh.ready; xh.send({ t: 'host', code: XC, key: KEY, se
 async function xjoin(name, team) { const c = client(); await c.ready; c.send({ t: 'join', code: XC, name, team, bw: 800, bh: 500 }); const j = await c.wait('joined'); c.id = j.id; return c; }
 const xa = await xjoin('Ann', 'ta'), xb = await xjoin('Ben', 'tb');
 const pull = async () => { xh.clear(); xh.send({ t: 'export' }); return (await xh.wait('export')).rec; };
+const SORTQ = { t: 'q', kind: 'sort', question: 'Sort the rocks', sort: { lanes: [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }], shuffle: false, fb: 'reveal',
+  cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'cooling' }, { id: 2, text: 'Sandstone', lane: 'B', idea: 'layers' }] } };
 
 await test('export: nothing to report before a question is sent', async () => {
   const rec = await pull();
-  assert.equal(rec.v, 1); assert.deepEqual(rec.questions, []);
-  assert.equal(rec.teams.length, 2);
+  assert.equal(rec.v, 2); assert.deepEqual(rec.questions, []);
 });
 
-await test('export: a drawing question is boiled down to numbers, and kept after the next question wipes it', async () => {
+await test('export: a drawing question keeps the words typed, colour and projector, not the drawing; it survives the next question', async () => {
   xh.send({ t: 'q', question: '<b>Draw</b> the rock cycle', bg: 'graph' }); await sleep(80);
   xa.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[0, 0], [30, 40]] } });
-  xa.send({ t: 'set', o: { id: 2, k: 'text', c: '#dc2626', x: 100, y: 100, w: 120, size: 20, t: 'magma' } });
-  xa.send({ t: 'set', o: { id: 3, k: 'shape', s: 'rect', c: '#111111', lw: 2, dash: 'solid', fill: 'none', x: 200, y: 200, w: 100, h: 80 } });
-  xa.send({ t: 'del', oid: 3 });
-  xa.send({ t: 'pulse', c: 'r' }); await sleep(40); xa.send({ t: 'pulse', c: 'g' });
-  xh.send({ t: 'award', id: xa.id, on: true }); xh.send({ t: 'spot', ids: [xa.id], hide: true });
-  xh.send({ t: 'freeze', on: true }); await sleep(60); xh.send({ t: 'freeze', on: false });
+  xa.send({ t: 'set', o: { id: 2, k: 'text', c: '#dc2626', x: 100, y: 100, w: 120, size: 20, t: ' magma ' } });
+  xa.send({ t: 'set', o: { id: 3, k: 'text', c: '#dc2626', x: 100, y: 200, w: 120, size: 20, t: '   ' } });
+  xa.send({ t: 'pulse', c: 'g' }); xh.send({ t: 'spot', ids: [xa.id], hide: true });
   await sleep(120);
   let rec = await pull();
   assert.equal(rec.questions.length, 1); assert.equal(rec.questions[0].live, true, 'the question on screen is marked live');
@@ -445,33 +444,36 @@ await test('export: a drawing question is boiled down to numbers, and kept after
   assert.equal(rec.questions.length, 2);
   const q = rec.questions[0], a = q.students.find(x => x.id === xa.id), b = q.students.find(x => x.id === xb.id);
   assert.equal(q.live, false); assert.equal(q.kind, 'draw'); assert.equal(q.q, 'Draw the rock cycle', 'markup is stripped');
-  assert.equal(q.freezes, 1); assert.ok(q.end >= q.start);
-  assert.equal(a.team, 'ta'); assert.equal(a.pulse, 'g'); assert.deepEqual(a.trail.map(t => t[1]), ['r', 'g'], 'every colour change is kept, in order');
-  assert.equal(a.awarded, true); assert.equal(a.shown, true); assert.equal(a.revisions, 1);
-  assert.ok(a.first !== null && a.last >= a.first, 'first and last mark times');
-  assert.equal(a.drawing.n, 2); assert.equal(a.drawing.stroke, 1); assert.equal(a.drawing.text, 1);
-  assert.deepEqual(a.drawing.labels, ['magma']); assert.equal(a.drawing.ink, 50); assert.equal(a.drawing.colors, 2);
-  assert.ok(a.drawing.cover > 0 && a.drawing.cover <= 1);
-  assert.equal(b.drawing, null, 'a student who drew nothing is still listed'); assert.equal(b.first, null); assert.equal(b.awarded, false);
-  assert.equal(q.scores.ta, 1, 'team points as they stood when the question ended');
-  const live = rec.questions[1];
-  assert.equal(live.live, true); assert.equal(live.frozenSecs, 0, 'each question has its own clock'); assert.equal(live.students.find(x => x.id === xa.id).awarded, false);
+  assert.equal(a.pulse, 'g'); assert.equal(a.shown, true); assert.deepEqual(a.labels, ['magma'], 'typed words only, trimmed, blanks dropped');
+  assert.ok(!('objs' in a) && !('drawing' in a), 'no drawing content is kept');
+  assert.deepEqual(b.labels, []); assert.equal(b.pulse, null); assert.equal(b.shown, false, 'a student who did nothing is still listed');
+  assert.equal(rec.questions[1].students.find(x => x.id === xa.id).shown, false, 'each question starts with nobody shown');
 });
 
-await test('export: a sort question carries per-card results and which wrong lane students chose', async () => {
-  xh.send({ t: 'q', kind: 'sort', question: 'Sort the rocks', sort: { lanes: [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }], shuffle: false, fb: 'reveal',
-    cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'cooling' }, { id: 2, text: 'Sandstone', lane: 'B', idea: 'layers' }] } });
-  await sleep(80);
-  xa.send({ t: 'sort', p: { 1: 'A', 2: 'A' }, done: true }); xb.send({ t: 'sort', p: { 1: 'A', 2: 'B' }, done: true }); await sleep(120);
+await test('export: a sort question carries the key tags and each answer; confidence is read at hand-in', async () => {
+  xh.send(SORTQ); await sleep(80);
+  xa.send({ t: 'pulse', c: 'g' }); xb.send({ t: 'pulse', c: 'r' }); await sleep(60);
+  xa.send({ t: 'sort', p: { 1: 'A', 2: 'A' }, done: true }); xb.send({ t: 'sort', p: { 1: 'A', 2: 'B' }, done: true }); await sleep(100);
+  xa.send({ t: 'pulse', c: 'r' }); await sleep(80); // changing the colour after handing in must not count
   const rec = await pull(), q = rec.questions[rec.questions.length - 1];
-  assert.equal(q.kind, 'sort'); assert.equal(q.sort.cards.length, 2);
-  const c1 = q.sort.cards.find(c => c.id === 1), c2 = q.sort.cards.find(c => c.id === 2);
-  assert.equal(c1.right, 2); assert.equal(c2.right, 1); assert.deepEqual(c2.wrong, { A: 1 }); assert.equal(c2.idea, 'layers');
-  assert.equal(q.students.find(x => x.id === xa.id).sort.correct, 1); assert.equal(q.students.find(x => x.id === xb.id).sort.correct, 2);
-  assert.equal(q.students.find(x => x.id === xb.id).sort.done, true);
+  const a = q.students.find(x => x.id === xa.id), b = q.students.find(x => x.id === xb.id);
+  assert.equal(q.kind, 'sort'); assert.equal(q.sort.feedback, 'reveal');
+  assert.deepEqual(q.sort.cards.map(c => [c.text, c.lane, c.idea]), [['Granite', 'A', 'cooling'], ['Sandstone', 'B', 'layers']]);
+  assert.equal(a.sort.correct, 1); assert.equal(a.sort.placed, 2); assert.equal(a.sort.done, true); assert.deepEqual(a.sort.place, { 1: 'A', 2: 'A' });
+  assert.equal(b.sort.correct, 2);
+  assert.equal(a.pulse, 'g', 'the colour they had when they handed in'); assert.equal(b.pulse, 'r');
+});
+
+await test('export: reopening a sort answer takes back the locked-in colour', async () => {
+  xh.send({ t: 'reopen', id: xa.id }); await sleep(80);
+  const rec = await pull(), q = rec.questions[rec.questions.length - 1];
+  assert.equal(q.students.find(x => x.id === xa.id).pulse, 'r', 'back to what they have tapped now');
+});
+
+await test('export: only the host gets the record', async () => {
   const pj = client(); await pj.ready; pj.send({ t: 'watch', code: XC }); await pj.wait('state');
   pj.send({ t: 'export' }); await sleep(100);
-  assert.ok(!pj.last('export'), 'the projector never gets the record (it holds the answer key results)');
+  assert.ok(!pj.last('export'), 'the projector never gets it (it holds the answer key tags)');
   xa.send({ t: 'export' }); await sleep(100);
   assert.ok(!xa.last('export'), 'students never get it either');
   pj.ws.close();
@@ -484,6 +486,90 @@ await test('export: Clear class starts a fresh record', async () => {
   const after = await pull();
   assert.ok(after.questions.every(q => q.live), 'finished questions are gone');
   assert.deepEqual(after.questions[0].students, []);
+});
+
+// ---- the next-lesson report: pure analysis of a record we built by hand, so every number is checkable ----
+const NL = new Function(fs.readFileSync(new URL('./public/nextlesson.js', import.meta.url), 'utf8') + '; return NL;')();
+const L2 = [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }];
+const stu = (id, pulse, extra = {}) => ({ id, rid: id, ini: id.toUpperCase(), pulse, shown: false, ...extra });
+const place = (c1, c2) => ({ placed: 2, done: true, correct: (c1 === 'A') + (c2 === 'B'), place: { 1: c1, 2: c2 } });
+const REC = { v: 2, questions: [
+  { n: 1, kind: 'draw', q: 'Draw the cycle', live: false, students: [
+    stu('ann', 'g', { shown: true, labels: ['magma', 'Sedimnt'] }), stu('ben', 'g', { labels: ['arrow'] }), stu('cy', 'r', { shown: true, labels: ['Magma chamber', 'rock'] }), stu('dee', null, { labels: [] })] },
+  { n: 2, kind: 'sort', q: 'Sort the rocks', live: false, sort: { feedback: 'reveal', lanes: L2, cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'cooling' }, { id: 2, text: 'Sandstone', lane: 'B', idea: 'layers' }] }, students: [
+    stu('ann', 'g', { sort: place('A', 'B') }),                 // confident and right
+    stu('ben', 'g', { sort: place('B', 'A') }),                 // confident but wrong
+    stu('cy', 'r', { shown: true, sort: place('B', 'A') }),     // unsure and wrong
+    stu('dee', 'r', { sort: place('A', 'B') }),                 // unsure but right
+    stu('eli', null, { sort: place('A', 'A') }),                // no colour, half right
+    stu('fay', null, {})] },                                    // did not answer
+  { n: 3, kind: 'sort', q: 'Instant feedback one', live: true, sort: { feedback: 'now', lanes: L2, cards: [{ id: 1, text: 'Basalt', lane: 'A', idea: 'cooling' }, { id: 2, text: 'Shale', lane: 'B', idea: 'layers' }] }, students: [
+    stu('ann', 'g', { shown: true, sort: place('A', 'B') }), stu('ben', 'g', { sort: place('B', 'A') })] },
+] };
+const an = NL.analyze(REC, { terms: ['magma', 'sediment', 'metamorphic'] });
+
+await test('report: confidence vs accuracy sorts each student into the right bucket, and skips instant-feedback questions', () => {
+  assert.deepEqual(an.totals, { solid: 1, over: 1, under: 1, aware: 1, mixed: 0, none: 1 }, 'Q2 only: Q3 gave instant feedback');
+  assert.equal(an.calib[0].noAnswer, 1); assert.equal(an.calib[1].skipped, true);
+  assert.deepEqual(an.watch.map(w => w.name), ['BEN', 'CY']); assert.deepEqual(an.watch[0].over, [{ n: 2, got: 0, of: 2 }]);
+  assert.deepEqual(an.boost, ['DEE']);
+});
+
+await test('report: tapping green and landing under 80% counts as missing some, with the real score; amber is never judged', () => {
+  const lanes = [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }], cs = [1, 2, 3, 4, 5].map(id => ({ id, text: 'c' + id, lane: 'A', idea: 'x' }));
+  const mk = (id, pulse, right) => stu(id, pulse, { sort: { placed: 5, done: true, correct: right, place: Object.fromEntries(cs.map((c, i) => [c.id, i < right ? 'A' : 'B'])) } });
+  const r = { questions: [{ n: 1, kind: 'sort', q: 'q', live: false, sort: { feedback: 'reveal', lanes, cards: cs }, students: [mk('p', 'g', 4), mk('q', 'g', 3), mk('r', 'y', 1), mk('s', 'r', 2), mk('t', 'r', 3)] }] };
+  const x = NL.analyze(r);
+  assert.deepEqual(x.totals, { solid: 1, over: 1, under: 0, aware: 1, mixed: 2, none: 0 }, '4 of 5 is right (80%); 3 of 5 on green is missed-some; red at 2 of 5 is unsure and wrong; red at 3 of 5 and any amber are in between');
+  assert.deepEqual(x.watch.map(w => w.name), ['Q', 'S']); assert.deepEqual(x.watch[0].over, [{ n: 1, got: 3, of: 5 }]);
+});
+
+await test('report: names the mix-up per card and per idea, and counts confident-but-wrong', () => {
+  const g = an.cards.find(c => c.text === 'Granite');
+  assert.equal(g.placed, 5); assert.equal(g.right, 3); assert.equal(g.pct, 60); assert.deepEqual(g.mix, ['Sedimentary', 2]); assert.equal(g.confWrong, 1);
+  const cool = an.ideas.find(i => i.name === 'cooling');
+  assert.equal(cool.confWrong, 1, 'the instant-feedback question adds none');
+  assert.equal(an.ideas[0].pct <= an.ideas[1].pct, true, 'weakest idea first');
+  const t = an.priorities.map(p => p.h + ': ' + p.t).join('\n');
+  assert.match(t, /Re-teach: .*% right\./); assert.match(t, /Check in with: BEN, CY/);
+  assert.ok(!/Hidden misconception/.test(t), 'one confident-but-wrong student is a check-in, not a class-wide finding');
+  const two = JSON.parse(JSON.stringify(REC)); two.questions[1].students.push(stu('gus', 'g', { sort: place('B', 'A') }));
+  const t2 = NL.analyze(two).priorities.map(p => p.h + ': ' + p.t).join('\n');
+  assert.match(t2, /Hidden misconception: .*2 placements were wrong from students who said/, 'two or more on the same idea is');
+});
+
+await test('report: vocabulary counts exact, spelled-differently and unused words', () => {
+  const m = Object.fromEntries(an.vocab.terms.map(r => [r.term, r]));
+  assert.deepEqual([m.magma.exact, m.magma.close, m.magma.none], [2, 0, 2], '“Magma chamber” counts, and a plural or extra words are fine');
+  assert.deepEqual([m.sediment.exact, m.sediment.close, m.sediment.none], [0, 1, 3], '“Sedimnt” is a spelling slip, not a miss');
+  assert.equal(m.metamorphic.none, 4);
+  assert.equal(an.vocab.terms[0].term, 'metamorphic', 'least used word first');
+  assert.deepEqual(an.vocab.confidentNoWords, ['BEN'], 'said green, used none of the words');
+  assert.equal(an.vocab.top[0].n, 1);
+});
+
+await test('report: projector counts who was shown, how often, and from which colour', () => {
+  assert.equal(an.projector.total, 4, 'Ann on Q1 and Q3, Cy on Q1 and Q2');
+  assert.deepEqual(an.projector.rows.map(r => [r.name, r.times]), [['ANN', 2], ['CY', 2]]);
+  assert.deepEqual(an.projector.colours, { g: 2, y: 0, r: 2, none: 0 }, 'the colour each had on the question they were shown');
+  assert.deepEqual(an.projector.never, ['BEN', 'DEE', 'ELI', 'FAY']);
+});
+
+await test('report: matching ignores case, accents and plurals, and does not match short words loosely', () => {
+  assert.equal(NL.match('MAGMA!', 'magma'), 'exact'); assert.equal(NL.match('rocas', 'roca'), 'exact'); assert.equal(NL.match('Lava flows', 'lava'), 'exact');
+  assert.equal(NL.match('crust', 'crest'), 'close'); assert.equal(NL.match('ash', 'ask'), null, 'short words must match exactly');
+  assert.equal(NL.match('métamorphic', 'metamorphic'), 'exact');
+  assert.deepEqual(NL.parseTerms('magma, crust\nmagma; core '), ['magma', 'crust', 'core']);
+});
+
+await test('report: an empty or drawing-only lesson does not break, and the text summary reads cleanly', () => {
+  const e = NL.analyze({ questions: [] }); assert.deepEqual(e.priorities, []); assert.equal(e.sortQs, 0);
+  const d = NL.analyze({ questions: [REC.questions[0]] }, { terms: ['magma'] });
+  assert.equal(d.sortQs, 0); assert.equal(d.vocab.terms[0].exact, 2);
+  const text = NL.text(an, { cls: '3rd Hour', date: '11/11/2026' });
+  assert.match(text, /^Next lesson report — 3rd Hour/); assert.match(text, /Confident but missed some 1/); assert.match(text, /BEN \(said “I understand” but got 0 of 2 on Q2\)/); assert.match(text, /Not yet shown: BEN, DEE, ELI, FAY/); assert.match(text, /4 showings \(2 from students on green, 0 amber, 2 red/);
+  assert.ok(!/undefined|NaN/.test(text));
+  assert.ok(!/undefined|NaN/.test(NL.text(e)));
 });
 
 // ---- a refresh in the middle of a lesson must not lose the student ----
