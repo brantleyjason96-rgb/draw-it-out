@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Landing page mock-up</title>
+<link rel="stylesheet" href="../public/tokens.css">
+<style>
+/* Mock-up of the landing page (public/landing.html). Colours and sizes come from public/tokens.css.
+   The pictures are real screenshots from design-audit/v2/. Fonts are the app's own files by relative path. Nothing is fetched from another site. */
+@font-face{font-family:'Figtree';font-weight:400 800;src:url(../public/fonts/figtree-latin-wght-normal.woff2) format('woff2')}
+@font-face{font-family:'Bricolage Grotesque';font-weight:700;src:url(../public/fonts/bricolage-grotesque-latin-700-normal.woff2) format('woff2')}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font:var(--fs-md)/1.5 var(--font-body);color:var(--c-ink);background:var(--c-bg)}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.12}
+a{color:var(--c-primary-strong)}
+:focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}
+svg.i{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* top bar */
+.tb{background:#fff;border-bottom:1px solid var(--c-line)}
+.tb .wrap{display:flex;align-items:center;gap:12px;min-height:72px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xl);color:var(--c-question);text-decoration:none;margin-right:auto}
+.logo svg{width:36px;height:36px}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:var(--r-md);border:1px solid var(--c-control);background:#fff;font-weight:700;text-decoration:none;color:var(--c-ink);white-space:nowrap;font-size:var(--fs-md)}
+.b:hover{background:var(--c-surface-2)}
+.b.pri{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.b.pri:hover{background:var(--c-primary-strong)}
+.b.big{min-height:56px;padding:0 28px;font-size:var(--fs-lg);border-radius:var(--r-lg)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:40px;align-items:center;padding:56px 0 40px}
+.hero h1{font-size:clamp(34px,4.4vw,56px);margin-bottom:14px}
+.hero p.lead{font-size:var(--fs-xl);color:var(--c-ink-2);margin:0 0 24px;max-width:30em}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero .fine{margin:14px 0 0;color:var(--c-muted)}
+.shot{border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-3);border:1px solid var(--c-line-2);background:#fff;aspect-ratio:1440/900}
+.shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top left}
+@media(max-width:860px){.hero{grid-template-columns:1fr;padding-top:32px}}
+@media(max-width:520px){.wrap{padding:0 16px}.tb .wrap{gap:8px}.b{padding:0 14px}.b.big{padding:0 18px;flex:1}.logo{font-size:var(--fs-lg)}.logo svg{width:30px;height:30px}.close{padding:32px 16px}}
+
+/* three steps, one strip */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:8px 0 8px;counter-reset:s}
+.step{background:#fff;border:1px solid var(--c-line);border-radius:var(--r-xl);padding:18px;display:flex;flex-direction:column;gap:12px}
+.step .n{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:var(--fs-xl);font-weight:700}
+.step .n i{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--c-primary-tint);color:var(--c-primary-strong)}
+.step p{margin:0;color:var(--c-ink-2)}
+.step .tiny{border-radius:var(--r-md);overflow:hidden;border:1px solid var(--c-line-2);aspect-ratio:16/9;margin-top:auto}
+.step .tiny img{width:100%;height:100%;display:block;object-fit:cover;object-position:top left}
+@media(max-width:860px){.steps{grid-template-columns:1fr}}
+
+h2.sec{font-size:var(--fs-3xl);margin:56px 0 18px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.benefit{background:#fff;border:1px solid var(--c-line);border-radius:var(--r-xl);padding:22px}
+.benefit .ico{display:grid;place-items:center;width:52px;height:52px;border-radius:var(--r-lg);background:var(--c-good-soft);color:var(--c-good-strong);margin-bottom:12px}
+.benefit.b2 .ico{background:var(--c-primary-tint);color:var(--c-primary-strong)}
+.benefit.b3 .ico{background:var(--c-warn-soft);color:var(--c-warn-strong)}
+.benefit h3{font-size:var(--fs-xl);margin-bottom:6px}
+.benefit p{margin:0;color:var(--c-ink-2)}
+@media(max-width:860px){.three{grid-template-columns:1fr}}
+
+/* privacy: calm two columns */
+.priv{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;background:#fff;border:1px solid var(--c-line);border-radius:var(--r-xl);padding:28px}
+.priv ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.priv li{display:flex;gap:10px;align-items:flex-start}
+.priv li svg{width:22px;height:22px;color:var(--c-good);margin-top:2px}
+.priv .note{background:var(--c-surface-2);border:1px solid var(--c-line);border-radius:var(--r-lg);padding:20px}
+.priv .note h3{font-size:var(--fs-lg);margin-bottom:8px}
+.priv .note p{margin:0 0 10px;color:var(--c-ink-2)}
+@media(max-width:860px){.priv{grid-template-columns:1fr}}
+
+/* closing call to action and footer */
+.close{text-align:center;margin:56px 0 0;padding:40px 24px;border-radius:var(--r-2xl);background:var(--c-question);color:#fff}
+.close h2{font-size:var(--fs-3xl);margin-bottom:16px;color:#fff}
+.close .b.pri{background:#fff;color:var(--c-question);border-color:#fff}
+.close .b.pri:hover{background:var(--c-primary-tint)}
+.close .b:focus-visible{outline-color:#fff}
+.close .b:not(.pri){background:transparent;color:#fff;border-color:rgba(255,255,255,.6)}
+footer{margin-top:40px;border-top:1px solid var(--c-line);background:#fff}
+footer .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;min-height:84px}
+footer .logo{font-size:var(--fs-lg)}
+footer .logo svg{width:30px;height:30px}
+footer nav{display:flex;gap:6px 20px;flex-wrap:wrap}
+footer nav a{display:inline-block;padding:12px 0;font-weight:600}
+</style>
+</head>
+<body>
+<header class="tb">
+ <div class="wrap">
+  <a class="logo" href="#" aria-label="Draw It Out"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</a>
+  <a class="b" href="#">Join a class</a>
+  <a class="b pri" href="#">Start a class</a>
+ </div>
+</header>
+
+<main class="wrap">
+ <section class="hero" aria-labelledby="h1">
+  <div>
+   <h1 id="h1">See every student’s thinking. All at once.</h1>
+   <p class="lead">Ask a question. Every student draws the answer. You see them all live, pick one for the projector, and award team points.</p>
+   <div class="cta"><a class="b pri big" href="#">Start a class</a><a class="b big" href="#">Try the demo</a></div>
+   <p class="fine">No accounts, nothing to install. The demo needs no students.</p>
+  </div>
+  <div class="shot"><img src="../design-audit/v2/phase3/31-class-projecting--1440x900.png" alt="The teaching screen: a question, student drawings arriving live, and team scores."></div>
+ </section>
+
+ <section aria-label="How it works">
+  <div class="steps">
+   <div class="step"><div class="n"><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM20 14v.01M14 20v.01"/></svg></i>Share the code</div><p>Show the four-letter code or the QR code. Students join in seconds.</p><div class="tiny"><img src="../design-audit/v2/phase4/50-projector-join--1440x900.png" alt="The projector showing the class code and a QR code."></div></div>
+   <div class="step"><div class="n"><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z"/></svg></i>Students draw</div><p>Each student answers on their own screen, with a pen, shapes and text.</p><div class="tiny"><img src="../design-audit/v2/phase2/14-student-draw--1366x768.png" alt="A student drawing on their screen."></div></div>
+   <div class="step"><div class="n"><i><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v11H3zM8 21h8M12 16v5"/></svg></i>See everyone, show one</div><p>Watch every drawing live. Click one to put it on the projector.</p><div class="tiny"><img src="../design-audit/v2/phase4/52-projector-compare3--1440x900.png" alt="Three student drawings side by side on the projector."></div></div>
+  </div>
+ </section>
+
+ <h2 class="sec">What you get</h2>
+ <section class="three" aria-label="What you get">
+  <div class="benefit"><div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v11H3zM8 21h8M12 16v5"/></svg></div><h3>Every answer, live</h3><p>See who has started, who is stuck and who is done, without walking the room.</p></div>
+  <div class="benefit b2"><div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h8v8H3zM17 3a4.5 4.5 0 110 9 4.5 4.5 0 010-9z"/></svg></div><h3>Sort questions</h3><p>Students sort cards into lanes. You see which cards and ideas tripped up the class.</p></div>
+  <div class="benefit b3"><div class="ico"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 3M16 6h3a3 3 0 01-3 3M12 13v4M8 20h8"/></svg></div><h3>Teams and points</h3><p>Award points as drawings come in. The projector shows the leaderboard.</p></div>
+ </section>
+
+ <h2 class="sec">Privacy</h2>
+ <section class="priv" aria-label="Privacy">
+  <div>
+   <p style="margin:0;font-size:var(--fs-lg);font-weight:600">Designed to collect as little as possible.</p>
+   <ul>
+    <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>There are <b>no student accounts</b>, no emails and no Google sign-in.</span></li>
+    <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Students use a nickname or tap their <b>initials</b>. With a class list, full names stay in your own browser and are never sent to the server.</span></li>
+    <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Drawings exist only while a class is active. A class that has been idle for 6 hours is deleted from the server.</span></li>
+    <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Teams, scores and question sets are saved in your browser. Use <b>Back up everything</b> to keep a copy.</span></li>
+   </ul>
+  </div>
+  <div class="note"><h3>Check with your school</h3><p>Every school has its own approval process. Please check with your school’s data-privacy contact before using any tool with students.</p></div>
+ </section>
+
+ <section class="close" aria-label="Get started"><h2>Try it with your next class.</h2><div class="cta" style="justify-content:center"><a class="b pri big" href="#">Start a class</a><a class="b big" href="#">Try the demo</a></div></section>
+</main>
+
+<footer>
+ <div class="wrap">
+  <a class="logo" href="#" aria-label="Draw It Out"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</a>
+  <nav aria-label="Footer"><a href="#">Try the demo</a><a href="#">Join a class</a><a href="#">Start a class</a></nav>
+ </div>
+</footer>
+</body>
+</html>

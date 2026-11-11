@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Today mock-up</title>
+<link rel="stylesheet" href="../public/tokens.css">
+<style>
+/* Mock-up of the teacher home (public/teacher.html): top-bar tabs, class cards, question sets, teams.
+   Colours and sizes come from public/tokens.css. Fonts are the app's own files by relative path. Nothing is fetched from another site.
+   Everything in .mock is a mock-up control, not part of the design. */
+@font-face{font-family:'Figtree';font-weight:400 800;src:url(../public/fonts/figtree-latin-wght-normal.woff2) format('woff2')}
+@font-face{font-family:'Bricolage Grotesque';font-weight:700;src:url(../public/fonts/bricolage-grotesque-latin-700-normal.woff2) format('woff2')}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font:var(--fs-md)/1.4 var(--font-body);color:var(--c-ink);background:var(--c-bg)}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.15}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.mut{color:var(--c-muted)}
+.gut{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+
+/* mock-up controls */
+.mock{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding-block:6px;background:var(--c-warn-soft);border-bottom:2px dashed var(--c-warn-line);color:var(--c-warn-strong);font-size:var(--fs-sm)}
+.mseg{display:inline-flex;border:1px solid var(--c-control);border-radius:var(--r-sm);overflow:hidden;background:#fff}
+.mseg button{border:0;background:none;padding:6px 10px;min-height:34px;font-weight:600;font-size:var(--fs-sm);color:var(--c-ink)}
+.mseg button+button{border-left:1px solid var(--c-line)}
+.mseg button[aria-pressed=true]{background:var(--c-ink);color:#fff}
+
+/* buttons: three levels */
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:var(--r-md);border:1px solid var(--c-control);background:#fff;font-weight:600;white-space:nowrap}
+.b:hover{background:var(--c-surface-2)}
+.b.pri{background:var(--c-primary);border-color:var(--c-primary);color:#fff;font-weight:700}
+.b.pri:hover{background:var(--c-primary-strong)}
+.b.ter{border-color:transparent;background:none;color:var(--c-ink-2)}
+.b.ter:hover{background:var(--c-fill)}
+.b.sq{padding:0;width:44px}
+.b.sm{min-height:36px;padding:0 12px;font-size:var(--fs-sm)}
+.b.danger{color:var(--c-bad)}
+
+/* top bar */
+.tb{background:var(--c-dark);color:#fff;display:flex;align-items:center;gap:24px;min-height:68px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:var(--fs-xl);color:#fff;text-decoration:none}
+.logo svg{width:30px;height:30px;border-radius:8px;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+.tabs{display:flex;gap:4px;align-self:stretch;align-items:stretch}
+.tabs button{border:0;background:none;color:#fff;padding:0 18px;font-weight:600;font-size:var(--fs-md);border-bottom:4px solid transparent;opacity:.8}
+.tabs button:hover{opacity:1;background:var(--c-dark-2)}
+.tabs button[aria-selected=true]{opacity:1;border-bottom-color:var(--c-focus-on-dark)}
+.tb .sp{flex:1}
+.tb .b{background:none;border-color:var(--c-dark-line);color:#fff}
+.tb .b:hover{background:var(--c-dark-2)}
+.tb :focus-visible{outline-color:var(--c-focus-on-dark)}
+@media(max-width:700px){.tb{flex-wrap:wrap;gap:6px 12px;padding-block:8px;min-height:0}.tabs{order:3;width:100%;overflow-x:auto;min-height:48px}.tabs button{padding:0 14px;white-space:nowrap}.tb .b{min-height:40px;padding:0 12px}main{padding:20px 16px 8px}.gut{padding-left:16px;padding-right:16px}.head h1{font-size:var(--fs-3xl)}.grid{grid-template-columns:1fr}}
+
+main{max-width:1100px;margin:0 auto;padding:28px 24px 8px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.head h1{font-size:var(--fs-4xl)}
+.head p{margin:4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:#fff;border:1px solid var(--c-line);border-radius:var(--r-xl);padding:18px}
+
+/* class card */
+.cc{display:flex;flex-direction:column;gap:12px;position:relative}
+.cc .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.cc h3{font-size:var(--fs-xl)}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-pill);padding:2px 12px;font-weight:700;font-size:var(--fs-sm);background:var(--c-fill);color:var(--c-ink-2)}
+.code{font-family:var(--font-display);letter-spacing:.16em;font-size:var(--fs-md)}
+.ticons{display:flex;gap:6px;font-size:var(--fs-xl);min-height:30px;align-items:center}
+.ticons i{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--c-surface-2);border:2px solid var(--tc);font-style:normal;font-size:var(--fs-md)}
+.cc .last{font-size:var(--fs-sm)}
+.new{display:grid;place-items:center;border:2px dashed var(--c-control);background:transparent;min-height:190px;color:var(--c-ink-2);font-weight:700;gap:8px;text-align:center}
+.new:hover{background:#fff}
+
+/* welcome card: first visit */
+.welcome{max-width:560px;margin:24px auto 0;text-align:center;padding:32px 28px}
+.welcome h1{font-size:var(--fs-3xl);margin-bottom:6px}
+.welcome form{display:flex;gap:10px;margin-top:20px}
+.welcome input{flex:1;min-height:52px;padding:0 14px;border:2px solid var(--c-control);border-radius:var(--r-lg);font-size:var(--fs-lg)}
+.welcome .steps{display:flex;justify-content:center;gap:10px;margin-top:20px;color:var(--c-muted);font-size:var(--fs-sm);flex-wrap:wrap}
+.welcome .steps b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);margin-right:6px;font-size:var(--fs-xs)}
+
+/* menus */
+.menuwrap{position:relative}
+.menu{position:absolute;z-index:20;right:0;top:calc(100% + 4px);min-width:220px;background:#fff;border:1px solid var(--c-line-2);border-radius:var(--r-lg);box-shadow:var(--sh-3);padding:8px 0}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 16px;border:0;background:none;text-align:left;font-weight:600}
+.menu button:hover{background:var(--c-fill)}
+.menu hr{border:0;border-top:1px solid var(--c-line);margin:6px 0}
+
+/* question sets */
+.set{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.set .band{height:10px;background:var(--sc)}
+.set .body{padding:16px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.set h3{font-size:var(--fs-lg)}
+.mix{display:flex;gap:6px;flex-wrap:wrap}
+.mix .chip{font-size:var(--fs-xs)}
+.set .acts{display:flex;gap:8px;margin-top:auto}
+.sech{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:30px 0 14px}
+.sech h2{font-size:var(--fs-2xl)}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{min-height:40px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--c-control);background:#fff;font-weight:600}
+.filters button[aria-pressed=true]{background:var(--c-ink);color:#fff;border-color:var(--c-ink)}
+.starter{border-style:dashed}
+
+/* teams */
+.pickrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+select{min-height:44px;padding:0 12px;border:1px solid var(--c-control);border-radius:var(--r-md);background:#fff;font-weight:600}
+.empty{max-width:560px;margin:10px auto;text-align:center;padding:32px 28px}
+.empty h2{font-size:var(--fs-3xl)}
+.counts{display:flex;justify-content:center;gap:8px;margin:20px 0 22px;flex-wrap:wrap}
+.counts button{width:56px;height:56px;border-radius:var(--r-lg);border:2px solid var(--c-control);background:#fff;font-weight:800;font-size:var(--fs-xl)}
+.counts button[aria-pressed=true]{background:var(--c-ink);border-color:var(--c-ink);color:#fff}
+.tcols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media(max-width:860px){.tcols{grid-template-columns:1fr}}
+.trow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--c-line)}
+.trow:first-child{border-top:0}
+.grab{color:var(--c-muted);cursor:grab;display:grid;place-items:center;width:32px;height:44px}
+.ticon{width:44px;height:44px;border-radius:50%;border:3px solid var(--tc);display:grid;place-items:center;background:#fff;font-size:var(--fs-xl)}
+.trow input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--c-control);border-radius:var(--r-md);font-weight:600}
+.swatch{width:44px;height:44px;border-radius:var(--r-md);border:2px solid #fff;box-shadow:0 0 0 2px var(--c-control);background:var(--tc)}
+.prev h3{font-size:var(--fs-md);margin-bottom:10px;color:var(--c-muted);font-family:var(--font-body);font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:18px}
+.tiles div{border:3px solid var(--tc);border-radius:var(--r-lg);padding:10px 6px;text-align:center;font-weight:700;background:#fff}
+.tiles div span{display:block;font-size:var(--fs-2xl)}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bars div{display:flex;align-items:center;gap:8px;border-radius:var(--r-sm);background:var(--c-fill);overflow:hidden;font-weight:700;font-size:var(--fs-sm);height:32px;position:relative}
+.bars div i{position:absolute;left:0;top:0;bottom:0;background:var(--tc);width:var(--w)}
+.bars div span{position:relative;background:rgba(11,18,32,.9);color:#fff;border-radius:99px;padding:1px 10px;margin-left:6px}
+
+/* backup footer row, on every tab */
+.bk{margin-top:36px;padding:16px 0 32px;border-top:1px solid var(--c-line);display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--c-muted);font-size:var(--fs-sm)}
+.bk b{color:var(--c-ink)}
+.toast{position:fixed;left:50%;top:76px;transform:translateX(-50%);background:var(--c-dark);color:#fff;border:2px solid #fff;border-radius:var(--r-lg);padding:10px 18px;font-weight:600;box-shadow:var(--sh-2);z-index:40}
+</style>
+</head>
+<body>
+<div class="mock gut" role="group" aria-label="Mock-up controls">
+ <span><b>Mock-up.</b> Click the tabs. Try both of these:</span>
+ <span class="mseg" id="mvisit"><button data-v="first" aria-pressed="false">First visit (no classes)</button><button data-v="used" aria-pressed="true">Has classes</button></span>
+ <span class="mseg" id="mteams"><button data-t="none" aria-pressed="true">Teams tab: no teams yet</button><button data-t="some" aria-pressed="false">Teams tab: 4 teams</button></span>
+</div>
+
+<header class="tb gut">
+ <a class="logo" href="#" aria-label="Draw It Out"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</a>
+ <nav class="tabs" role="tablist" aria-label="Sections">
+  <button role="tab" data-tab="classes" aria-selected="true">Classes</button>
+  <button role="tab" data-tab="sets" aria-selected="false">Question sets</button>
+  <button role="tab" data-tab="teams" aria-selected="false">Teams</button>
+ </nav>
+ <span class="sp"></span>
+ <button class="b" data-note="Opens the demo class">Try the demo</button>
+ <button class="b" data-note="Opens the help page">Help</button>
+</header>
+
+<main id="main"></main>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const IC = { dots: 'M5 12h.01M12 12h.01M19 12h.01', plus: 'M12 5v14M5 12h14', folder: 'M3 6h6l2 2h10v11H3z', file: 'M6 3h9l4 4v14H6zM14 3v5h5', grab: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01', copy: 'M9 9h11v11H9zM5 15V4h11', reset: 'M4 12a8 8 0 108-8H7M10 1L7 4l3 3', edit: 'M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z', trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13', send: 'M7 4l13 8-13 8z', share: 'M12 4v12M7 9l5-5 5 5M5 20h14', down: 'M6 9l6 6 6-6', play: 'M7 4l13 8-13 8z' };
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
+const TEAMS = [{ e: '🪨', n: 'Granite', c: '#475569' }, { e: '🌋', n: 'Basalt', c: '#B3261E' }, { e: '💎', n: 'Quartz', c: '#0284C7' }, { e: '🔥', n: 'Magma', c: '#EA580C' }, { e: '🌲', n: 'Forest', c: '#0E7C4A' }, { e: '🌊', n: 'Tide', c: '#0891B2' }, { e: '☄️', n: 'Comet', c: '#7C3AED' }, { e: '🏜️', n: 'Dune', c: '#A16207' }];
+const CLASSES = [{ n: '3rd Hour', code: 'H9FM', teams: 4, last: 'Tuesday' }, { n: '5th Hour', code: 'K2QX', teams: 6, last: 'Monday' }, { n: 'Period 1 (honors)', code: 'W7PD', teams: 0, last: 'Not used yet' }];
+const SETS = [
+  { n: 'Layers of the Earth', q: 5, d: 5, s: 0, c: '#0B6BCB' }, { n: 'Rock cycle', q: 6, d: 3, s: 3, c: '#0E7C4A' }, { n: 'Sort It! Rocks', q: 4, d: 0, s: 4, c: '#8F5500' }, { n: 'Plate tectonics', q: 8, d: 6, s: 2, c: '#7C3AED' }];
+const STARTERS = [{ n: 'Weathering and erosion', q: 6, sub: 'Earth science' }, { n: 'Water cycle', q: 5, sub: 'Earth science' }, { n: 'Cell parts', q: 7, sub: 'Life science' }, { n: 'Forces and motion', q: 6, sub: 'Physical science' }, { n: 'Food webs', q: 5, sub: 'Life science' }, { n: 'The atom', q: 4, sub: 'Physical science' }];
+let S = { tab: 'classes', visit: 'used', teams: 'none', n: 4, filter: 'All', menu: null };
+
+const backup = () => `<div class="bk"><span>Last backup: <b>Tuesday, Nov 4</b></span><button class="b sm pri" data-note="Backup saved">Back up now</button><button class="b sm" data-note="Choose a backup file to restore">Restore</button></div>`;
+function classes() {
+  if (S.visit === 'first') return `<div class="card welcome"><h1>Welcome. Let’s set up your first class.</h1><p class="mut" style="margin:0">Give it a name your students will recognise.</p>
+   <form id="wf"><input id="wn" aria-label="Class name" placeholder="3rd Hour" value=""><button class="b pri" style="min-height:52px">Start class</button></form>
+   <div class="steps"><span><b>1</b>Name your class</span><span><b>2</b>Start it</span><span><b>3</b>Share the code</span></div></div>`;
+  return `<div class="head"><div><h1>Today</h1><p class="mut">Pick a class to start, or set up team names and icons.</p></div></div>
+  <div class="grid">${CLASSES.map((c, i) => `<article class="card cc"><div class="top"><div><h3>${c.n}</h3><div class="mut last">Last used ${c.last}</div></div>
+   <div class="menuwrap"><button class="b ter sq" data-menu="c${i}" aria-label="More for ${c.n}" title="More" aria-haspopup="true">${ic('dots')}</button>${S.menu === 'c' + i ? `<div class="menu" role="menu"><button>${ic('edit')} Rename</button><button>${ic('copy')} Duplicate</button><hr><button class="danger" style="color:var(--c-bad)">${ic('trash')} Remove class</button></div>` : ''}</div></div>
+   <div><span class="chip">Code <span class="code">${c.code}</span></span></div>
+   <div class="ticons">${c.teams ? TEAMS.slice(0, c.teams).map(t => `<i style="--tc:${t.c}" title="${t.n}">${t.e}</i>`).join('') : '<span class="mut" style="font-size:var(--fs-sm)">No teams yet</span>'}</div>
+   <button class="b pri" data-note="Starts ${c.n}">${ic('play')} Start class</button></article>`).join('')}
+   <button class="card new" data-note="Adds a new class">${ic('plus')}<span>New class</span></button></div>`;
+}
+function sets() {
+  const subs = ['All', 'Earth science', 'Life science', 'Physical science'], st = STARTERS.filter(s => S.filter === 'All' || s.sub === S.filter);
+  return `<div class="head"><div><h1>Question sets</h1><p class="mut">Your sets are ready to send. Add a starter set to get going.</p></div>
+   <div style="display:flex;gap:8px"><button class="b pri" data-note="Opens the editor with a new set">${ic('plus')} New set</button>
+    <div class="menuwrap"><button class="b" data-menu="new" aria-haspopup="true">New ${ic('down')}</button>${S.menu === 'new' ? `<div class="menu" role="menu"><button>${ic('folder')} New folder</button><button>${ic('file')} Import a file</button></div>` : ''}</div></div></div>
+  <div class="grid">${SETS.map(s => `<article class="card set" style="--sc:${s.c}"><div class="band"></div><div class="body"><h3>${s.n}</h3><div class="mut">${s.q} questions</div>
+   <div class="mix">${s.d ? `<span class="chip">${s.d} Draw</span>` : ''}${s.s ? `<span class="chip">${s.s} Sort</span>` : ''}</div>
+   <div class="acts"><button class="b sm">${ic('edit')} Edit</button><button class="b sm">${ic('share')} Share link</button><button class="b ter sq sm" aria-label="More" title="More">${ic('dots')}</button></div></div></article>`).join('')}</div>
+  <div class="sech"><h2>Starter sets</h2><div class="filters" role="group" aria-label="Subject">${subs.map(f => `<button data-f="${f}" aria-pressed="${S.filter === f}">${f}</button>`).join('')}</div></div>
+  <div class="grid">${st.map(s => `<article class="card starter cc"><h3 style="font-size:var(--fs-lg)">${s.n}</h3><div class="mut">${s.q} questions · ${s.sub}</div><button class="b" data-note="Added “${s.n}” to your sets" style="margin-top:auto">${ic('plus')} Add to my sets</button></article>`).join('')}</div>`;
+}
+function teams() {
+  const head = `<div class="head"><div><h1>Teams</h1><p class="mut">Names and icons are saved on this computer.</p></div><div class="pickrow"><label for="cls" class="mut" style="font-weight:600">Class</label><select id="cls"><option>3rd Hour</option><option>5th Hour</option></select><button class="b" data-note="Opens the class">Open class</button></div></div>`;
+  if (S.teams === 'none') return head + `<div class="card empty"><h2>How many teams?</h2><p class="mut" style="margin:6px 0 0">Pick a number. You can rename them and change the icons next.</p>
+   <div class="counts" role="group" aria-label="Number of teams">${[2, 3, 4, 5, 6, 7, 8].map(n => `<button data-n="${n}" aria-pressed="${S.n === n}">${n}</button>`).join('')}</div>
+   <button class="b pri" id="mk" style="min-height:52px;padding:0 28px;font-size:var(--fs-lg)">Create ${S.n} teams</button></div>`;
+  const T = TEAMS.slice(0, S.n);
+  return head + `<div class="tcols"><section class="card"><div class="sech" style="margin:0 0 8px"><h2 style="font-size:var(--fs-xl)">${S.n} teams</h2>
+    <div class="menuwrap"><button class="b ter sq" data-menu="tm" aria-label="More for teams" title="More" aria-haspopup="true">${ic('dots')}</button>${S.menu === 'tm' ? `<div class="menu" role="menu"><button>${ic('copy')} Copy to another class…</button><hr><button style="color:var(--c-bad)">${ic('reset')} Reset all scores</button></div>` : ''}</div></div>
+    ${T.map(t => `<div class="trow" style="--tc:${t.c}"><span class="grab" title="Drag to reorder" aria-label="Drag to reorder">${ic('grab')}</span><span class="ticon">${t.e}</span><input value="${t.n}" aria-label="Team name"><span class="swatch" title="Team color"></span><button class="b ter sq" aria-label="Remove ${t.n}" title="Remove">${ic('trash')}</button></div>`).join('')}
+    <div style="margin-top:10px"><button class="b" id="addt">${ic('plus')} Add team</button></div></section>
+   <aside class="card prev" aria-label="Preview"><h3>What students see when they join</h3><div class="tiles">${T.map(t => `<div style="--tc:${t.c}"><span>${t.e}</span>${t.n}</div>`).join('')}</div>
+    <h3>What the projector shows</h3><div class="bars">${T.map((t, i) => `<div style="--tc:${t.c};--w:${70 - i * 12}%"><i></i><span>${i + 1} ${t.e} ${t.n}</span></div>`).join('')}</div></aside></div>`;
+}
+function render() {
+  $('#main').innerHTML = { classes, sets, teams }[S.tab]() + (S.visit === 'first' && S.tab === 'classes' ? '' : backup());
+  $$('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === S.tab));
+  $$('#mvisit button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.visit));
+  $$('#mteams button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === S.teams));
+}
+let tt; const note = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => (t.hidden = true), 2600); };
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab],[data-menu],[data-f],[data-n],[data-note],#mk,#addt,[data-v],[data-t]');
+  if (!t) { if (S.menu) { S.menu = null; render(); } return; }
+  e.stopPropagation();
+  if (t.dataset.tab) { S.tab = t.dataset.tab; S.menu = null; }
+  else if (t.dataset.menu) S.menu = S.menu === t.dataset.menu ? null : t.dataset.menu;
+  else if (t.dataset.f) S.filter = t.dataset.f;
+  else if (t.dataset.n) S.n = +t.dataset.n;
+  else if (t.id === 'mk') S.teams = 'some';
+  else if (t.id === 'addt') S.n = Math.min(8, S.n + 1);
+  else if (t.dataset.v) S.visit = t.dataset.v;
+  else if (t.dataset.t) S.teams = t.dataset.t;
+  else if (t.dataset.note) note(t.dataset.note);
+  render();
+});
+document.addEventListener('submit', e => { e.preventDefault(); S.visit = 'used'; note('Class started. Students join with code H9FM.'); render(); });
+render();
+</script>
+</body>
+</html>
