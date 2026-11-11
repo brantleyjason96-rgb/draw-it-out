@@ -96,7 +96,7 @@ const SR = (() => {
     stus.forEach(s => {
       const selS = ST.sel && ST.sel.k === 's' && ST.sel.id === s.id, tr = el('tr', { className: selS ? 'sel' : '' });
       const rb = el('button', { className: 'rowh', onclick: () => { ST.sel = { k: 's', id: s.id }; render(); } });
-      rb.style.setProperty('--tc', s.team ? s.team.color : '#e5e7eb');
+      rb.style.setProperty('--tc', s.team ? s.team.color : 'var(--c-line)');
       rb.append(T('span', '', s.name), T('span', 'sc b-' + (s.g.put ? SK.tier(Math.round(100 * s.g.right / n)) : 'mid'), s.g.put ? s.g.right + '/' + n : 'not started'));
       tr.append(el('th', { className: 'sticky', scope: 'row' }, rb));
       cards.forEach(k => {
