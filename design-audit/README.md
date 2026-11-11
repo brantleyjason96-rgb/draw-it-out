@@ -36,4 +36,4 @@ OUT=design-audit/after node design-audit/capture.cjs 1366     # one size only
 ## Status
 
 - Plan written and checked: every find string, count and grep in the plan was run against a scratch copy of the repo, and `npm test` passed.
-- Implementation: **not started.** No file in `public/` or `server.js` has been changed yet.
+- Implementation: **done** (T00–T23; "after" screenshots are in `after/`). The next round of design work is proposed in `../DESIGN_PLAN_V2.md`.
