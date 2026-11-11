@@ -105,7 +105,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       console.log('sets href', href);
       if (href) { await T.goto(B + href); await sleep(1500); await shot(T, '45-sets-editor'); await T.screenshot({ path: `${OUT}/45-sets-editor-full--${tag}.png`, fullPage: true }); }
     });
-    await T.goto(B + '/classic?demo=1'); await sleep(7000); await shot(T, '60-classic');
     await tc.close(); await sc.close(); await pc.close();
   }
   await br.close();

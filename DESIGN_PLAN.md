@@ -4,17 +4,17 @@
 
 1. The app has two unrelated style systems: `style.css` (student, projector, landing, classic: blue `#2563eb`, Tailwind grays) and `tstyle.css` (teacher pages: blue `#0B6BCB`, blue-grays). 140 distinct colours, 25 font sizes and 15 radii are in use, mostly in per-page `<style>` blocks.
 2. This plan adds one file, `public/tokens.css`, points both systems at it, then moves each screen onto the tokens with find/replace tables whose counts were checked against the files by script.
-3. The audit (113 screenshots in `design-audit/`: 38 screens × 3 sizes) found **2 issues that block use**, **21 that hurt use** and **10 polish** items (all but one are fixed by the tasks; that one is Deferred D8). The worst: the projector's join code prints on top of the question; right answers on a sort are marked by colour alone; keyboard focus is invisible on teacher pages (2.09:1).
-4. 21 tasks, each one commit: tokens (T01–T04), student (T05–T09), projector (T10–T11), class screen (T12–T14), Today / editor / landing (T15–T17), cross-cutting (T18–T21). No server change, no new dependency, no build step.
-5. Eight larger ideas are parked under **Deferred** for your decision (pulse wording, `/classic`, splitting `class.html`, full type scale, fonts and logo, and three smaller ones).
+3. The audit (113 screenshots in `design-audit/`: 38 screens × 3 sizes) found **2 issues that block use**, **22 that hurt use** and **10 polish** items (every one is fixed by a task). The worst: the projector's join code prints on top of the question; right answers on a sort are marked by colour alone; keyboard focus is invisible on teacher pages (2.09:1).
+4. 24 tasks, each one commit: retire `/classic` (T00), tokens (T01–T04), student (T05–T09), projector (T10–T11), class screen (T12–T14), Today / editor / landing (T15–T17), cross-cutting (T18–T20), then the three changes you approved — new pulse words (T21), bigger projector text (T22) — and a final check (T23). The only server change is deleting the `/classic` route. No new dependency, no build step.
+5. Approved and now in the task list: plain pulse words (**How is your work? — I need help / Almost / I understand**), bigger question text on the projector, and retiring `/classic`. Five ideas stay under **Deferred** (splitting `class.html`, full type scale, fonts and logo, sort-results header, team palette).
 
 ---
 
 ## Rules for the implementer (read before every task)
 
 - Do the tasks **in order**. One task = one commit, message `T07: <title>`. Do not start a task until its **Depends on** tasks are committed.
-- **Never touch:** `server.js`, `test.js`, `package.json`, `package-lock.json`, `Dockerfile`, `render.yaml`, `public/qrcode.js`, `public/starters.json`, `public/emoji.js`, `public/sortkit.js`, `public/sortedit.js`, `mockups/`, and `public/classic.html` (except the single line added in T01).
-- **Never change drawing colours.** These are ink, not UI, and are saved inside students' drawings: the `COLORS=[…]` array, the `data-qc="…"` buttons and `S.color` defaults in `index.html`; the `COL = […]` arrays in `class.html` and `classic.html`; `TEAM_COLORS`, `PRE` in `tcommon.js`; every `fillStyle` / `strokeStyle` in `common.js`. All of them live **outside** `<style>` blocks, which is why every colour table below is scoped to the `<style>` block.
+- **Never touch:** `server.js` (except the one deletion in T00), `test.js`, `package.json`, `package-lock.json`, `Dockerfile`, `render.yaml`, `public/qrcode.js`, `public/starters.json`, `public/emoji.js`, `public/sortkit.js`, `public/sortedit.js`, `mockups/`.
+- **Never change drawing colours.** These are ink, not UI, and are saved inside students' drawings: the `COLORS=[…]` array, the `data-qc="…"` buttons and `S.color` defaults in `index.html`; the `COL = […]` array in `class.html`; `TEAM_COLORS`, `PRE` in `tcommon.js`; every `fillStyle` / `strokeStyle` in `common.js`. All of them live **outside** `<style>` blocks, which is why every colour table below is scoped to the `<style>` block.
 - **SVG attributes** (`fill="#…"`, `stroke="#…"`) stay as hex. `var()` does not work there.
 - `#fff` is never replaced. White is white.
 - A table row "Find → Replace" means: replace **every** occurrence **inside the stated scope**, case-insensitively, and only when the next character is not a hex digit (so `#fff` must not match inside `#fff4dc`). With GNU sed, the style-block scope is
@@ -49,6 +49,7 @@ Sizes: 1440×900 (teacher laptop / projector), 1366×768 (student Chromebook), 3
 | S9 | H | Phone: the Tools button overlaps the zoom bar; in Quick mode the zoom bar overlaps Undo/Redo. | `16-…--390x844`, `17-…--390x844` | T07 |
 | S10 | H | Pulse label is 11 px, bold, upper-case, letter-spaced (`HOW'S IT GOING?`). Tool labels are 12 px. Small capitals are the hardest text on the page for a new reader of English. | `16-student-pulse-on--1366x768` | T07 |
 | S11 | H | Idioms: "Hold on for a moment…", "Eyes up here", "carry on", "Rub out". | `18`, `19` | T09 |
+| S18 | H | Pulse words are idioms: "How's it going?", "Getting there", "Got it". "Getting there" is the hardest for a newcomer. | `16-student-pulse-on` | T21 |
 | S12 | P | Colour swatches announce themselves as hex codes (`aria-label="#dc2626"`). | code | T07 |
 | S13 | P | No visible focus ring on the dark question bar or drawer header (browser default on navy). | code | T07 |
 
@@ -64,7 +65,7 @@ Sizes: 1440×900 (teacher laptop / projector), 1366×768 (student Chromebook), 3
 | # | Rank | Finding | Evidence | Task |
 |---|---|---|---|---|
 | P1 | **B** | The corner "Join: CODE" is fixed top-right and prints on top of the question whenever the leaderboard or sort results are showing. | `53-projector-leaderboard--1440x900` | T11 |
-| P2 | H | The question is 34 px on every projector view. On a 6-ft-high image that is about 1.9-inch capitals; 30 ft needs about 3 inches. | `50-projector-join` | Deferred D8 |
+| P2 | H | The question is 34 px on every projector view. On a 6-ft-high image that is about 1.9-inch capitals; 30 ft needs about 3 inches. | `50-projector-join` | T22 |
 | P3 | H | Pulse chips beside student names are 20 px at 1440 wide; "showing 1 of 3" line is 24 px. | `52-projector-compare3` | T11 |
 | P4 | P | "Eyes on your teacher." → plain wording to match the student screen. | `54-projector-frozen` | T11 |
 
@@ -183,23 +184,39 @@ Contrast figures are WCAG ratios computed for the new value.
 | `--c-stage`, `--c-stage-accent`, `--c-stage-ink` | `#0B1220`, `#93C5FD`, `#E2E8F0` | same, `#9ec8ee` | projector.html, index.html | accent on stage 10.4 |
 | `--r-xs` … `--r-pill` | 4, 8, 10, 12, 16, 22, 99 px | 3/4 → 4 · 6/7/8/9 → 8 · 10 → 10 · 12/14 → 12 · 16/18 → 16 · 20/22/26 → 22 · 99 → 99 | all (T18) | — |
 | `--sh-1`, `--sh-2`, `--sh-3` | see file | 14 different shadows (`#0002`–`#0005`, six `rgba(23,33,43,…)`, two navy, one black) | index.html, class.html, sets.html, tstyle.css, sortkit.css | — |
-| `--fs-*`, `--sp-*` | see file | **Not mass-replaced.** Used for every rule this plan adds. Existing sizes below 13 px are raised (T07, T08, T14). See Deferred D4. | — | — |
+| `--fs-*`, `--sp-*` | see file | **Not mass-replaced.** Used for every rule this plan adds. Existing sizes below 13 px are raised (T07, T08, T14). See Deferred D2. | — | — |
 
 ---
 
 ## Tasks
 
+### T00 — Retire `/classic`
+- **Depends on:** nothing. Do this first, so no later task has to style a page that is being removed.
+- **Files:** `server.js` (one deletion), delete `public/classic.html`, `README.md` (one line), `design-audit/capture.cjs` (one line).
+- **Must not touch:** every other character of `server.js`.
+- **Changes:**
+  1. `server.js`, in the `const ROUTES = {…}` line: delete exactly `'/classic': 'classic.html', ` (including the space after the comma). The line then reads `…'/sets': 'sets.html', '/projector': 'projector.html', '/start': 'landing.html' };`.
+  2. `git rm public/classic.html`.
+  3. `README.md`: delete the whole line ``  - `/classic` is the previous single-page teacher screen, kept as a fallback``.
+  4. `design-audit/capture.cjs`: delete the whole line that contains `/classic?demo=1`.
+- **Done when:**
+  - `grep -rn "classic" server.js public README.md design-audit/capture.cjs` prints nothing.
+  - With the server running: `curl -s -o /dev/null -w '%{http_code}' localhost:3111/classic` prints `404`, and the same command for `/class?demo=1`, `/teacher`, `/sets`, `/projector`, `/start` and `/` prints `200`.
+  - `git diff --stat HEAD~1 -- server.js` shows `1 file changed, 1 insertion(+), 1 deletion(-)`.
+  - `npm test` → `43 passed`.
+- **Risk:** low. Nothing in `public/` links to `/classic` and no test uses it. A teacher with an old bookmark gets "Not found"; the README no longer advertises the page.
+
 ### T01 — Add `tokens.css` and load it on every page
-- **Depends on:** nothing.
-- **Files:** create `public/tokens.css`; edit `public/index.html`, `class.html`, `teacher.html`, `sets.html`, `projector.html`, `landing.html`, `classic.html` (one line each).
-- **Must not touch:** anything else. In `classic.html` only the one added line.
+- **Depends on:** T00.
+- **Files:** create `public/tokens.css`; edit `public/index.html`, `class.html`, `teacher.html`, `sets.html`, `projector.html`, `landing.html` (one line each).
+- **Must not touch:** anything else.
 - **Changes:**
   1. Create `public/tokens.css` with exactly the contents of the code block in the **Tokens** section above.
-  2. In `index.html`, `projector.html`, `landing.html`, `classic.html`: on the line directly **above** `<link rel="stylesheet" href="/style.css">` add `<link rel="stylesheet" href="/tokens.css">`.
+  2. In `index.html`, `projector.html`, `landing.html`: on the line directly **above** `<link rel="stylesheet" href="/style.css">` add `<link rel="stylesheet" href="/tokens.css">`.
   3. In `class.html`, `teacher.html`, `sets.html`: on the line directly **above** `<link rel="stylesheet" href="/tstyle.css">` add `<link rel="stylesheet" href="/tokens.css">`.
 - **Done when:**
   - `grep -L 'href="/tokens.css"' public/*.html` prints nothing.
-  - `grep -c 'href="/tokens.css"' public/*.html` prints `1` for all seven files.
+  - `grep -c 'href="/tokens.css"' public/*.html` prints `1` for all six files.
   - With the server running, `curl -sI localhost:3111/tokens.css | grep -i content-type` prints `text/css`.
   - `npm test` → `43 passed`. No screenshot changes.
 - **Risk:** low. The file only defines variables nothing uses yet.
@@ -211,7 +228,7 @@ Contrast figures are WCAG ratios computed for the new value.
 - **Changes:** replace the whole file with exactly:
 
 ```css
-/* Student, projector, landing and classic pages. Colours and sizes come from tokens.css, which must load first. */
+/* Student, projector and landing pages. Colours and sizes come from tokens.css, which must load first. */
 :root{--ink:var(--c-ink);--mut:var(--c-muted);--line:var(--c-line);--pri:var(--c-primary);--bg:var(--c-bg)}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.4 var(--font-system);color:var(--ink);background:var(--bg)}
@@ -235,9 +252,9 @@ canvas{width:100%;height:auto;display:block;border-radius:8px;border:1px solid v
   (Differences from today: the `:root` line, the body font variable, one new `:focus-visible` line, six colours, `.chip` 12 px → 13 px. Radii are handled in T18.)
 - **Done when:**
   - `grep -oiE '#[0-9a-f]{3,8}\b' public/style.css | grep -vi '^#fff$'` prints nothing.
-  - Screenshots `10-student-join-code`, `01-landing`, `60-classic`: the blue button is slightly deeper (`#0B6BCB`), layout identical.
+  - Screenshots `10-student-join-code`, `01-landing`: the blue button is slightly deeper (`#0B6BCB`), layout identical.
   - `npm test` → `43 passed`.
-- **Risk:** low. `classic.html` inherits the new blue and grays; that is intended and is the only visible change there.
+- **Risk:** low. Student, projector and landing pages take the token blue and grays; that is intended.
 
 ### T03 — Point `tstyle.css` at the tokens
 - **Depends on:** T01.
@@ -463,7 +480,7 @@ canvas{width:100%;height:auto;display:block;border-radius:8px;border:1px solid v
 ### T09 — Student copy in plain English
 - **Depends on:** T06, T07, T08 (same files; avoids merge noise).
 - **Files:** `public/index.html`, `public/sortstu.js`, `README.md`.
-- **Must not touch:** any string in `server.js`; the pulse words `Stuck`, `Getting there`, `Got it`, `How's it going?` (see Deferred D1); any logic in `sortstu.js` — change text inside quotes only.
+- **Must not touch:** any string in `server.js`; the pulse words `Stuck`, `Getting there`, `Got it`, `How's it going?` (T21 changes those everywhere at once); any logic in `sortstu.js` — change text inside quotes only.
 - **Changes:** replace each old string with the new one, character for character. Curly apostrophes (’) and the ellipsis character (…) are part of the old strings.
 
   `index.html`:
@@ -752,7 +769,7 @@ body:has(#corner:not([hidden])) .qbar{padding-left:clamp(190px,17vw,300px);paddi
 ### T18 — One radius scale
 - **Depends on:** T05, T10, T12, T15, T16, T17 (all colour tasks done, so diffs stay readable).
 - **Files:** `public/index.html`, `class.html`, `teacher.html`, `sets.html`, `projector.html`, `style.css`, `tstyle.css`, `sortkit.css`, `sortres.css`, `tcommon.js`.
-- **Must not touch:** `classic.html`; any `border-radius` whose value is `50%`, `0`, or has more than one number (for example `0 18px 18px 0`).
+- **Must not touch:** any `border-radius` whose value is `50%`, `0`, or has more than one number (for example `0 18px 18px 0`).
 - **Changes:** whole-file scope in each file listed. Match the exact text including `px`, followed by a non-digit.
 
   | Find | Replace with | Count before (all files) |
@@ -780,7 +797,7 @@ body:has(#corner:not([hidden])) .qbar{padding-left:clamp(190px,17vw,300px);paddi
   1. `common.js`: `c: '#C62828', soft: '#FDECEC', e: '🙋'` → `c: '#B3261E', soft: '#FBE4E1', e: '🙋'`.
   2. `sortres.js`: `s.team ? s.team.color : '#e5e7eb'` → `s.team ? s.team.color : 'var(--c-line)'`.
 - **Done when:**
-  - `grep -rci 'C62828\|FDECEC' public/ --include=*.js --include=*.html --include=*.css | grep -v ':0' | grep -v classic.html` prints nothing.
+  - `grep -rci 'C62828\|FDECEC' public/ --include=*.js --include=*.html --include=*.css | grep -v ':0'` prints nothing.
   - Screenshot `30-class-draw`: the "Stuck" chip and card outline are the same red as other red text on the page.
   - `npm test` → `43 passed`.
 - **Risk:** low. The saved report (CSV) does not contain colours.
@@ -789,29 +806,110 @@ body:has(#corner:not([hidden])) .qbar{padding-left:clamp(190px,17vw,300px);paddi
 - **Depends on:** T14, T15.
 - **Files:** `public/index.html`, `teacher.html`, `sets.html`, `tstyle.css`.
 - **Changes:** replace every `@media(pointer:coarse)` with `@media(any-pointer:coarse)` (index.html 1, teacher.html 2, sets.html 1, tstyle.css 1). Leave `@media(pointer:fine)` in `index.html` alone.
-- **Done when:** `grep -c '(pointer:coarse)' public/*.html public/*.css | grep -v ':0' | grep -v classic.html` prints nothing; at 1366×768 with a mouse-only device the screenshots are unchanged; `npm test` → `43 passed`.
+- **Done when:** `grep -c '(pointer:coarse)' public/*.html public/*.css | grep -v ':0'` prints nothing; at 1366×768 with a mouse-only device the screenshots are unchanged; `npm test` → `43 passed`.
 - **Risk:** low–medium. On a touch-screen Chromebook, buttons and sort cards grow to 44 px even when the student uses the trackpad. That is the intended behaviour for this audience.
 
-### T21 — Final check and "after" screenshots
+### T21 — New pulse words: "How is your work? — I need help / Almost / I understand"
+- **Depends on:** T07, T09, T14, T19 (same lines and files).
+- **Files:** `public/index.html`, `public/common.js`, `public/class.html`, `README.md`.
+- **Must not touch:** the pulse keys `r`, `y`, `g`; the `c`, `soft` and `e` values in `PULSES`; `ws.send({ t: 'pulse'` and everything in `server.js`. Only the words change.
+- **Changes:** replace each old string with the new one, character for character.
+
+  `index.html`:
+
+  | # | Old | New |
+  |---|---|---|
+  | 1 | `aria-label="How is your drawing going?"` | `aria-label="How is your work?"` |
+  | 2 | `<span class="plb">How's it going?</span>` | `<span class="plb">How is your work?</span>` |
+  | 3 | `aria-label="Stuck — I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>Stuck</span>` | `aria-label="I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>I need help</span>` |
+  | 4 | `aria-label="Getting there" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Getting there</span>` | `aria-label="Almost" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Almost</span>` |
+  | 5 | `aria-label="Got it" aria-pressed="false"><i aria-hidden="true">💡</i><span>Got it</span>` | `aria-label="I understand" aria-pressed="false"><i aria-hidden="true">💡</i><span>I understand</span>` |
+
+  `common.js`:
+
+  | # | Old | New |
+  |---|---|---|
+  | 6 | `// r = stuck, y = getting there, g = got it.` | `// r = I need help, y = almost, g = I understand.` |
+  | 7 | `n: 'Stuck', short: 'Stuck'` | `n: 'I need help', short: 'Need help'` |
+  | 8 | `n: 'Getting there', short: 'Getting there'` | `n: 'Almost', short: 'Almost'` |
+  | 9 | `n: 'Got it', short: 'Got it'` | `n: 'I understand', short: 'I understand'` |
+
+  `class.html` (teacher report, tooltips and CSV, so the teacher sees the same words the students tap):
+
+  | # | Old | New |
+  |---|---|---|
+  | 10 | `tot.g + ' got it, ' + tot.y + ' getting there, ' + tot.r + ' stuck' }` | `tot.g + ' understand, ' + tot.y + ' almost, ' + tot.r + ' need help' }` |
+  | 11 | `[r.g + ' got it', r.y + ' getting there', r.r + ' stuck']` | `[r.g + ' understand', r.y + ' almost', r.r + ' need help']` |
+  | 12 | `'stuck on ' + t.r + ' questions' : t.last === 'r' ? 'stuck on the last question'` | `'needed help on ' + t.r + ' questions' : t.last === 'r' ? 'needed help on the last question'` |
+  | 13 | `'Got it', 'Getting there', 'Stuck', 'No answer'` | `'I understand', 'Almost', 'I need help', 'No answer'` |
+  | 14 | `r.g + ' got it, ' + r.y + ' getting there, ' + r.r + ' stuck' + (r.none` | `r.g + ' understand, ' + r.y + ' almost, ' + r.r + ' need help' + (r.none` |
+  | 15 | `' said ' + p.n.toLowerCase() + ` | `' said “' + p.n + '”' + ` |
+
+  `README.md`:
+
+  | # | Old | New |
+  |---|---|---|
+  | 16 | `**🙋 Stuck / 🙂 Getting there / 💡 Got it**` | `**🙋 I need help / 🙂 Almost / 💡 I understand**` |
+  | 17 | `**How's it going?**` | `**How is your work?**` |
+
+- **Done when:**
+  - `grep -c "Stuck\|Getting there\|Got it\|How's it going\|got it\|getting there" public/index.html public/common.js public/class.html README.md` prints `0` for all four files.
+  - `grep -c "I need help" public/index.html public/common.js public/class.html` prints `1`, `2`, `1` (grep counts lines).
+  - Screenshot `16-student-pulse-on--1366x768`: the panel reads "How is your work?" then 🙋 I need help, 🙂 Almost, 💡 I understand, each on one line. At 390×844 the panel still shows the three emoji only.
+  - `30-class-draw`: student cards show chips "🙋 I need help", "🙂 Almost", "💡 I understand", each on one line. `52-projector-compare3`: the same words beside the names.
+  - `npm test` → `43 passed`.
+- **Risk:** low–medium. Words only, but they reach four places (student, teacher card, projector, report CSV). A CSV saved before this change uses the old column names. The server stores only `r` / `y` / `g`, so a class that is running during the update is not affected.
+
+### T22 — Projector: bigger question text; QR code beside the join code
+- **Depends on:** T11, T18.
+- **Files:** `public/projector.html`.
+- **Must not touch:** the script. It finds `#join`, `#url`, `#code` and `#qr` by id, and all four ids are kept.
+- **Changes:**
+  1. HTML. Replace the **whole line** that starts with ` <div id="join">` by exactly this one line:
+
+```html
+ <div id="join"><div class="jl">Go to <span id="url"></span><b id="code"></b></div><div class="jr"><div id="qr" role="img" aria-label="QR code to join"></div><div class="jcap">or scan to join</div></div></div>
+```
+
+  2. CSS. `.qbar{background:transparent;font-size:34px;text-align:center}` → `.qbar{background:transparent;font-size:clamp(34px,min(3vw,5vh),54px);line-height:1.25;text-align:center}`
+  3. CSS. Replace the whole rule `#join{text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}` with these five lines:
+
+```css
+#join{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:clamp(24px,6vw,110px);text-align:center;margin:auto;padding-bottom:4vh;font-size:clamp(24px,3vw,40px)}
+#qr{width:clamp(200px,min(26vw,46vh),440px);height:clamp(200px,min(26vw,46vh),440px);background:#fff;border-radius:var(--r-lg);padding:6px}
+.jcap{font-size:clamp(22px,2vw,32px);margin-top:10px;color:var(--c-stage-accent)}
+body:has(#join:not([hidden])) main{max-width:none;padding:12px 24px}
+body:has(#join:not([hidden])) .qbar{font-size:clamp(34px,min(3.6vw,6vh),64px)}
+```
+
+- **Done when:**
+  - `grep -c 'qbar{background:transparent;font-size:34px' public/projector.html` prints `0`, and `grep -c 'id="qr" role="img" aria-label="QR code to join"></div>' public/projector.html` prints `1` (the inline `style` on the QR box is gone).
+  - Screenshot `50-projector-join--1440x900`: the join code is on the left and the QR code on the right, side by side; the question is about 52 px (was 34 px); nothing is cut off. At 1366×768 the question is about 46 px and the QR code and "or scan to join" are fully on screen.
+  - `51-projector-one`, `52-projector-compare3`, `53-projector-leaderboard`, `55-projector-sort-summary` at 1440×900: question text is about 43 px; every drawing, team row and bar is fully on screen.
+  - `54-projector-frozen`: unchanged.
+  - `npm test` → `43 passed`.
+- **Risk:** medium. The question takes more height, so drawings on the projector are a little smaller (they still fill the space that is left; the script sizes them to fit). A very long question (three or more lines) on a 720-px-high projector leaves the least room; check `52-projector-compare3--1366x768`. If any drawing is cut off, stop and report it.
+
+### T23 — Final check and "after" screenshots
 - **Depends on:** all tasks.
 - **Files:** `design-audit/after/` (new images only). No app files.
+- **Note:** the baseline folder still holds `60-classic--*.png`; there is no "after" for it because T00 removed the page.
 - **Changes:** start the server on port 3111, run `OUT=design-audit/after node design-audit/capture.cjs`, commit the images.
 - **Done when:**
   - The script prints no line starting `FAIL`, `STEPFAIL` or `PAGEERR` except `STEPFAIL more 390x844` (the More button does not exist on the phone layout; this is in the baseline too).
   - `grep -hoiE '#[0-9a-f]{6}\b' $(ls public/*.css | grep -v tokens.css) | sort -u` prints nothing (`tokens.css` is the only stylesheet with hex colours).
   - `npm test` → `43 passed`.
-  - `git diff --stat <first commit of T01>^ -- server.js test.js public/sortkit.js public/sortedit.js public/qrcode.js public/starters.json` is empty.
+  - `git diff --stat <commit of T00> -- server.js test.js public/sortkit.js public/sortedit.js public/qrcode.js public/starters.json` is empty (nothing but T00 touched the server).
 - **Risk:** none.
 
 ---
 
 ## Deferred — needs your approval, not in the task list
 
-- **D1. Pulse wording.** "How's it going?", "Getting there" and "Got it" are idioms; "Getting there" is the hardest. A plainer set would be **How is your work? → I need help / Almost / I understand**. I left it out because these are the words you say out loud in class, they appear on the teacher screen, the projector, the report CSV and the README, and they must change together (`PULSES` in `common.js`, three buttons in `index.html`). Your call as the TESOL person in the room.
-- **D2. Retire `/classic`.** It is 770 lines that duplicate the class screen on the old styles. This plan leaves it working (it only inherits the token colours). Removing it deletes a route in `server.js`, which is outside this plan's limits.
-- **D3. Split `class.html`.** 1,124 lines with 53 inline `style=` attributes and about 40 style strings built in JavaScript. Moving the CSS to `class.css` and the phone layout to its own script would make later design work much safer, but it is a refactor, not a restyle.
-- **D4. Full type and spacing scale.** 25 font sizes are in use (14, 15, 13, 18, 20, 17 are the top six). Snapping 15 → 16 and 17 → 18 touches about 90 rules on dense screens and needs a visual pass per screen. Tokens `--fs-*` and `--sp-*` exist now; this plan only raises text under 13 px.
-- **D5. One font and one logo.** Teacher pages load Figtree and Bricolage Grotesque from Google Fonts; student pages use the system font (faster, and no third-party request from student devices). The student join card and the teacher top bar also use two different logos. Options: self-host the fonts and use them everywhere, or keep the split on purpose. Either way, pick one logo.
-- **D6. Sort results header on the class screen.** Three stacked rows of controls sit above the numbers (`34-class-sort-results--1366x768`). Merging them into one row means changing markup built in `sortres.js`.
-- **D8. Bigger question text on the projector.** I tested raising it to about 48 px on the join screen: at 1366×768 it pushed the QR code off the bottom, because the code, QR and caption already fill that height. Doing it properly means a layout change (QR beside the code instead of under it, or hiding the question until the first drawing is shown), which is a design decision for you.
-- **D7. Team colours that fail as text backgrounds.** `#ea580c`, `#0891b2`, `#0284c7` in `TEAM_COLORS`. T07 removes the only place white text sat on them, so nothing fails today; darkening the palette would also change teams teachers have already saved.
+Already decided and moved into the tasks: pulse wording (T21), bigger projector text (T22), retiring `/classic` (T00).
+
+- **D1. Split `class.html`.** 1,124 lines with 53 inline `style=` attributes and about 40 style strings built in JavaScript. Moving the CSS to `class.css` and the phone layout to its own script would make later design work much safer, but it is a refactor, not a restyle.
+- **D2. Full type and spacing scale.** 25 font sizes are in use (14, 15, 13, 18, 20, 17 are the top six). Snapping 15 → 16 and 17 → 18 touches about 90 rules on dense screens and needs a visual pass per screen. Tokens `--fs-*` and `--sp-*` exist now; this plan only raises text under 13 px.
+- **D3. One font and one logo.** Teacher pages load Figtree and Bricolage Grotesque from Google Fonts; student pages use the system font (faster, and no third-party request from student devices). The student join card and the teacher top bar also use two different logos. Options: self-host the fonts and use them everywhere, or keep the split on purpose. Either way, pick one logo.
+- **D4. Sort results header on the class screen.** Three stacked rows of controls sit above the numbers (`34-class-sort-results--1366x768`). Merging them into one row means changing markup built in `sortres.js`.
+- **D5. Team colours that fail as text backgrounds.** `#ea580c`, `#0891b2`, `#0284c7` in `TEAM_COLORS`. T07 removes the only place white text sat on them, so nothing fails today; darkening the palette would also change teams teachers have already saved.
