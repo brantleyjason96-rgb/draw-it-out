@@ -10,8 +10,18 @@ html,body{height:100%}
 
 /* question rail */
 #rail{width:340px;flex:none;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.stepper{margin:14px 16px 0;background:var(--dark);color:#fff;border-radius:var(--r-lg);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 8px}
-.stepper .b{min-width:44px;padding:0}
+#rail .open{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}
+.chead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px}
+.chead h2{font-size:var(--fs-lg)}
+.strip{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-height:0}
+#pos{font-size:var(--fs-sm);text-align:center;line-height:1.2;color:var(--c-ink-2)}
+.b.vb{flex-direction:column;gap:0;width:52px;min-height:52px;padding:0;font-size:var(--fs-xs)}
+#rail:not(.shut) .strip{display:none}
+#rail.shut{width:64px;align-items:center;padding:8px 0;gap:8px}
+#rail.shut .open{display:none}
+.qi .live{flex:1;font-weight:700;color:var(--pri-d);display:flex;align-items:center;min-height:44px}
+.qi .bs{position:relative}
+.qi .bs>.b:first-child{flex:1}
 .qlist{flex:1;min-height:0;overflow:auto;padding:4px 16px;display:flex;flex-direction:column;gap:8px}
 .qi{border:2px solid var(--line);border-radius:var(--r-lg);padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#fff}
 .qi.on{border-color:var(--pri);background:var(--pri-l)}
@@ -20,7 +30,7 @@ html,body{height:100%}
 .qi.on .n{background:var(--pri);color:#fff}
 .qi .x{font-size:var(--fs-md);line-height:1.35;font-weight:500;overflow-wrap:anywhere}
 .qi .bs{display:flex;gap:6px}
-.qi .bs .b{padding:0 8px;min-width:44px;font-size:var(--fs-sm)}
+.qi .bs .b{padding:0 12px;min-width:44px;font-size:var(--fs-sm)}
 
 /* main */
 main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap:14px}

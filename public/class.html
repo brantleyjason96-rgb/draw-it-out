@@ -36,20 +36,24 @@
 
  <div class="body">
   <!-- question rail -->
-  <aside id="rail">
-   <div class="stepper">
-    <button class="b dk" id="prev" aria-label="Previous question" title="Previous question"><svg data-i="back"></svg></button>
-    <b id="pos" style="text-align:center"></b>
-    <button class="b sky" id="next" aria-label="Next question" title="Next question" style="min-width:44px;padding:0"><svg data-i="next"></svg></button>
+  <aside id="rail" aria-label="Questions">
+   <div class="strip">
+    <button class="b sq ter" id="qopen" aria-label="Show questions" title="Show questions"><svg data-i="list"></svg></button>
+    <b id="pos"></b>
+    <button class="b vb" id="prev" aria-label="Send the question before" title="Send the question before"><svg data-i="up"></svg>Back</button>
+    <button class="b vb pri" id="next" aria-label="Send the next question" title="Send the next question"><svg data-i="down"></svg>Next</button>
    </div>
-   <div style="display:flex;gap:8px;padding:12px 16px 8px">
-    <select class="inp" id="setsel" aria-label="Question set" style="font-weight:700"></select>
-    <button class="b sq" id="setmenu" aria-label="Manage this set" title="Manage this set"><svg data-i="dots"></svg></button>
-   </div>
-   <div class="qlist" id="qlist"></div>
-   <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px">
-    <button class="b" id="addq" style="flex:1">+ Add question</button>
-    <button class="b" id="starter" style="flex:1">Starter sets</button>
+   <div class="open">
+    <div class="chead"><h2>Questions</h2><button class="b sq ter" id="qshut" aria-label="Hide questions" title="Hide questions"><svg data-i="back"></svg></button></div>
+    <div style="display:flex;gap:8px;padding:0 16px 8px">
+     <select class="inp" id="setsel" aria-label="Question set" style="font-weight:700"></select>
+     <button class="b sq" id="setmenu" aria-label="Manage this set" title="Manage this set"><svg data-i="dots"></svg></button>
+    </div>
+    <div class="qlist" id="qlist"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px">
+     <button class="b" id="addq" style="flex:1"><svg data-i="plus"></svg>Add question</button>
+     <button class="b ter" id="starter" style="flex:1">Starter sets</button>
+    </div>
    </div>
   </aside>
 
@@ -455,7 +459,7 @@ function renderScores() {
 // ---- question rail ----
 let cur = +store.do_cur; const qs = () => activeSet().questions;
 const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
-function go(i) { if (i < 0 || i >= qs().length) return; cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
+function go(i) { if (i < 0 || i >= qs().length) return; foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
   fillSetSelect($('#setsel'), activeSet().id);
@@ -463,13 +467,23 @@ function renderSet() {
   qs().forEach((q, i) => {
     const row = el('div', { className: 'qi' + (i === cur ? ' on' : '') });
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1' }), ...(q.kind === 'sort' ? [el('span', { className: 'chip proj', textContent: 'Sort' })] : []));
-    const SYM = { '↑': 'up', '↓': 'down', '✕': 'x' };
-    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b ' + (cls || ''), onclick: f }, SYM[l] ? icoEl(SYM[l]) : l); b.setAttribute('aria-label', label); return b; };
-    const bs = el('div', { className: 'bs' }, mk('Send', () => go(i), 'Send question ' + (i + 1) + ' to students', 'line2'), mk('↑', () => mv(i, -1), 'Move up', 'ter'), mk('↓', () => mv(i, 1), 'Move down', 'ter'), mk('Edit', () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code), 'Edit question', 'ter'), mk('✕', () => rm(i), 'Delete question', 'ter danger'));
-    bs.firstChild.style.flex = '1'; row.append(t, bs); box.append(row);
+    const nextUnsent = i === cur + 1 || (cur < 0 && i === 0);
+    const more = el('button', { className: 'b sq ter', title: 'More for question ' + (i + 1) }, icoEl('dots')); more.setAttribute('aria-label', 'More for question ' + (i + 1));
+    more.onclick = e => { e.stopPropagation();
+      const r = more.getBoundingClientRect(), up = r.bottom + 190 > innerHeight; // fixed, so the scrolling list cannot clip it
+      const where = 'position:fixed;min-width:190px;right:' + (innerWidth - r.right) + 'px;' + (up ? 'bottom:' + (innerHeight - r.top + 4) + 'px' : 'top:' + (r.bottom + 4) + 'px');
+      openMenu(more, [
+      { t: 'Edit', f: () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code) },
+      { t: 'Move up', f: () => mv(i, -1) }, { t: 'Move down', f: () => mv(i, 1) }, '-',
+      { t: 'Delete', danger: true, f: () => rm(i) }], where); };
+    const main = i === cur
+      ? el('div', { className: 'live', textContent: 'Students are answering' })
+      : (() => { const b = el('button', { className: 'b' + (nextUnsent ? ' pri' : ' line2'), onclick: () => go(i) }, icoEl('send', 'sm'), 'Send'); b.setAttribute('aria-label', 'Send question ' + (i + 1) + ' to students'); return b; })();
+    const bs = el('div', { className: 'bs' }, main, more);
+    row.append(t, bs); box.append(row);
   });
   if (!n) box.append(el('div', { className: 'mut', textContent: 'This set has no questions yet. Use + Add question, or Starter sets.', style: 'padding:12px 4px' }));
-  $('#pos').textContent = !n ? 'No questions yet' : cur < 0 ? n + ' questions · none sent' : 'Question ' + (cur + 1) + ' of ' + n;
+  $('#pos').textContent = !n ? '' : (cur < 0 ? '–' : cur + 1) + ' of ' + n;
   $('#prev').disabled = cur <= 0; $('#next').disabled = !n || cur >= n - 1;
   if (ph.matches) renderPhone();
 }
@@ -484,6 +498,9 @@ function rm(i) {
   store.do_cur = cur; persistSets(); renderSet();
 }
 $('#setsel').onchange = e => { store.do_active = e.target.value; cur = -1; store.do_cur = -1; renderSet(); };
+function foldRail(on) { $('#rail').classList.toggle('shut', on); try { store.do_qfold = on ? '1' : '0'; } catch (e) { } }
+try { if (store.do_qfold === '1') $('#rail').classList.add('shut'); } catch (e) { }
+$('#qopen').onclick = () => foldRail(false); $('#qshut').onclick = () => foldRail(true);
 $('#prev').onclick = () => go(cur - 1);
 $('#next').onclick = () => go(cur + 1);
 $('#addq').onclick = () => (location.href = '/sets?id=' + activeSet().id + '&q=new&code=' + code);
