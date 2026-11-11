@@ -207,3 +207,12 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 
 /* V15: group headings in the More menu */
 .menu .mh{padding:8px 16px 2px;font-size:var(--fs-sm);font-weight:700;color:var(--mut)}
+#sctlhost{gap:8px;flex-wrap:wrap}
+#sctlhost .inp{width:auto;min-width:0;font-weight:600}
+#sctlhost .lbl{white-space:nowrap}
+#sctlhost .tog{min-height:44px}
+#sctlhost{display:flex;align-items:center}
+#sctlhost .lbl{margin-left:6px}
+#sres .sstats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+#sres .sstat .v{font-size:var(--fs-2xl)}
+#sres .sstat .v.sm{font-size:var(--fs-lg)}

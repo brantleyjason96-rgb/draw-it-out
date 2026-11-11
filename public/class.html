@@ -64,6 +64,7 @@
    </div>
    <div class="toolrow">
     <div id="pulsesum" hidden></div>
+    <div id="sctlhost" class="row" hidden></div>
     <span class="sp"></span>
     <span class="seg" role="group" aria-label="Card size" id="csize"><button data-z="170" aria-pressed="false" title="Small cards">S</button><button data-z="230" aria-pressed="true" title="Medium cards">M</button><button data-z="320" aria-pressed="false" title="Large cards">L</button></span>
     <button class="tog blue" id="hide"><span id="hidet">Names on projector</span><i></i></button>
@@ -216,7 +217,7 @@ const teamOf = id => TM.teams.find(t => t.id === id);
 const sortCtx = () => ({ q: S.q, sk: S.sk, spotId: S.spot, projSum: S.projSum, toast,
   students: [...S.stu.values()].map(s => ({ id: s.id, name: disp(s), team: teamOf(s.team) || null, sort: s.sort || {}, done: !!s.done, aw: !!s.aw })),
   award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => pick(s.id),
-  reopen: s => ws.send({ t: 'reopen', id: s.id }), setProjSum: on => ws.send({ t: 'sres', on }) });
+  ctlHost: () => $('#sctlhost'), reopen: s => ws.send({ t: 'reopen', id: s.id }), setProjSum: on => ws.send({ t: 'sres', on }) });
 $('#revbtn').onclick = () => ws.send({ t: 'reveal', on: !S.revealed });
 const rosterOf = s => s.rid && TM.roster.find(e => e.rid === s.rid);
 // the teacher's card shows the real name if the class list has it; the server only ever knew initials
@@ -401,7 +402,7 @@ function ui() {
   $('#qtag').hidden = !S.simple;
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
   const isSort = S.q.kind === 'sort';
-  $('#grid').hidden = isSort; $('#sres').hidden = !isSort;
+  $('#grid').hidden = isSort; $('#sres').hidden = !isSort; $('#sctlhost').hidden = !isSort; $('#csize').hidden = isSort;
   const rb = $('#revbtn'); rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
   const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
   $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';

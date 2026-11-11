@@ -4,6 +4,7 @@
 #sres .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #sres .inp{width:auto;min-width:0;font-weight:600}
 .sstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.sstat .s+.s{margin-top:0}
 .sstat{padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .sstat .v{font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);line-height:1.1;font-variant-numeric:tabular-nums}
 .sstat .v.sm{font-size:var(--fs-xl);line-height:1.2;padding:4px 0}
@@ -71,3 +72,6 @@ button.pill{cursor:pointer}
 .sn em{font-style:normal;font-size:var(--fs-xs);font-weight:700}
 @media(max-width:1280px){.spair{grid-template-columns:minmax(0,1fr)}.dgrid,.dgrid.stu{grid-template-columns:minmax(0,1fr)}}
 @media(any-pointer:coarse){.rowh,.cell{height:44px}button.pill{min-height:44px;padding:0 14px}}
+
+/* V16: four compact tiles */
+.sstats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}

@@ -51,17 +51,18 @@ const SR = (() => {
     sSel.onchange = () => { ST.stu = sSel.value; render(); }; cSel.onchange = () => { ST.card = cSel.value; render(); };
     const proj = el('button', { className: 'tog blue' + (c.projSum ? ' on' : ''), onclick: () => c.setProjSum(!c.projSum) }, el('span', { textContent: 'Results on projector' }), document.createElement('i'));
     const csv = el('button', { className: 'b', textContent: 'Save results (CSV)', onclick: () => exportCSV(c, D) });
-    box.append(el('div', { className: 'sctl' }, el('div', { className: 'row' }, T('span', 'lbl', 'Students'), sSel, T('span', 'lbl', 'Cards'), cSel), el('div', { className: 'row' }, csv, proj)));
+    const host = c.ctlHost && c.ctlHost(); // on the teaching screen these join the single toolbar row
+    if (host) host.replaceChildren(T('span', 'lbl', 'Students'), sSel, T('span', 'lbl', 'Cards'), cSel, csv, proj);
+    else box.append(el('div', { className: 'sctl' }, el('div', { className: 'row' }, T('span', 'lbl', 'Students'), sSel, T('span', 'lbl', 'Cards'), cSel), el('div', { className: 'row' }, csv, proj)));
 
     // summary numbers
     const avg = D.started.length ? D.started.reduce((a, s) => a + s.g.right, 0) / D.started.length : 0, n = D.cards.length;
     const low = D.started.filter(s => s.g.right <= Math.floor(n / 2)).length, perfect = D.started.filter(s => s.g.right === n).length;
-    const stat = (k, v, s, big) => el('div', { className: 'card sstat' }, T('span', 'lbl', k), T('span', big ? 'v sm' : 'v', v), T('span', 's', s));
+    const stat = (k, v, s, big, s2) => el('div', { className: 'card sstat' }, T('span', 'lbl', k), T('span', big ? 'v sm' : 'v', v), T('span', 's', s), ...(s2 ? [T('span', 's', s2)] : []));
     box.append(el('div', { className: 'sstats' },
       stat('Class average', avg.toFixed(1) + ' / ' + n, D.started.length ? Math.round(100 * avg / n) + '% of cards in the right lane' : 'Waiting for answers'),
-      stat('Finished', D.finished + ' of ' + D.all.length, plural(D.started.length - D.finished, 'student') + ' still working'),
+      stat('Finished', D.finished + ' of ' + D.all.length, plural(D.started.length - D.finished, 'student') + ' still working', false, plural(perfect, 'student') + ' got every card'),
       stat('Need a small group', plural(low, 'student'), 'Got half the cards or fewer right'),
-      stat('Got every card', plural(perfect, 'student'), 'Possible helpers or an extension group'),
       D.worst ? stat('Biggest mix-up', D.worst.k.text + ' → ' + D.laneName(D.worst.lane), plural(D.worst.n, 'student') + ', instead of ' + D.laneName(D.worst.k.lane), true) : stat('Biggest mix-up', 'None yet', 'Wrong placements show here')));
 
     // ideas and teams
@@ -80,7 +81,7 @@ const SR = (() => {
       const bar = T('span', 'bar1'); bar.append(el('i', { className: 'f-' + SK.tier(t.pct), style: 'width:' + t.pct + '%' }));
       r.append(T('b', '', (t.team.emoji ? t.team.emoji + ' ' : '') + t.team.name), bar, T('span', 'pct', t.pct + '%')); teamBox.append(r);
     });
-    box.append(el('div', { className: 'spair' }, ideaBox, teamBox));
+    const spairEl = el('div', { className: 'spair' }, ideaBox, teamBox);
 
     // heat map
     const cards = orderCards(D), stus = orderStudents(D);
@@ -115,6 +116,8 @@ const SR = (() => {
     box.append(el('div', { className: 'card spad' }, el('div', { className: 'shead' }, T('h2', '', 'Who got which card'), T('span', 'mut', (ST.stu === 'need' ? 'Students who need help are at the top. ' : '') + (ST.card === 'hard' ? 'Hardest cards are on the left. ' : '') + 'The stripe is the student’s team.')), legend, el('div', { className: 'sscroll' }, tbl)));
     const lanesLegend = D.lanes.map(l => l.name[0].toUpperCase() + ' = ' + l.name);
     if (new Set(D.lanes.map(l => l.name[0].toUpperCase())).size < D.lanes.length) legend.append(T('span', '', 'Lanes share a first letter, so hover a red cell to see the lane.')); else legend.append(T('span', '', lanesLegend.join('   ')));
+
+    box.append(spairEl); // ideas and teams sit under the heat map so the heat map is visible first
 
     // detail
     box.append(detail(c, D, cards));
