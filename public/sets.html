@@ -200,7 +200,7 @@ function renderAll() {
     row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
     const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
-    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
+    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ter ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
     m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
     row.append(t, m); box.append(row);
   });

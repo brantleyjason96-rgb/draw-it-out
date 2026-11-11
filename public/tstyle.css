@@ -24,8 +24,15 @@ h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.15}
 /* buttons: 44px minimum touch target */
 .b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:var(--r-md);border:1px solid var(--line2);background:#fff;color:var(--ink);font-weight:600;font-size:15px;white-space:nowrap}
 .b:disabled{opacity:.45;cursor:not-allowed}
+.b:hover:not(:disabled){background:var(--c-surface-2);border-color:var(--c-control)}
 .b.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.b.pri:hover:not(:disabled){background:var(--pri-d);border-color:var(--pri-d)}
 .b.good{background:var(--good);border-color:var(--good);color:#fff;font-weight:700}
+.b.good:hover:not(:disabled){background:var(--good-d);border-color:var(--good-d)}
+/* third level: small, repeated actions. No border, no fill until you point at it. */
+.b.ter{border-color:transparent;background:none;color:var(--c-ink-2)}
+.b.ter:hover:not(:disabled){background:var(--c-fill);border-color:transparent}
+.b.ter.danger{color:var(--bad)}
 .b.sky{background:var(--sky);border-color:var(--sky);color:var(--c-on-sky);font-weight:700}
 .b.line2{border:2px solid var(--pri);color:var(--pri-d);font-weight:700}
 .b.dk{background:transparent;border-color:var(--c-dark-line);color:#fff}

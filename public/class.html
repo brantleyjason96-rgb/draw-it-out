@@ -463,7 +463,7 @@ function renderSet() {
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1' }), ...(q.kind === 'sort' ? [el('span', { className: 'chip proj', textContent: 'Sort' })] : []));
     const SYM = { '↑': 'up', '↓': 'down', '✕': 'x' };
     const mk = (l, f, label, cls) => { const b = el('button', { className: 'b ' + (cls || ''), onclick: f }, SYM[l] ? icoEl(SYM[l]) : l); b.setAttribute('aria-label', label); return b; };
-    const bs = el('div', { className: 'bs' }, mk('Send', () => go(i), 'Send question ' + (i + 1) + ' to students', 'line2'), mk('↑', () => mv(i, -1), 'Move up'), mk('↓', () => mv(i, 1), 'Move down'), mk('Edit', () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code), 'Edit question'), mk('✕', () => rm(i), 'Delete question', 'danger'));
+    const bs = el('div', { className: 'bs' }, mk('Send', () => go(i), 'Send question ' + (i + 1) + ' to students', 'line2'), mk('↑', () => mv(i, -1), 'Move up', 'ter'), mk('↓', () => mv(i, 1), 'Move down', 'ter'), mk('Edit', () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code), 'Edit question', 'ter'), mk('✕', () => rm(i), 'Delete question', 'ter danger'));
     bs.firstChild.style.flex = '1'; row.append(t, bs); box.append(row);
   });
   if (!n) box.append(el('div', { className: 'mut', textContent: 'This set has no questions yet. Use + Add question, or Starter sets.', style: 'padding:12px 4px' }));

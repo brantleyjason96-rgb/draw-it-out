@@ -503,11 +503,11 @@ function renderTeamsTab() {
       el('span', { className: 'rk' + (r.leader ? ' top' : ''), textContent: r.leader ? '🏆' : r.rank }),
       el('b', { textContent: r.score }));
     const move = (d, label, glyph, dis) => {
-      const b = el('button', { className: 'b', title: label, disabled: dis, onclick: () => { [working[i], working[i + d]] = [working[i + d], working[i]]; editTeams(); renderTeamsTab(); } }, icoEl(glyph === '↑' ? 'up' : 'down'));
+      const b = el('button', { className: 'b ter', title: label, disabled: dis, onclick: () => { [working[i], working[i + d]] = [working[i + d], working[i]]; editTeams(); renderTeamsTab(); } }, icoEl(glyph === '↑' ? 'up' : 'down'));
       b.setAttribute('aria-label', label + ' ' + t.name); return b;
     };
     const mv = el('div', { className: 'tcard-move' }, move(-1, 'Move up', '↑', i === 0), move(1, 'Move down', '↓', i === working.length - 1),
-      el('button', { className: 'b danger', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }, icoEl('x')));
+      el('button', { className: 'b ter danger', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }, icoEl('x')));
     c.append(ic, el('div', {}, nm, sub), score, mv); box.append(c);
   });
   renderPreview();
