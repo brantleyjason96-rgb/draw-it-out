@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg  xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22 fill=%22none%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22%231e3a8a%22/%3E%3Cpath d=%22M9 22.5c3-8 6-11 9-9s-1 7 5 2.5%22 stroke=%22%23fff%22 stroke-width=%222.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2223%22 cy=%229%22 r=%222.4%22 fill=%22%23fbbf24%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/fonts.css">
 <link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/ui.css">
 <link rel="stylesheet" href="/tstyle.css">
 <link rel="stylesheet" href="/sortres.css">
 <link rel="stylesheet" href="/class.css">
@@ -18,31 +19,31 @@
  <div class="tb">
   <div class="grp">
    <a class="b dk" href="/teacher" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>Today</a>
-   <button class="b dk cpick" id="cpick">3rd Hour ▾</button>
+   <button class="b dk cpick" id="cpick">3rd Hour <svg data-i="chev" class="sm"></svg></button>
    <div class="stat"><span class="dotc" id="dot"></span><span id="cnt">Connecting…</span></div>
   </div>
   <div class="grp">
    <span class="chip" id="qtag" hidden style="background:var(--c-warn-soft);color:var(--c-warn-strong)">Quick mode on</span>
    <button class="b dk" id="join">Join <span class="code" id="code"></span></button>
    <button class="b dk" id="stoggle" aria-expanded="true" title="Show or hide team scores">Scores</button>
-   <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go">❄ Freeze</button>
+   <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go"><svg data-i="snow"></svg> Freeze</button>
    <button class="b sky" id="proj"><span class="lg">Open </span>Projector</button>
-   <button class="b dk" id="more">More ▾</button>
+   <button class="b dk" id="more">More <svg data-i="chev" class="sm"></svg></button>
   </div>
  </div>
- <div id="frzbar" hidden role="status"><span>❄ Class is frozen — students can’t draw.</span><button class="b sm" id="frzoff">Unfreeze</button></div>
+ <div id="frzbar" hidden role="status"><span><svg data-i="snow"></svg> Class is frozen — students can’t draw.</span><button class="b sm" id="frzoff">Unfreeze</button></div>
 
  <div class="body">
   <!-- question rail -->
   <aside id="rail">
    <div class="stepper">
-    <button class="b dk" id="prev" aria-label="Previous question">◀</button>
+    <button class="b dk" id="prev" aria-label="Previous question" title="Previous question"><svg data-i="back"></svg></button>
     <b id="pos" style="text-align:center"></b>
-    <button class="b sky" id="next" aria-label="Next question" style="min-width:44px;padding:0">▶</button>
+    <button class="b sky" id="next" aria-label="Next question" title="Next question" style="min-width:44px;padding:0"><svg data-i="next"></svg></button>
    </div>
    <div style="display:flex;gap:8px;padding:12px 16px 8px">
     <select class="inp" id="setsel" aria-label="Question set" style="font-weight:700"></select>
-    <button class="b sq" id="setmenu" aria-label="Manage this set" style="font-size:20px">⋯</button>
+    <button class="b sq" id="setmenu" aria-label="Manage this set" title="Manage this set"><svg data-i="dots"></svg></button>
    </div>
    <div class="qlist" id="qlist"></div>
    <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px">
@@ -70,7 +71,7 @@
   <aside id="scores" aria-label="Team scores">
    <div class="sh">
     <h2>Team scores</h2>
-    <button class="b sm" id="sclose" title="Hide team scores" aria-label="Hide team scores">✕</button>
+    <button class="b sm" id="sclose" title="Hide team scores" aria-label="Hide team scores"><svg data-i="x"></svg></button>
    </div>
    <div class="ssum" id="ssum"></div>
    <div class="slist" id="slist"></div>
@@ -88,7 +89,7 @@
   <div class="ph-h">
    <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
    <button class="b sky" id="pproj">Projector</button>
-   <button class="b dk" id="pfreeze" aria-pressed="false" aria-label="Freeze the class" title="Freeze the class" style="min-width:44px;padding:0 12px">❄</button>
+   <button class="b dk" id="pfreeze" aria-pressed="false" aria-label="Freeze the class" title="Freeze the class" style="min-width:44px;padding:0 12px"><svg data-i="snow"></svg></button>
   </div>
   <div class="ph-body" id="pbody"></div>
   <div class="ph-tabs" id="ptabs">
@@ -156,12 +157,13 @@
 </dialog>
 
 <div id="demobar" hidden>
- <span><b>Demo mode.</b> <span class="dlong">Eight practice students are drawing and tapping red, amber or green. Send a question, click a drawing (click up to three to show them side by side), press ✓, try <b>❄ Freeze</b>, then open <b>How the class felt</b> in More. Nothing here is saved.</span><span class="dshort">Practice students, nothing saved.</span></span>
+ <span><b>Demo mode.</b> <span class="dlong">Eight practice students are drawing and tapping red, amber or green. Send a question, click a drawing (click up to three to show them side by side), press <svg data-i="check" class="sm"></svg>, try <b><svg data-i="snow" class="sm"></svg> Freeze</b>, then open <b>How the class felt</b> in More. Nothing here is saved.</span><span class="dshort">Practice students, nothing saved.</span></span>
  <a class="b pri" href="/teacher" style="text-decoration:none">Start my real class</a>
 </div>
 <div id="toast" hidden></div>
 <input type="file" id="restore" accept=".json,application/json" hidden>
 <script src="/qrcode.js"></script>
+<script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
@@ -182,7 +184,7 @@ const key = store['do_key_' + code] || hostKey();
 const per = () => periodOf(code);
 const link = location.origin + '/?code=' + code;
 document.title = (DEMO ? 'Demo' : per().name) + ' – Draw It Out';
-$('#cpick').textContent = per().name + ' ▾'; $('#code').textContent = code; $('#pname').textContent = per().name; $('#pcode').textContent = code;
+setCpick(per().name); $('#code').textContent = code; $('#pname').textContent = per().name; $('#pcode').textContent = code;
 
 const S = { q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, phist: [], stu: new Map(), conn: false };
 let TM = loadTM(code); TM.scores = TM.scores || {};
@@ -225,7 +227,7 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="chip proj" hidden>On projector</span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Give this team a point">✓ +1</button></div>';
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="chip proj" hidden>On projector</span></div><canvas width="480" height="300"></canvas><div class="r2"><select class="tsel" aria-label="Team"></select><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
     c.onclick = () => pick(s.id); // up to 3 drawings side by side on the projector
     c.querySelector('.tsel').onclick = e => e.stopPropagation();
     c.querySelector('.tsel').onchange = e => setTeam(s, e.target.value || null);
@@ -321,7 +323,7 @@ function pulseSummary() {
     box.append(b);
   });
   if (none) box.append(el('span', { className: 'mut', textContent: none + ' no answer', style: 'font-size:14px;font-weight:600' }));
-  box.append(el('button', { className: 'b sm', textContent: '📋 Report', title: 'How the class felt, question by question', onclick: openReport }));
+  box.append(el('button', { className: 'b sm', title: 'How the class felt, question by question', onclick: openReport }, icoEl('report', 'sm'), ' Report'));
 }
 function applyPulseFilter() {
   let shown = 0;
@@ -353,7 +355,7 @@ function renderPicks() {
     const s = S.stu.get(id);
     const b = el('button', { className: 'pk', title: 'Take ' + disp(s) + ' off the projector' });
     b.setAttribute('aria-label', 'Take ' + disp(s) + ' off the projector');
-    b.append(el('span', { textContent: disp(s) }), el('span', { textContent: '✕' }));
+    b.append(el('span', { textContent: disp(s) }), el('span', {}, icoEl('x', 'sm')));
     b.onclick = () => pick(id);
     box.append(b);
   });
@@ -372,9 +374,9 @@ function freezeMenu(btn) {
 }
 function freezeUI() {
   const b = $('#freeze'); b.classList.toggle('on', S.frozen); b.setAttribute('aria-pressed', S.frozen ? 'true' : 'false');
-  b.textContent = S.frozen ? '❄ Frozen' : '❄ Freeze';
+  b.replaceChildren(icoEl('snow'), S.frozen ? ' Frozen' : ' Freeze');
   $('#frzbar').hidden = !S.frozen;
-  const p = $('#pfreeze'); if (p) { p.classList.toggle('on', S.frozen); p.textContent = S.frozen ? '❄✕' : '❄'; }
+  const p = $('#pfreeze'); if (p) { p.classList.toggle('on', S.frozen); p.replaceChildren(icoEl('snow'), ...(S.frozen ? [icoEl('x', 'sm')] : [])); }
 }
 $('#freeze').onclick = e => { e.stopPropagation(); freezeMenu($('#freeze')); };
 $('#pfreeze').onclick = e => { e.stopPropagation(); freezeMenu($('#pfreeze')); };
@@ -388,7 +390,7 @@ function ui() {
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
   const isSort = S.q.kind === 'sort';
   $('#grid').hidden = isSort; $('#sres').hidden = !isSort;
-  const rb = $('#revbtn'); rb.hidden = !isSort; rb.textContent = S.revealed ? '✓ Answers revealed (hide)' : 'Reveal answers to students'; rb.classList.toggle('revd', S.revealed);
+  const rb = $('#revbtn'); rb.hidden = !isSort; rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
   const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
   $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
   $('#hidet').textContent = S.hide ? 'Names hidden on projector' : 'Names shown on projector'; $('#hide').classList.toggle('on', S.hide);
@@ -404,7 +406,7 @@ function ui() {
     sel.hidden = !TM.teams.length; ok.hidden = !TM.teams.length;
     if (sel.dataset.k !== want) { sel.dataset.k = want; sel.innerHTML = ''; [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); }
     sel.value = s.team || '';
-    ok.classList.toggle('on', !!s.aw); ok.textContent = s.aw ? '✓ Given' : '✓ +1'; ok.title = s.aw ? 'Click to take the point back' : 'Give this team a point';
+    ok.classList.toggle('on', !!s.aw); ok.replaceChildren(icoEl('check', 'sm'), s.aw ? ' Given' : ' +1'); ok.title = s.aw ? 'Click to take the point back' : 'Give this team a point';
     const up = S.picks.includes(s.id);
     s.el.querySelector('.chip').hidden = !up;
     s.el.classList.toggle('spot', up);
@@ -412,10 +414,11 @@ function ui() {
   });
   applyPulseFilter(); pulseSummary(); renderPicks(); freezeUI();
   const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = !(sp && TM.teams.length);
-  if (sp) { ab.textContent = sp.aw ? '✓ Point given (undo)' : '✓ Give ' + (teamNm(sp.team) || 'a team') + ' a point'; ab.onclick = () => award(sp); }
+  if (sp) { ab.replaceChildren(icoEl('check'), sp.aw ? ' Point given (undo)' : ' Give ' + (teamNm(sp.team) || 'a team') + ' a point'); ab.onclick = () => award(sp); }
   renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
   if (ph.matches) renderPhone(); else if (isSort) SR.update();
 }
+function setCpick(name) { const c = $('#cpick'); c.textContent = name + ' '; c.append(icoEl('chev', 'sm')); }
 // Team scores, ranked: who is first, how far ahead, and a +/− right where the number is.
 function renderScores() {
   const box = $('#slist'), ranked = rankTeams(TM.teams, TM.scores), max = scoreMax(ranked);
@@ -427,9 +430,9 @@ function renderScores() {
   ranked.forEach(x => {
     const t = x.team;
     const r = el('div', { className: 'srow' + (x.leader ? ' lead' : '') }); r.style.setProperty('--tc', t.color);
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b', textContent: l, onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const adj = (l, d, lab) => { const b = el('button', { className: 'b', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
     const bar = el('div', { className: 'sbar' }, el('i', {})); bar.firstChild.style.width = Math.max(3, Math.round(x.score / max * 100)) + '%';
-    const more = el('button', { className: 'b dots', textContent: '⋯', title: 'More for ' + t.name });
+    const more = el('button', { className: 'b dots', title: 'More for ' + t.name }, icoEl('dots')); more.setAttribute('aria-label', 'More for ' + t.name);
     more.onclick = e => {
       e.stopPropagation();
       openMenu(more, [
@@ -458,7 +461,8 @@ function renderSet() {
   qs().forEach((q, i) => {
     const row = el('div', { className: 'qi' + (i === cur ? ' on' : '') });
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1' }), ...(q.kind === 'sort' ? [el('span', { className: 'chip proj', textContent: 'Sort' })] : []));
-    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b ' + (cls || ''), textContent: l, onclick: f }); b.setAttribute('aria-label', label); return b; };
+    const SYM = { '↑': 'up', '↓': 'down', '✕': 'x' };
+    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b ' + (cls || ''), onclick: f }, SYM[l] ? icoEl(SYM[l]) : l); b.setAttribute('aria-label', label); return b; };
     const bs = el('div', { className: 'bs' }, mk('Send', () => go(i), 'Send question ' + (i + 1) + ' to students', 'line2'), mk('↑', () => mv(i, -1), 'Move up'), mk('↓', () => mv(i, 1), 'Move down'), mk('Edit', () => (location.href = '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code), 'Edit question'), mk('✕', () => rm(i), 'Delete question', 'danger'));
     bs.firstChild.style.flex = '1'; row.append(t, bs); box.append(row);
   });
@@ -498,7 +502,7 @@ function openMenu(anchor, items, css) {
   items.forEach(it => {
     if (it === '-') return menu.append(document.createElement('hr'));
     const b = el('button', { className: it.danger ? 'danger' : '', onclick: () => { if (!it.keep) closeMenu(); it.f(); } });
-    const lab = el('span', {}, document.createTextNode(it.t)); if (it.sub) lab.append(el('small', { textContent: it.sub })); b.append(lab);
+    const lab = el('span', {}, document.createTextNode(it.t)); if (it.sub) lab.append(el('small', { textContent: it.sub })); if (it.check) lab.prepend(icoEl('check', 'sm'), ' '); b.append(lab);
     if (it.tog !== undefined) { const t = el('span', { className: 'tog' + (it.tog ? ' on' : ''), style: 'min-height:0;padding:0;border:0;background:none' }); t.append(document.createElement('i')); b.append(t); }
     menu.append(b);
   });
@@ -506,11 +510,11 @@ function openMenu(anchor, items, css) {
 }
 $('#cpick').onclick = e => {
   e.stopPropagation();
-  openMenu($('#cpick'), [...periods.map(p => ({ t: (p.code === code ? '✓ ' : '') + p.name, f: () => { if (p.code !== code) location.href = '/class?code=' + p.code; } })), '-',
+  openMenu($('#cpick'), [...periods.map(p => ({ t: p.name, check: p.code === code, f: () => { if (p.code !== code) location.href = '/class?code=' + p.code; } })), '-',
     { t: '+ New class', f: () => { const n = (prompt('Name for the new class (for example 3rd Hour):') || '').trim(); if (n) location.href = '/class?code=' + newPeriod(n); } },
     { t: 'Rename this class', f: renameClass }], 'top:52px;left:0;min-width:260px');
 };
-function renameClass() { const v = (prompt('Rename this class:', per().name) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); $('#cpick').textContent = v + ' ▾'; $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
+function renameClass() { const v = (prompt('Rename this class:', per().name) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); setCpick(v); $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
 $('#more').onclick = e => {
   e.stopPropagation();
   openMenu($('#more'), [
@@ -766,7 +770,7 @@ function sheetUI() {
     const nm = el('div', { style: 'flex:1;min-width:0' },
       el('div', { style: 'font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, teamLabel(t)),
       el('div', { className: 'mut', textContent: n + ' student' + (n === 1 ? '' : 's'), style: 'font-size:13px' }), bar);
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b sm', textContent: l, onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const adj = (l, d, lab) => { const b = el('button', { className: 'b sm', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
     r.append(el('span', { className: 'rk' + (x.leader ? ' top' : ''), textContent: x.leader ? '🏆' : x.rank }), nm,
       adj('−', -1, 'Take a point from'), el('div', { className: 'pt', textContent: x.score }), adj('+', 1, 'Give a point to'));
     box.append(r);
@@ -786,7 +790,7 @@ function sheetUI() {
     const sel = el('select', { className: 'inp' }); sel.setAttribute('aria-label', 'Team');
     [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); sel.value = e.team || '';
     sel.onchange = () => { e.team = sel.value || null; syncRoster(); };
-    const x = el('button', { className: 'b sm danger', textContent: '✕', title: 'Remove student', style: 'border-color:transparent;background:transparent', onclick: () => { TM.roster.splice(i, 1); syncRoster(); sheetUI(); } });
+    const x = el('button', { className: 'b sm danger', title: 'Remove student', 'aria-label': 'Remove student', style: 'border-color:transparent;background:transparent', onclick: () => { TM.roster.splice(i, 1); syncRoster(); sheetUI(); } }, icoEl('x'));
     r.append(nm, ini, sel, x); rows.append(r);
   });
 }
@@ -861,14 +865,14 @@ function phoneReview(box) {
     el('div', { style: 'display:flex;align-items:center;gap:10px;min-width:0' }, el('b', { textContent: disp(s), style: 'font-family:var(--disp);font-size:24px' }), tm ? el('span', { className: 'chip', textContent: teamLabel(tm) }) : el('span', {})),
     el('span', { className: 'mut', textContent: (pi + 1) + ' of ' + list.length, style: 'font-weight:600' }));
   const cvw = el('div', { className: 'ph-cv' }); const cv = el('canvas', { id: 'pcv', width: 720, height: 840 });
-  const prev = el('button', { className: 'nav', textContent: '‹', style: 'left:-6px', onclick: () => { pi = (pi + list.length - 1) % list.length; renderPhone(); s.dirty = true; } }); prev.setAttribute('aria-label', 'Previous drawing');
-  const next = el('button', { className: 'nav', textContent: '›', style: 'right:-6px', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }); next.setAttribute('aria-label', 'Next drawing');
+  const prev = el('button', { className: 'nav', style: 'left:-6px', onclick: () => { pi = (pi + list.length - 1) % list.length; renderPhone(); s.dirty = true; } }, icoEl('back')); prev.setAttribute('aria-label', 'Previous drawing'); prev.title = 'Previous drawing';
+  const next = el('button', { className: 'nav', style: 'right:-6px', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }, icoEl('next')); next.setAttribute('aria-label', 'Next drawing'); next.title = 'Next drawing';
   cvw.append(cv, prev, next);
   const dots = el('div', { style: 'display:flex;justify-content:center;gap:6px;align-items:center;min-height:12px;flex-wrap:wrap' });
   list.slice(0, 40).forEach((x, i) => dots.append(el('span', { style: 'height:8px;border-radius:var(--r-pill);width:' + (i === pi ? 22 : 8) + 'px;background:' + (i === pi ? 'var(--pri)' : x.aw ? 'var(--good)' : 'var(--c-line-2)') })));
   const row = el('div', { style: 'display:flex;gap:8px' });
   if (TM.teams.length) { const sel = el('select', { className: 'inp' }); sel.setAttribute('aria-label', 'Team'); [['', 'No team'], ...TM.teams.map(t => [t.id, teamLabel(t)])].forEach(([v, l]) => sel.append(el('option', { value: v, textContent: l }))); sel.value = s.team || ''; sel.onchange = () => setTeam(s, sel.value || null); row.append(sel); }
-  const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), textContent: s.aw ? '✓ Point given (undo)' : '✓ Give ' + (tm ? tm.name : 'a team') + ' a point', style: 'min-height:64px;font-size:20px;border-radius:var(--r-lg)' }); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
+  const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), style: 'min-height:64px;font-size:20px;border-radius:var(--r-lg)' }, icoEl('check'), s.aw ? ' Point given (undo)' : ' Give ' + (tm ? tm.name : 'a team') + ' a point'); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
   if (!TM.teams.length) { aw.disabled = true; aw.textContent = 'Make teams to give points'; }
   const acts = el('div', { style: 'display:flex;gap:10px' }, el('button', { className: 'b', textContent: S.picks.includes(s.id) ? 'Stop showing' : 'Show on projector', style: 'flex:1;min-height:48px;border-width:2px;font-weight:700', onclick: () => pick(s.id) }), el('button', { className: 'b', textContent: 'Skip', style: 'width:110px;min-height:48px;border-width:2px;font-weight:700', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }));
   rev.append(head, cvw, dots, ...(TM.teams.length ? [row] : []), aw, acts); box.append(rev);
@@ -892,7 +896,7 @@ function phoneQuestions(box) {
   if (later.length) { pad.append(el('div', { className: 'lbl', textContent: 'Later' })); later.slice(0, 6).forEach(([q, i]) => pad.append(el('div', { className: 'ph-row' }, el('div', { className: 'n qi-n', textContent: i + 1, style: 'flex:none;width:30px;height:30px;border-radius:50%;background:var(--c-fill);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px' }), el('div', { textContent: plain(q.question).trim() || '(photo only)', style: 'flex:1;min-width:0;font-size:15px;line-height:1.3;font-weight:500' }), el('button', { className: 'b', textContent: 'Send', style: 'border-width:2px;font-weight:700', onclick: () => go(i) })))); }
   const tg = (label, sub, on, f) => { const b = el('button', { className: 'tog' + (on ? ' on' : ''), style: 'width:100%;justify-content:space-between;min-height:60px;text-align:left', onclick: f }); b.append(el('span', {}, document.createTextNode(label), el('small', { textContent: sub, style: 'display:block;font-weight:500;color:var(--mut)' })), document.createElement('i')); return b; };
   pad.append(tg('Leaderboard on projector', 'Shows when no drawing is up', S.board, () => ws.send({ t: 'board', on: !S.board })), tg('Names hidden on projector', 'Projector says “A student’s work”', S.hide, () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide })), tg('Quick mode', 'Students get a pen and 4 colors', S.simple, () => ws.send({ t: 'mode', simple: !S.simple })));
-  pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', textContent: '📋 How the class felt (report)', onclick: openReport }));
+  pad.append(el('button', { className: 'b', style: 'min-height:56px;font-weight:700', onclick: openReport }, icoEl('report'), ' How the class felt (report)'));
   pad.append(el('div', { className: 'mut', textContent: 'To write or edit questions, use a computer.', style: 'font-size:14px;text-align:center' }));
   box.append(pad);
 }
@@ -903,7 +907,7 @@ function phoneTeams(box) {
   ranked.forEach(x => {
     const t = x.team;
     const r = el('div', { className: 'ph-row', style: 'border-left:8px solid ' + t.color + ';min-height:84px;flex-direction:column;align-items:stretch;gap:8px' });
-    const adj = (l, d, lab) => { const b = el('button', { className: 'b sq', textContent: l, style: 'flex:1;min-height:52px;font-size:24px;font-weight:800', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
+    const adj = (l, d, lab) => { const b = el('button', { className: 'b sq', style: 'flex:1;min-height:52px', onclick: () => ws.send({ t: 'adj', team: t.id, d }) }, icoEl(l === '+' ? 'plus' : 'minus', 'lg')); b.setAttribute('aria-label', lab + ' ' + t.name); return b; };
     const bar = el('div', { style: 'height:6px;border-radius:var(--r-pill);background:var(--c-fill);overflow:hidden;margin-top:6px' }, el('i', {}));
     bar.firstChild.style.cssText = 'display:block;height:100%;border-radius:var(--r-pill);background:' + t.color + ';width:' + Math.max(4, Math.round(x.score / max * 100)) + '%';
     const rk = el('span', { textContent: x.leader ? '🏆' : x.rank, style: 'flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:' + (x.leader ? 'var(--c-warn-soft)' : 'var(--c-fill)') + ';color:' + (x.leader ? 'var(--c-warn-strong)' : 'var(--c-ink-2)') });

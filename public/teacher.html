@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg  xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22 fill=%22none%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22%231e3a8a%22/%3E%3Cpath d=%22M9 22.5c3-8 6-11 9-9s-1 7 5 2.5%22 stroke=%22%23fff%22 stroke-width=%222.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2223%22 cy=%229%22 r=%222.4%22 fill=%22%23fbbf24%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/fonts.css">
 <link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/ui.css">
 <link rel="stylesheet" href="/tstyle.css">
 <style>
 main{max-width:1320px;margin:0 auto;padding:28px 40px 40px;display:flex;flex-direction:column;gap:26px}
@@ -154,7 +155,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     <div style="display:flex;gap:8px;flex-wrap:wrap">
      <button class="b" id="imp">Import a file</button>
      <input type="file" id="impfile" accept=".json,application/json" hidden>
-     <button class="b" id="newfolder">📁 New folder</button>
+     <button class="b" id="newfolder"><svg data-i="folder"></svg> New folder</button>
      <button class="b" id="newset">+ New set</button>
     </div>
    </div>
@@ -196,7 +197,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     <div class="ta-list" id="talist"></div>
     <div class="ta-foot">
      <button class="b" id="taadd">+ Add team</button>
-     <span class="copywrap"><button class="b" id="tacopy" title="Copy the names, icons, colours and order of these teams to another class">⧉ Copy to another class…</button></span>
+     <span class="copywrap"><button class="b" id="tacopy" title="Copy the names, icons, colours and order of these teams to another class"><svg data-i="copy"></svg> Copy to another class…</button></span>
      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <select class="inp" id="tasize" aria-label="How many teams to create" style="width:auto;min-width:120px"></select>
       <button class="b" id="tacreate">Create teams</button>
@@ -215,7 +216,7 @@ h1{font-size:38px;letter-spacing:-.01em}
     </section>
     <section class="card">
      <div class="lbl">Good to know</div>
-     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here. ⧉ Copy to another class… reuses these teams in a second period; a team that is already there keeps its points.</div>
+     <div class="mut" style="font-size:15px;line-height:1.5;margin-top:8px">Names and icons are saved on this computer. If the class is running, students and the projector update straight away. Class lists and points are never changed here. “Copy to another class…” reuses these teams in a second period; a team that is already there keeps its points.</div>
     </section>
    </aside>
   </div>
@@ -238,6 +239,7 @@ h1{font-size:38px;letter-spacing:-.01em}
 </dialog>
 
 <div id="toast" hidden></div>
+<script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
@@ -259,7 +261,7 @@ function renderClasses() {
     const tm = loadTM(p.code), st = live[p.code] || {}, c = el('div', { className: 'card cls' + (st.live ? ' live' : '') });
     const top = el('div', { className: 'row1' }, el('h3', { textContent: p.name }), el('div', { style: 'display:flex;align-items:center;gap:4px' },
       el('span', { className: 'chip' + (st.live ? ' live' : ''), textContent: st.live ? 'Live now' : 'Ready' }),
-      el('button', { className: 'dots', textContent: '⋯', title: 'Rename or remove this class', onclick: e => classMenu(p, c, e) })));
+      el('button', { className: 'dots', title: 'Rename or remove this class', 'aria-label': 'Rename or remove this class', onclick: e => classMenu(p, c, e) }, icoEl('dots'))));
     const n = tm.roster.length, teams = tm.teams.length;
     const l1 = (n ? n + ' students' : 'No class list') + ' · ' + (teams ? teams + ' teams' : 'no teams');
     const l2 = st.live ? st.here + ' here now' + (lastSet(p.code) ? ' · ' + lastSet(p.code) : '') : (lastSet(p.code) ? 'Last: ' + lastSet(p.code) : 'Code ' + p.code);
@@ -306,7 +308,7 @@ function setCard(s) {
   const c = el('div', { className: 'card setc' });
   const tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
   const hd = el('div', { className: 'hd' }, tile, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:17px;line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:14px' })));
-  const mv = el('button', { className: 'b', textContent: '📁', title: 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' });
+  const mv = el('button', { className: 'b', title: 'Move to a folder', 'aria-label': 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' }, icoEl('folder'));
   mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
   const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
   c.append(hd, btns); return c;
@@ -327,21 +329,21 @@ function folderMenu(f, anchor) {
 function renderSets() {
   closeMenu();
   const box = $('#sets'); box.innerHTML = ''; box.className = folders.length ? 'fstack' : 'grid';
-  $('#newfolder').textContent = '📁 New folder';
+  $('#newfolder').replaceChildren(icoEl('folder'), ' New folder');
   if (!folders.length) { sets.forEach(s => box.append(setCard(s))); return; }
   const coll = fcoll();
   setGroups().forEach(g => {
     if (!g.folder && !g.sets.length) return;
     const id = g.folder ? g.folder.id : '_none', open = !coll[id];
     const tog = el('button', { className: 'ftog', onclick: () => { const c = fcoll(); c[id] = open ? 1 : 0; try { store.do_fcollapsed = JSON.stringify(c); } catch {} renderSets(); } },
-      el('span', { className: 'chev', textContent: '▾' }), el('span', { className: 'fn', textContent: (g.folder ? '📁 ' + g.folder.name : 'Not in a folder') }), el('small', { textContent: g.sets.length + ' set' + (g.sets.length === 1 ? '' : 's') }));
+      el('span', { className: 'chev' }, icoEl('chev', 'sm')), el('span', { className: 'fn' }, ...(g.folder ? [icoEl('folder', 'sm'), ' ' + g.folder.name] : ['Not in a folder'])), el('small', { textContent: g.sets.length + ' set' + (g.sets.length === 1 ? '' : 's') }));
     tog.setAttribute('aria-expanded', open ? 'true' : 'false');
     const head = el('div', { className: 'fhead' }, tog);
-    if (g.folder) { const dots = el('button', { className: 'dots', textContent: '⋯', title: 'Folder options', onclick: e => { e.stopPropagation(); folderMenu(g.folder, head); } }); dots.setAttribute('aria-label', 'Options for folder ' + g.folder.name); head.append(dots); }
+    if (g.folder) { const dots = el('button', { className: 'dots', title: 'Folder options', onclick: e => { e.stopPropagation(); folderMenu(g.folder, head); } }, icoEl('dots')); dots.setAttribute('aria-label', 'Options for folder ' + g.folder.name); head.append(dots); }
     const grp = el('div', { className: 'fgroup' }, head);
     if (open) {
       if (g.sets.length) { const gr = el('div', { className: 'grid' }); g.sets.forEach(x => gr.append(setCard(x))); grp.append(gr); }
-      else grp.append(el('div', { className: 'fempty', textContent: 'Empty. Tap 📁 on any set to move it here.' }));
+      else grp.append(el('div', { className: 'fempty', textContent: 'Empty. Use the folder button on a set to move it here.' }));
     }
     box.append(grp);
   });
@@ -501,11 +503,11 @@ function renderTeamsTab() {
       el('span', { className: 'rk' + (r.leader ? ' top' : ''), textContent: r.leader ? '🏆' : r.rank }),
       el('b', { textContent: r.score }));
     const move = (d, label, glyph, dis) => {
-      const b = el('button', { className: 'b', textContent: glyph, title: label, disabled: dis, onclick: () => { [working[i], working[i + d]] = [working[i + d], working[i]]; editTeams(); renderTeamsTab(); } });
+      const b = el('button', { className: 'b', title: label, disabled: dis, onclick: () => { [working[i], working[i + d]] = [working[i + d], working[i]]; editTeams(); renderTeamsTab(); } }, icoEl(glyph === '↑' ? 'up' : 'down'));
       b.setAttribute('aria-label', label + ' ' + t.name); return b;
     };
     const mv = el('div', { className: 'tcard-move' }, move(-1, 'Move up', '↑', i === 0), move(1, 'Move down', '↓', i === working.length - 1),
-      el('button', { className: 'b danger', textContent: '✕', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }));
+      el('button', { className: 'b danger', title: 'Remove team', 'aria-label': 'Remove ' + t.name, onclick: () => removeTeam(t) }, icoEl('x')));
     c.append(ic, el('div', {}, nm, sub), score, mv); box.append(c);
   });
   renderPreview();

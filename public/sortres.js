@@ -5,7 +5,7 @@
 const SR = (() => {
   const ST = { stu: 'need', card: 'hard', idea: null, sel: null, open: new Set() };
   let box = null, get = null, timer = 0;
-  const T = (tag, cls, text) => el(tag, { className: cls || '', textContent: text == null ? '' : text });
+  const T = (tag, cls, text, ...kids) => { const e = el(tag, { className: cls || '', textContent: text == null ? '' : text }); kids.forEach(k => e.append(k)); return e; };
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 
   function compute(c) {
@@ -101,7 +101,7 @@ const SR = (() => {
       tr.append(el('th', { className: 'sticky', scope: 'row' }, rb));
       cards.forEach(k => {
         const a = s.sort[k.id], ok = a && a === c.sk.lane[k.id], on = ST.sel && ST.sel.k === 'c' && ST.sel.id === k.id;
-        const d = T('div', 'cell ' + (!a ? 'none' : ok ? 'ok' : 'no') + (ST.idea && ST.idea !== k.idea ? ' dim' : ''), !a ? '' : ok ? '✓' : (D.laneName(a)[0] || '?').toUpperCase());
+        const d = T('div', 'cell ' + (!a ? 'none' : ok ? 'ok' : 'no') + (ST.idea && ST.idea !== k.idea ? ' dim' : ''), !a || ok ? '' : (D.laneName(a)[0] || '?').toUpperCase(), ...(ok ? [icoEl('check', 'sm')] : []));
         d.title = s.name + (a ? ' put “' + k.text + '” in ' + D.laneName(a) : ' has not placed “' + k.text + '”');
         tr.append(el('td', { className: on ? 'colsel' : '' }, d));
       });
@@ -109,7 +109,7 @@ const SR = (() => {
     });
     tbl.append(tb);
     const legend = el('div', { className: 'legend' },
-      el('span', {}, el('i', { className: 'swc ok', textContent: '✓' }), document.createTextNode('In the right lane')),
+      el('span', {}, el('i', { className: 'swc ok' }, icoEl('check', 'sm')), document.createTextNode('In the right lane')),
       el('span', {}, el('i', { className: 'swc no', textContent: D.laneName(D.lanes[0].id)[0].toUpperCase() }), document.createTextNode('Wrong. The letter is the first letter of the lane the student chose')),
       el('span', {}, T('i', 'swc none', ''), document.createTextNode('Not placed yet')));
     box.append(el('div', { className: 'card spad' }, el('div', { className: 'shead' }, T('h2', '', 'Who got which card'), T('span', 'mut', (ST.stu === 'need' ? 'Students who need help are at the top. ' : '') + (ST.card === 'hard' ? 'Hardest cards are on the left. ' : '') + 'The stripe is the student’s team.')), legend, el('div', { className: 'sscroll' }, tbl)));
@@ -131,14 +131,14 @@ const SR = (() => {
       const dist = el('div', {}, T('h3', '', 'Where students put it'));
       D.lanes.forEach(l => {
         const r = el('div', { className: 'dr' + (l.id === k.lane ? ' right' : '') }), bar = T('span', 'bar1'); bar.append(el('i', { className: l.id === k.lane ? 'f-good' : 'f-bad', style: 'width:' + (k.n ? Math.round(100 * k.dist[l.id] / k.n) : 0) + '%' }));
-        r.append(T('span', '', l.name + (l.id === k.lane ? ' ✓' : '')), bar, T('span', 'pct', k.dist[l.id])); dist.append(r);
+        r.append(T('span', '', l.name, ...(l.id === k.lane ? [' ', icoEl('check', 'sm')] : [])), bar, T('span', 'pct', k.dist[l.id])); dist.append(r);
       });
       const who = el('div', {}, T('h3', '', 'Missed it (' + missed.length + ')'));
       if (!missed.length) who.append(T('span', 'mut', k.n ? 'Nobody. Move on.' : 'Waiting for answers.'));
       missed.forEach(s => who.append(el('button', { className: 'pill bad', textContent: s.name, onclick: () => { ST.sel = { k: 's', id: s.id }; render(); } })));
       if (missed.length) {
         const msg = T('span', 'mut', ''), b = el('button', { className: 'b pri', textContent: 'Copy names for a small group' });
-        b.onclick = () => navigator.clipboard.writeText(missed.map(s => s.name).join(', ')).then(() => (msg.textContent = 'Copied ✓'), () => (msg.textContent = missed.map(s => s.name).join(', ')));
+        b.onclick = () => navigator.clipboard.writeText(missed.map(s => s.name).join(', ')).then(() => (msg.textContent = 'Copied'), () => (msg.textContent = missed.map(s => s.name).join(', ')));
         who.append(el('div', { className: 'row', style: 'margin-top:8px' }, b, msg));
       }
       card.append(el('div', { className: 'dgrid' }, left, dist, who));
@@ -153,13 +153,13 @@ const SR = (() => {
       if (weak.length) head.append(T('span', 'pill bad', 'Trouble with: ' + weak.join(', ')));
       const acts = el('div', { className: 'row', style: 'margin-top:8px' });
       acts.append(el('button', { className: 'b', textContent: c.spotId === s.id ? 'Stop showing' : 'Show on projector', onclick: () => c.spot(s) }));
-      if (c.award && s.team) acts.append(el('button', { className: 'b' + (s.aw ? ' good' : ''), textContent: s.aw ? '✓ Point given (undo)' : '✓ +1 for ' + s.team.name, onclick: () => c.award(s) }));
+      if (c.award && s.team) acts.append(el('button', { className: 'b' + (s.aw ? ' good' : ''), onclick: () => c.award(s) }, icoEl('check', 'sm'), s.aw ? ' Point given (undo)' : ' +1 for ' + s.team.name));
       if (s.done) acts.append(el('button', { className: 'b', textContent: 'Let them change it', title: 'Reopens their answer', onclick: () => c.reopen(s) }));
       head.append(acts);
       const g = el('div', { className: 'dgrid stu' }, head);
       D.lanes.forEach(l => {
         const here = D.cards.filter(k => s.sort[k.id] === l.id), col = el('div', { className: 'ln' }, T('h4', '', l.name));
-        here.forEach(k => { const ok = c.sk.lane[k.id] === l.id; col.append(el('div', { className: 'sn ' + (ok ? 'ok' : 'no') }, T('span', '', k.text), T('em', '', ok ? '✓' : 'Belongs in ' + D.laneName(c.sk.lane[k.id])))); });
+        here.forEach(k => { const ok = c.sk.lane[k.id] === l.id; col.append(el('div', { className: 'sn ' + (ok ? 'ok' : 'no') }, T('span', '', k.text), T('em', '', ok ? '' : 'Belongs in ' + D.laneName(c.sk.lane[k.id]), ...(ok ? [icoEl('check', 'sm')] : [])))); });
         if (!here.length) col.append(T('span', 'mut', 'Nothing placed here'));
         g.append(col);
       });
@@ -184,7 +184,7 @@ const SR = (() => {
       el('div', {}, T('div', 'lbl', 'Class average'), T('div', '', D.started.length ? avg.toFixed(1) + ' / ' + n : '–')),
       el('div', { style: 'text-align:right' }, T('div', 'lbl', 'Handed in'), T('div', '', D.finished + ' of ' + D.all.length))));
     pad.lastChild.querySelectorAll('div > div:last-child').forEach(d => { d.style.cssText = 'font-family:var(--disp);font-weight:800;font-size:28px'; });
-    const rv = el('button', { className: 'b big' + (c.revealed ? ' good' : ' line2'), textContent: c.revealed ? '✓ Answers revealed (hide)' : 'Reveal answers to students', style: 'min-height:60px', onclick: c.reveal });
+    const rv = el('button', { className: 'b big' + (c.revealed ? ' good' : ' line2'), style: 'min-height:60px', onclick: c.reveal }, ...(c.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students']));
     pad.append(rv);
     if (D.ideas.length) {
       pad.append(T('div', 'lbl', 'Ideas'));

@@ -1,0 +1,6 @@
+/* Shared interface pieces. Load after tokens.css on every page. */
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-4px}
+svg.i.sm{width:16px;height:16px;vertical-align:-3px}
+svg.i.lg{width:24px;height:24px;vertical-align:-6px}
+/* a tick that can be drawn with CSS (used where an SVG cannot go in content:) */
+:root{--ic-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}

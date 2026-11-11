@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg  xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22 fill=%22none%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22%231e3a8a%22/%3E%3Cpath d=%22M9 22.5c3-8 6-11 9-9s-1 7 5 2.5%22 stroke=%22%23fff%22 stroke-width=%222.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2223%22 cy=%229%22 r=%222.4%22 fill=%22%23fbbf24%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/fonts.css">
 <link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/ui.css">
 <link rel="stylesheet" href="/tstyle.css">
 <link rel="stylesheet" href="/sortkit.css">
 <style>
@@ -82,7 +83,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
  </div>
  <div class="grp" style="position:relative">
   <button class="b dk" id="share">Share link</button>
-  <button class="b dk" id="manage">Manage set ▾</button>
+  <button class="b dk" id="manage">Manage set <svg data-i="chev" class="sm"></svg></button>
  </div>
 </div>
 <div class="wrap">
@@ -158,6 +159,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
  </section>
 </div>
 <div id="toast" hidden></div>
+<script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
@@ -198,7 +200,7 @@ function renderAll() {
     row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }));
     const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
-    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ' + (cls || ''), textContent: l, title: label, onclick: ev => { ev.stopPropagation(); f(); } }); b.setAttribute('aria-label', label); return b; };
+    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
     m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
     row.append(t, m); box.append(row);
   });

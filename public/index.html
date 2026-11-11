@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg  xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22 fill=%22none%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%229%22 fill=%22%231e3a8a%22/%3E%3Cpath d=%22M9 22.5c3-8 6-11 9-9s-1 7 5 2.5%22 stroke=%22%23fff%22 stroke-width=%222.6%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2223%22 cy=%229%22 r=%222.4%22 fill=%22%23fbbf24%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/fonts.css">
 <link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/ui.css">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/sortkit.css">
 <style>
@@ -60,7 +61,7 @@ body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur
 #pick button .em{font-size:30px;display:block}
 #pick button:disabled{opacity:.4;cursor:not-allowed}
 #pick button.on{position:relative;background:var(--c-primary-soft);box-shadow:0 0 0 3px var(--c-ink)}
-#pick button.on::after{content:'✓';position:absolute;top:2px;right:8px;font-size:var(--fs-lg);font-weight:800;color:var(--c-ink)}
+#pick button.on::after{content:'';position:absolute;top:6px;right:8px;width:20px;height:20px;background:var(--c-ink);-webkit-mask:var(--ic-check) center/contain no-repeat;mask:var(--ic-check) center/contain no-repeat}
 #pick .back{grid-column:1/-1;min-height:44px;font-size:15px;font-weight:400;border-style:dashed}
 #tm{display:block;width:fit-content;border-radius:var(--r-sm);padding:2px 12px;font-size:15px;font-weight:600;margin-bottom:6px;color:var(--c-ink);background:#fff;border:0;border-left:10px solid var(--tc,var(--c-muted))}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:#fff;flex-wrap:wrap}
@@ -72,7 +73,7 @@ body.playing main{padding:0;max-width:none}
 #quick{display:none;position:fixed;left:12px;bottom:10px;z-index:12;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:8px 12px;box-shadow:var(--sh-2)}
 #quick{gap:6px}
 #quick .swb{width:44px;height:44px;min-height:44px}
-.qt{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:var(--r-md);font-size:22px;line-height:1;transition:background-color .15s,color .15s,border-color .15s,transform .08s}
+.qt{width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:var(--r-md);display:grid;place-items:center;line-height:1;transition:background-color .15s,color .15s,border-color .15s,transform .08s}
 .qt:active{transform:scale(.93)}
 .qt.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .qsep{width:1px;height:32px;background:var(--line);margin:0 4px}
@@ -87,8 +88,8 @@ button{cursor:pointer}
 #qbox{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(900px,calc(100% - 24px));z-index:12;background:var(--c-question);color:#fff;border-radius:var(--r-lg);padding:10px 12px 10px 18px;font-size:20px;display:flex;gap:12px;align-items:flex-start;box-shadow:var(--sh-2)}
 #qbox span{padding-top:2px}
 #qt{flex:none;border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:var(--r-sm);min-height:44px;padding:0 14px;font-size:14px}
-#qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'❓ Show question  '}
-#qbox:not(.min) #qt:before{content:'Hide ▲'}
+#qbox.min{width:auto}#qbox.min span{display:none}#qbox.min #qt:before{content:'Show'}
+#qbox:not(.min) #qt:before{content:'Hide'}
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px;width:84px;flex:none}
 #drawer{position:fixed;left:0;top:0;bottom:0;width:340px;z-index:20;background:var(--c-bg);box-shadow:var(--sh-3);transform:translateX(-105%);transition:transform .3s cubic-bezier(.2,.9,.3,1.03);display:flex;flex-direction:column;border-radius:0 18px 18px 0}
 #drawer.open{transform:none}
@@ -106,7 +107,7 @@ button{cursor:pointer}
 #toolsbtn{position:fixed;left:12px;bottom:10px;z-index:12;height:52px;padding:0 18px;border-radius:var(--r-lg);border:0;background:var(--c-dark);color:#fff;display:flex;align-items:center;gap:10px;font-weight:600;box-shadow:var(--sh-2);transition:background-color .15s,transform .08s}
 #toolsbtn:hover{background:var(--c-dark-2)}
 #toolsbtn:active{transform:scale(.97)}
-#toolsbtn b{font-size:22px;font-weight:400}#toolsbtn i{width:18px;height:18px;border-radius:50%;border:2px solid #fff}
+#toolsbtn b{display:flex;font-weight:400}#toolsbtn b svg.i{width:24px;height:24px}#toolsbtn i{width:18px;height:18px;border-radius:50%;border:2px solid #fff}
 #ur,#zoom{position:fixed}
 #ur{left:50%;transform:translateX(-50%);bottom:10px}
 #zoom{right:12px;bottom:10px}
@@ -129,7 +130,7 @@ button{cursor:pointer}
 /* toolbar */
 #tools{display:flex;flex-direction:column;gap:6px;padding:8px}
 .tool{border:1px solid var(--line);background:#fff;border-radius:var(--r-lg);min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:var(--fs-sm);transition:background-color .15s,color .15s,border-color .15s,transform .08s}
-.tool b{font-size:24px;font-weight:400;line-height:1}
+.tool b{display:flex;font-weight:400;line-height:1}.tool b svg.i{width:26px;height:26px}
 .tool:active{transform:scale(.95)}
 .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 /* options */
@@ -181,7 +182,7 @@ body.playing:not(.sorting) #pulse{display:flex}
 #ptog .pdot{flex:none;width:9px;height:9px;border-radius:50%;background:currentColor;opacity:0;transition:opacity .15s}
 #ptog.on{color:var(--pc)}
 #ptog.on .pdot{opacity:1}
-#ptog .pchev{flex:none;transition:transform .2s;font-size:12px;line-height:1}
+#ptog .pchev{flex:none;transition:transform .2s;line-height:1;display:flex}
 #pulse.collapsed #ptog .pchev{transform:rotate(180deg)}
 #pbtns{display:flex;flex-direction:column;gap:8px;max-height:170px;opacity:1;visibility:visible;overflow:hidden;transition:max-height .25s cubic-bezier(.2,.9,.3,1),opacity .18s ease,visibility 0s}
 #pulse.collapsed #pbtns{max-height:0;opacity:0;visibility:hidden;transition:max-height .25s cubic-bezier(.2,.9,.3,1),opacity .18s ease,visibility 0s .25s}
@@ -191,7 +192,7 @@ body.playing:not(.sorting) #pulse{display:flex}
 #pulse .pb[data-p=y]{--pc:var(--c-warn);--ps:var(--c-warn-soft)}
 #pulse .pb[data-p=g]{--pc:var(--c-good);--ps:var(--c-good-soft)}
 #pulse .pb.on{border-color:var(--pc);background:var(--ps);box-shadow:0 0 0 3px var(--pc)}
-#pulse .pb.on:after{content:'✓';font-weight:800;color:var(--pc);margin-left:auto}
+#pulse .pb.on:after{content:'';width:18px;height:18px;background:var(--pc);-webkit-mask:var(--ic-check) center/contain no-repeat;mask:var(--ic-check) center/contain no-repeat;margin-left:auto}
 @media(prefers-reduced-motion:reduce){#pbtns,#ptog .pchev,#ptog .pdot{transition:none}}
 @media(max-width:620px){
  #pulse .pb span{display:none}
@@ -242,7 +243,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="stage">
    <canvas id="cv"></canvas>
    <textarea id="ed" maxlength="300" aria-label="Type your text"></textarea>
-   <div class="ov lockable" id="selbar" hidden><button class="del" data-a="del" aria-label="Delete">🗑</button><button data-a="dup" aria-label="Duplicate">⧉</button><button data-a="front" aria-label="Bring to front">⬆</button></div>
+   <div class="ov lockable" id="selbar" hidden><button class="del" data-a="del" aria-label="Delete" title="Delete"><svg data-i="trash"></svg></button><button data-a="dup" aria-label="Duplicate" title="Duplicate"><svg data-i="dup"></svg></button><button data-a="front" aria-label="Bring to front" title="Bring to front"><svg data-i="front"></svg></button></div>
    <div id="mini" hidden title="Where you are on the page"><div id="mv"></div></div>
   </div>
   <div id="qbox"><div style="flex:1"><div id="tm" hidden></div><span id="q"></span></div><button id="qt" aria-label="Show or hide the question"></button></div>
@@ -254,31 +255,31 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="smsg" hidden>Answer sent. Wait for your teacher.</div>
   <div id="lockmsg" hidden>Your teacher is showing your work to the class. Please wait.</div>
   <div id="pulse" class="lockable" role="group" aria-label="How is your work?">
-   <button id="ptog" type="button" aria-expanded="true" aria-controls="pbtns"><span class="plb">How is your work?</span><span class="pdot" aria-hidden="true"></span><span class="pchev" aria-hidden="true">▸</span></button>
+   <button id="ptog" type="button" aria-expanded="true" aria-controls="pbtns"><span class="plb">How is your work?</span><span class="pdot" aria-hidden="true"></span><span class="pchev" aria-hidden="true"><svg data-i="next" class="sm"></svg></span></button>
    <div id="pbtns">
     <button class="pb" type="button" data-p="r" aria-label="I need help" aria-pressed="false"><i aria-hidden="true">🙋</i><span>I need help</span></button>
     <button class="pb" type="button" data-p="y" aria-label="Almost" aria-pressed="false"><i aria-hidden="true">🙂</i><span>Almost</span></button>
     <button class="pb" type="button" data-p="g" aria-label="I understand" aria-pressed="false"><i aria-hidden="true">💡</i><span>I understand</span></button>
    </div>
   </div>
-  <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen">✏️</button><button class="qt" data-qt="eraser" aria-label="Eraser">⌫</button><button class="qt" data-qt="text" aria-label="Text">T</button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
-  <button id="toolsbtn" aria-label="Open tools"><b>⬚</b>Tools<i></i></button>
-  <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo">↶<span class="lb"> Undo</span></button><button id="redo" aria-label="Redo">↷<span class="lb"> Redo</span></button></div>
-  <div class="ov" id="zoom"><span>🔍</span><button data-z="-1" aria-label="Zoom out">−</button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in">+</button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" role="img" aria-label="Connected" title="Connection"></span></div>
+  <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen" title="Pen"><svg data-i="pen"></svg></button><button class="qt" data-qt="eraser" aria-label="Eraser" title="Eraser"><svg data-i="eraser"></svg></button><button class="qt" data-qt="text" aria-label="Text" title="Text"><svg data-i="text"></svg></button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
+  <button id="toolsbtn" aria-label="Open tools" title="Open tools"><b><svg data-i="select"></svg></b>Tools<i></i></button>
+  <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo" title="Undo"><svg data-i="undo"></svg><span class="lb"> Undo</span></button><button id="redo" aria-label="Redo" title="Redo"><svg data-i="redo"></svg><span class="lb"> Redo</span></button></div>
+  <div class="ov" id="zoom"><span><svg data-i="search"></svg></span><button data-z="-1" aria-label="Zoom out" title="Zoom out"><svg data-i="minus"></svg></button><input type="range" id="zs" min="100" max="600" step="10" value="100" aria-label="Zoom"><button data-z="1" aria-label="Zoom in" title="Zoom in"><svg data-i="plus"></svg></button><span id="zv">100%</span><button class="fit" data-z="0">Fit</button><span class="dot" id="dot" role="img" aria-label="Connected" title="Connection"></span></div>
   <aside id="drawer" aria-label="Tools">
-   <div id="dhead"><b>Tools</b><button id="pin">📌 Keep open</button><button id="dclose" aria-label="Close tools">✕ Close</button></div>
+   <div id="dhead"><b>Tools</b><button id="pin"><svg data-i="pin"></svg> Keep open</button><button id="dclose" aria-label="Close tools"><svg data-i="x"></svg> Close</button></div>
    <div id="dbody">
     <div class="card lockable" id="tools">
-     <button class="tool on" data-t="select"><b>⬚</b>Select</button>
-     <button class="tool" data-t="hand"><b>✋</b>Move view</button>
-     <button class="tool" data-t="pen"><b>✏️</b>Draw</button>
-     <button class="tool" data-t="eraser"><b>⌫</b>Eraser</button>
-     <button class="tool" data-t="text"><b>T</b>Text</button>
-     <button class="tool" data-t="shape"><b>◇</b>Shapes</button>
+     <button class="tool on" data-t="select"><b><svg data-i="select"></svg></b>Select</button>
+     <button class="tool" data-t="hand"><b><svg data-i="hand"></svg></b>Move view</button>
+     <button class="tool" data-t="pen"><b><svg data-i="pen"></svg></b>Draw</button>
+     <button class="tool" data-t="eraser"><b><svg data-i="eraser"></svg></b>Eraser</button>
+     <button class="tool" data-t="text"><b><svg data-i="text"></svg></b>Text</button>
+     <button class="tool" data-t="shape"><b><svg data-i="shapes"></svg></b>Shapes</button>
     </div>
     <div class="card lockable" id="opts"></div>
    </div>
-   <div id="dfoot"><button id="leave" type="button">🚪 Leave this class</button></div>
+   <div id="dfoot"><button id="leave" type="button"><svg data-i="leave"></svg> Leave this class</button></div>
   </aside>
  </div>
 
@@ -287,6 +288,7 @@ body.frozen #stage,body.frozen #qbox,body.frozen #quick,body.frozen #toolsbtn,bo
   <div id="frzcard"><span class="fi" aria-hidden="true">✋</span><b>Frozen</b><p>Look at your teacher. Your work is saved. You can start again soon.</p></div>
  </div>
 </main>
+<script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/sortstu.js"></script>
@@ -469,7 +471,7 @@ const cv=$('#cv'),cx=cv.getContext('2d'),ed=$('#ed'),opts=$('#opts'),bar=$('#sel
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const COLORS=['#111111','#6b7280','#dc2626','#f97316','#facc15','#22c55e','#059669','#06b6d4','#2563eb','#7c3aed','#db2777','#92400e'];
 const CNAME={'#111111':'Black','#6b7280':'Gray','#dc2626':'Red','#f97316':'Orange','#facc15':'Yellow','#22c55e':'Light green','#059669':'Green','#06b6d4':'Light blue','#2563eb':'Blue','#7c3aed':'Purple','#db2777':'Pink','#92400e':'Brown'};
-const SHAPES={rect:'▭',ellipse:'◯',tri:'△',diamond:'◇',star:'☆'},LINES={line:'╱',arrow:'➚'};
+const SHAPES={rect:ico('rect'),ellipse:ico('ellipse'),tri:ico('tri'),diamond:ico('diamond'),star:ico('star')},LINES={line:ico('line'),arrow:ico('arrow')};
 const HF={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5]};
 let S={erase:'whole',esize:20,pin:localStorage.do_pin==='1',tool:'select',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]}; // a pinned tools drawer stays pinned in the next class too
 let uid=1;const nid=()=>uid++;
@@ -686,7 +688,7 @@ function ui(){
  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tool));
  $('#undo').disabled=hi<1;$('#redo').disabled=hi>=hist.length-1;
  $('#zs').value=Math.round(V.z*100);$('#zv').textContent=Math.round(V.z*100)+'%';
- mini.hidden=V.z<=1.001;const tb=$('#toolsbtn');tb.querySelector('b').textContent=({select:'⬚',hand:'✋',pen:'✏️',eraser:'⌫',text:'T',shape:'◇'})[S.tool];tb.querySelector('i').style.background=sel?sel.c:S.color;Object.assign($('#mv').style,{left:Math.max(0,V.ox/W*100)+'%',top:Math.max(0,V.oy/H*100)+'%',width:Math.min(100,aw()/sc()/W*100)+'%',height:Math.min(100,ah()/sc()/H*100)+'%'});
+ mini.hidden=V.z<=1.001;const tb=$('#toolsbtn');tb.querySelector('b').innerHTML=ico(({select:'select',hand:'hand',pen:'pen',eraser:'eraser',text:'text',shape:'shapes'})[S.tool]);tb.querySelector('i').style.background=sel?sel.c:S.color;Object.assign($('#mv').style,{left:Math.max(0,V.ox/W*100)+'%',top:Math.max(0,V.oy/H*100)+'%',width:Math.min(100,aw()/sc()/W*100)+'%',height:Math.min(100,ah()/sc()/H*100)+'%'});
  cv.style.cursor={select:'default',hand:'grab',pen:'crosshair',eraser:'cell',text:'text',shape:'crosshair'}[S.tool];
  selBar();if(editing)posEd();
 }
@@ -724,7 +726,7 @@ const drawer=$('#drawer');
 function layout(){PAD.l=drawer.classList.contains('open')&&S.pin&&innerWidth>900?352:12;clampView();all(true)}
 function openDrawer(o){drawer.classList.toggle('open',o);$('#toolsbtn').hidden=o;layout()}
 $('#toolsbtn').onclick=()=>openDrawer(true);$('#dclose').onclick=()=>openDrawer(false);
-function setPinUI(){const b=$('#pin');b.classList.toggle('on',S.pin);b.textContent=S.pin?'📌 Pinned open':'📌 Keep open'}
+function setPinUI(){const b=$('#pin');b.classList.toggle('on',S.pin);b.innerHTML=ico('pin')+(S.pin?' Pinned open':' Keep open')}
 $('#pin').onclick=()=>{S.pin=!S.pin;localStorage.do_pin=S.pin?'1':'0';setPinUI();layout()}
 setPinUI();
 // leaving on purpose: the server takes the student out of the room, so no ghost card is left on the teacher's screen
@@ -754,13 +756,13 @@ function setProp(k,v,quiet){
 function setColor(hex){setProp('color',hex,true);const h=$('#hex'),c=$('#chip');if(h)h.value=hex;if(c)c.style.background=hex;drawWheel()}
 function renderOpts(){
  const o=sel,m=o?o.k:S.tool;let h='';
- if(m==='hand')return opts.innerHTML=hint('✋ Move view','Drag to move the page. Use two fingers to move and zoom at any time.');
+ if(m==='hand')return opts.innerHTML=hint(ico('hand','sm')+' Move view','Drag to move the page. Use two fingers to move and zoom at any time.');
  if(m==='eraser')return opts.innerHTML=`<div class="sec"><h4>Eraser mode</h4><div class="grid">
   <button class="opt${S.erase==='part'?' on':''}" data-k="erase" data-v="part"><b>◐</b>Part</button>
   <button class="opt${S.erase==='whole'?' on':''}" data-k="erase" data-v="whole"><b>▣</b>All</button></div>
   <p class="hint" style="margin:8px 0 0;font-size:13px">${S.erase==='part'?'Erase one part of a line or arrow. To erase a shape or text, tap All.':'Tap a line, shape or text to erase all of it.'}</p></div>`
   +(S.erase==='part'?`<div class="sec"><h4>Eraser size <span id="esv">${S.esize}</span></h4><input type="range" id="esize" min="8" max="80" value="${S.esize}"></div>`:'');
- if(m==='select')return opts.innerHTML=hint('⬚ Select','Tap something to choose it. Drag it to move it. Drag the white circles to change its size. You can change its color here.');
+ if(m==='select')return opts.innerHTML=hint(ico('select','sm')+' Select','Tap something to choose it. Drag it to move it. Drag the white circles to change its size. You can change its color here.');
  const col=o?o.c:S.color,isShape=m==='shape',isLine=m==='line',isText=m==='text',isStroke=m==='stroke'||m==='pen';
  h+=`<div class="sec" data-pin="2"><h4>Color</h4><div class="sw">${COLORS.map(c=>`<button class="swb${c==col?' on':''}" style="background:${c}" data-k="color" data-v="${c}" aria-label="${CNAME[c]||c}"></button>`).join('')}<button class="swb wheelbtn${S.wheel?' on':''}" data-act="wheel" aria-label="Color wheel"></button></div>`;
  if(S.wheel)h+=`<div class="wheelbox"><canvas id="wheel" width="180" height="180"></canvas><label>Brightness <input type="range" id="val" min="5" max="100" value="${Math.round(S.hsv[2]*100)}"></label><div class="hexrow"><span id="chip" style="background:${col}"></span><input id="hex" value="${col}" maxlength="7" aria-label="Hex color"></div></div>`;

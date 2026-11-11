@@ -143,7 +143,7 @@ function fillSetSelect(sel, value) {
   sel.innerHTML = '';
   const opt = x => el('option', { value: x.id, textContent: x.name + ' (' + x.questions.length + ')' });
   if (!folders.length) sets.forEach(x => sel.append(opt(x)));
-  else setGroups().forEach(g => { if (!g.sets.length) return; const og = el('optgroup'); og.label = g.folder ? '📁 ' + g.folder.name : 'Not in a folder'; g.sets.forEach(x => og.append(opt(x))); sel.append(og); });
+  else setGroups().forEach(g => { if (!g.sets.length) return; const og = el('optgroup'); og.label = g.folder ? g.folder.name : 'Not in a folder'; g.sets.forEach(x => og.append(opt(x))); sel.append(og); });
   sel.value = value;
 }
 // "New set" dialog: a name and, if you like, a folder (or make a new folder on the spot). after(set) runs once it is saved.
@@ -156,7 +156,7 @@ function newSetDialog(after, presetFolder) {
   const fill = v => {
     sel.innerHTML = '';
     sel.append(el('option', { value: '', textContent: 'No folder' }));
-    folders.forEach(f => sel.append(el('option', { value: f.id, textContent: '📁 ' + f.name })));
+    folders.forEach(f => sel.append(el('option', { value: f.id, textContent: f.name })));
     sel.append(el('option', { value: '__new', textContent: '＋ New folder…' }));
     sel.value = v && folderById(v) ? v : '';
   };
@@ -187,10 +187,10 @@ function folderPicker(st, after) {
   const d = el('dialog', { id: 'fpdlg' }); d.style.maxWidth = '460px';
   const close = () => { d.close(); d.remove(); };
   const choose = id => { moveSet(st, id); close(); toast(id ? 'Moved to "' + folderById(id).name + '".' : 'Taken out of its folder.'); after && after(); };
-  const row = (label, count, on, f) => { const b = el('button', { className: 'fpopt' + (on ? ' on' : ''), onclick: f }, el('span', { textContent: label }), el('small', { textContent: on ? '✓ here' : count == null ? '' : count + ' set' + (count === 1 ? '' : 's') })); return b; };
+  const row = (label, count, on, f) => { const b = el('button', { className: 'fpopt' + (on ? ' on' : ''), onclick: f }, el('span', {}, ...(Array.isArray(label) ? label : [label])), on ? el('small', {}, icoEl('check', 'sm'), ' here') : el('small', { textContent: count == null ? '' : count + ' set' + (count === 1 ? '' : 's') })); return b; };
   const list = el('div', { className: 'fplist' });
   list.append(row('No folder', null, !folderById(st.folder), () => choose(null)));
-  folders.forEach(f => list.append(row('📁 ' + f.name, sets.filter(x => x.folder === f.id).length, st.folder === f.id, () => choose(f.id))));
+  folders.forEach(f => list.append(row([icoEl('folder', 'sm'), ' ' + f.name], sets.filter(x => x.folder === f.id).length, st.folder === f.id, () => choose(f.id))));
   const nb = el('button', { className: 'fpopt new', onclick: () => {
     if (folders.length >= MAX_FOLDERS) return toast('That is the most folders.');
     const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return;
@@ -272,7 +272,7 @@ async function showStarters(onAdd) {
     const row = el('div', {}); row.style.cssText = 'display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-lg);margin:6px 0';
     const t = el('div', { textContent: st.name }); t.append(el('small', { textContent: st.questions.length + ' questions · grades ' + st.grade, style: 'display:block;color:var(--mut)' }));
     const b = el('button', { className: 'b line2', textContent: 'Add' });
-    b.onclick = () => { const s = addSet(st.name, st.questions); b.textContent = 'Added ✓'; b.disabled = true; toast('Added "' + st.name + '" to your sets.'); onAdd && onAdd(s); };
+    b.onclick = () => { const s = addSet(st.name, st.questions); b.replaceChildren('Added ', icoEl('check', 'sm')); b.disabled = true; toast('Added "' + st.name + '" to your sets.'); onAdd && onAdd(s); };
     row.append(t, b); box.append(row);
   });
 }

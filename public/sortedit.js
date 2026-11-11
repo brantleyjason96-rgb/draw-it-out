@@ -22,7 +22,7 @@ const SE = (() => {
     d.lanes.forEach((l, i) => {
       const inp = el('input', { className: 'inp', value: l.name, maxLength: 24, placeholder: 'Lane ' + (i + 1) + ' name, like Igneous' }); inp.setAttribute('aria-label', 'Lane ' + (i + 1) + ' name');
       inp.oninput = () => { l.name = inp.value; touch(); };
-      const x = el('button', { className: 'b sq danger', textContent: '✕', title: 'Remove lane', disabled: d.lanes.length <= 2 }); x.setAttribute('aria-label', 'Remove lane ' + (i + 1));
+      const x = el('button', { className: 'b sq danger', title: 'Remove lane', disabled: d.lanes.length <= 2 }, icoEl('x')); x.setAttribute('aria-label', 'Remove lane ' + (i + 1));
       x.onclick = () => { d.lanes.splice(i, 1); d.cards.forEach(k => { if (k.lane === l.id) k.lane = null; }); touch(true); };
       E.lanes.append(row(inp, x));
     });
@@ -36,7 +36,7 @@ const SE = (() => {
       const sel = el('select', { className: 'inp', style: 'flex:none;width:130px;font-size:14px' }); sel.setAttribute('aria-label', 'Idea for card ' + (i + 1));
       [['', 'No idea'], ...d.ideas.map(x => [x, x])].forEach(([v, t]) => sel.append(el('option', { value: v, textContent: t }))); sel.value = d.ideas.includes(k.idea) ? k.idea : '';
       sel.onchange = () => { k.idea = sel.value; touch(); };
-      const x = el('button', { className: 'b sq danger', textContent: '✕', title: 'Remove card' }); x.setAttribute('aria-label', 'Remove card ' + (i + 1));
+      const x = el('button', { className: 'b sq danger', title: 'Remove card' }, icoEl('x')); x.setAttribute('aria-label', 'Remove card ' + (i + 1));
       x.onclick = () => { d.cards.splice(i, 1); touch(true); };
       E.cards.append(row(inp, sel, x));
     });
@@ -45,7 +45,7 @@ const SE = (() => {
     E.ideas.textContent = '';
     const chips = el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' });
     d.ideas.forEach((n, i) => {
-      const x = el('button', { textContent: '✕', title: 'Remove idea' }); x.setAttribute('aria-label', 'Remove idea ' + n);
+      const x = el('button', { title: 'Remove idea' }, icoEl('x')); x.setAttribute('aria-label', 'Remove idea ' + n);
       x.onclick = () => { d.ideas.splice(i, 1); d.cards.forEach(k => { if (k.idea === n) k.idea = ''; }); touch(true); };
       chips.append(el('span', { className: 'ichip' }, document.createTextNode(n), x));
     });

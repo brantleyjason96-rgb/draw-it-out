@@ -45,11 +45,11 @@ const SS = (() => {
     const un = ord.filter(c => !map[c.id]), pile = $('#spile'); pile.textContent = '';
     pile.append(target(mk('h4', '', done ? 'Cards' : 'Cards to sort (' + un.length + ')'), 'the pile'));
     un.forEach(c => pile.append(note(c)));
-    if (!un.length) pile.append(mk('div', 'sempty', done ? 'Your answer was sent.' : '✓ All cards are placed. Check your work. Then press “I’m done”.'));
+    if (!un.length) { const e = mk('div', 'sempty', done ? 'Your answer was sent.' : 'All cards are placed. Check your work. Then press “I’m done”.'); if (!done) e.prepend(icoEl('check', 'sm'), ' '); pile.append(e); }
     const n = s.cards.length, placed = n - un.length, right = fb ? s.cards.filter(c => fb.ok[c.id]).length : 0;
     const dn = $('#sdone'); dn.textContent = '';
     dn.append(mk('b', '', fb && placed === n ? 'You got ' + right + ' of ' + n + ' right' : placed + ' of ' + n + ' placed'));
-    const b = mk('button', 'btn', done ? 'Done ✓' : 'I’m done'); b.disabled = done || placed < n; b.onclick = () => { done = true; send({ t: 'sort', p: map, done: true }); sel = null; render(); };
+    const b = mk('button', 'btn', done ? 'Done' : 'I’m done'); if (done) b.append(' ', icoEl('check', 'sm')); b.disabled = done || placed < n; b.onclick = () => { done = true; send({ t: 'sort', p: map, done: true }); sel = null; render(); };
     dn.append(b);
     $('#smsg').hidden = !(done && !fb);
     $v().classList.toggle('sdone', done); $('#spile').classList.toggle('lockable', true);
