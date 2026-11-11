@@ -70,3 +70,4 @@ button.pill{cursor:pointer}
 .sn.ok{background:var(--c-good-soft);color:var(--c-good-strong)}.sn.no{background:var(--c-bad-soft);color:var(--c-bad-strong)}
 .sn em{font-style:normal;font-size:11px;font-weight:700}
 @media(max-width:1280px){.spair{grid-template-columns:minmax(0,1fr)}.dgrid,.dgrid.stu{grid-template-columns:minmax(0,1fr)}}
+@media(any-pointer:coarse){.rowh,.cell{height:44px}button.pill{min-height:44px;padding:0 14px}}

@@ -57,14 +57,14 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 .stu[data-pulse=g]{--pc:var(--c-good);--pcs:var(--c-good-soft)}
 .stu[data-pulse]{outline:3px solid var(--pc);outline-offset:-3px}
 .stu[data-pulse] .nm:after{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pc);margin-left:8px;vertical-align:middle}
-.pchip{font-size:12px;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap;flex:none}
+.pchip{font-size:var(--fs-xs);font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap;flex:none}
 #pulsesum{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 #pulsesum .pb{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:2px solid var(--pc,var(--c-line-2));background:var(--pcs,#fff);color:var(--pc,var(--c-ink-2));font-weight:700;font-size:14px}
 #pulsesum .pb.on{background:var(--pc);color:#fff}
 #pstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px}
 #pstrip .pk{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid var(--c-primary-line);background:var(--pri-l);color:var(--pri-d);font-weight:700;font-size:14px}
-#pstrip .pk span:last-child{opacity:.6}
-@media(pointer:coarse){#pulsesum .pb,#pstrip .pk{min-height:44px}}
+#pstrip .pk span:last-child{opacity:1}
+@media(any-pointer:coarse){#pulsesum .pb,#pstrip .pk,.srow .r2 .b{min-height:44px}}
 
 /* freeze */
 #freeze{min-width:130px}
@@ -100,7 +100,7 @@ body.scores-off #scores{display:none}
 .slist{flex:1;min-height:0;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .srow{border:1px solid var(--line);border-left:8px solid var(--tc);border-radius:12px;padding:8px 10px;background:#fff;display:flex;flex-direction:column;gap:6px}
 .srow .r1{display:flex;align-items:center;gap:8px;min-width:0}
-.srow .rk{flex:none;width:24px;height:24px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.srow .rk{flex:none;width:24px;height:24px;border-radius:50%;background:var(--c-fill);color:var(--c-ink-2);font-weight:800;font-size:var(--fs-xs);display:flex;align-items:center;justify-content:center}
 .srow.lead .rk{background:var(--c-warn-soft);color:var(--c-warn-strong);font-size:13px}
 .srow .em{font-size:18px;line-height:1}
 .srow .nm{flex:1;min-width:0;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -148,6 +148,16 @@ body.scores-off #scores{display:none}
 #demobar{position:fixed;bottom:0;left:0;right:0;background:var(--dark);color:#fff;padding:10px 16px;z-index:40;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--dbh,64px))}
 
+/* short screens (1366×768 laptops): give the height back to the drawings */
+@media(max-height:820px) and (min-width:701px){
+ main{padding:12px 16px;gap:10px}
+ .qbar{padding:10px 16px}
+ .qbar .q{font-size:20px}
+ .grid{grid-auto-rows:minmax(220px,1fr)}
+ #demobar{flex-wrap:nowrap;padding:8px 12px}
+ #demobar .dlong{display:none}
+ #demobar .dshort{display:inline}
+}
 /* phone layout (D1 and D2) */
 #phone{display:none}
 @media(max-width:700px){
@@ -247,7 +257,7 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
   <div class="ph-h">
    <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
    <button class="b sky" id="pproj">Projector</button>
-   <button class="b dk" id="pfreeze" aria-pressed="false" title="Freeze the class" style="min-width:44px;padding:0 12px">❄</button>
+   <button class="b dk" id="pfreeze" aria-pressed="false" aria-label="Freeze the class" title="Freeze the class" style="min-width:44px;padding:0 12px">❄</button>
   </div>
   <div class="ph-body" id="pbody"></div>
   <div class="ph-tabs" id="ptabs">
