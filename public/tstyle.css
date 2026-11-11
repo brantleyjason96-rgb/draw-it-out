@@ -24,7 +24,10 @@ h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.15}
 /* buttons: 44px minimum touch target */
 .b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:var(--r-md);border:1px solid var(--line2);background:#fff;color:var(--ink);font-weight:600;font-size:var(--fs-md);white-space:nowrap}
 .b:disabled{opacity:.45;cursor:not-allowed}
-.b:hover:not(:disabled){background:var(--c-surface-2);border-color:var(--c-control)}
+.b:not(.pri):not(.good):not(.sky):not(.dk):not(.ter):not(.revd):not(.line2):hover:not(:disabled){background:var(--c-surface-2);border-color:var(--c-control)}
+.b.dk:hover:not(:disabled){background:var(--dark2)}
+.b.sky:hover:not(:disabled){filter:brightness(1.1)}
+.b.line2:hover:not(:disabled){background:var(--pri-l)}
 .b.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
 .b.pri:hover:not(:disabled){background:var(--pri-d);border-color:var(--pri-d)}
 .b.good{background:var(--good);border-color:var(--good);color:#fff;font-weight:700}
@@ -73,7 +76,7 @@ dialog::backdrop{background:var(--c-scrim)}
 .dh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:1px solid var(--line)}
 .dh h2{font-size:var(--fs-3xl)}
 
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:12px 20px;border-radius:var(--r-lg);border:2px solid var(--c-surface);box-shadow:var(--sh-2);z-index:60;max-width:90vw;text-align:center}
+#toast{position:fixed;top:76px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:12px 20px;border-radius:var(--r-lg);border:2px solid var(--c-surface);box-shadow:var(--sh-2);z-index:60;max-width:90vw;text-align:center}
 .inp{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--c-control);border-radius:var(--r-md);background:#fff}
 select.inp{padding-right:8px}
 .seg{display:flex;border:1px solid var(--line2);border-radius:var(--r-md);overflow:hidden}

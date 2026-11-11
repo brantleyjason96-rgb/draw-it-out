@@ -53,6 +53,7 @@
   </aside>
 
   <main>
+   <div id="frzrow" hidden role="status"><span><svg data-i="snow"></svg> Class is frozen. Students can’t draw.</span><button class="b sm" id="frzoff2">Unfreeze</button></div>
    <div class="qbar">
     <div style="min-width:0"><div class="lbl">Students are answering</div><div class="q" id="curq"></div></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="b line2 big" id="revbtn" hidden></button><button class="b good big" id="awbig" hidden></button></div>
@@ -375,12 +376,12 @@ function freezeMenu(btn) {
 function freezeUI() {
   const b = $('#freeze'); b.classList.toggle('on', S.frozen); b.setAttribute('aria-pressed', S.frozen ? 'true' : 'false');
   b.replaceChildren(icoEl('snow'), S.frozen ? ' Frozen' : ' Freeze');
-  $('#frzbar').hidden = !S.frozen;
+  $('#frzbar').hidden = !S.frozen; $('#frzrow').hidden = !S.frozen;
   const p = $('#pfreeze'); if (p) { p.classList.toggle('on', S.frozen); p.replaceChildren(icoEl('snow'), ...(S.frozen ? [icoEl('x', 'sm')] : [])); }
 }
 $('#freeze').onclick = e => { e.stopPropagation(); freezeMenu($('#freeze')); };
 $('#pfreeze').onclick = e => { e.stopPropagation(); freezeMenu($('#pfreeze')); };
-$('#frzoff').onclick = () => ws.send({ t: 'freeze', on: false });
+$('#frzoff').onclick = $('#frzoff2').onclick = () => ws.send({ t: 'freeze', on: false });
 
 // ---- rendering ----
 function ui() {
