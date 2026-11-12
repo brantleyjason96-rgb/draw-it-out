@@ -48,3 +48,4 @@ Commits "Phase 4 / 24 (part 1)" through "Phase 4 / 26". Server tests 68 -> 79. I
 - Decision: bulk "Remove tag from selected" asks for the tag by name (with suggestions) rather than listing checkboxes.
 - Known limit: the Question sets tab filter shows at most 12 tags in the row; the rest are in the Tags dialog.
 - Known limit: Merge in the Tags dialog offers the 8 most used other tags as buttons (use Rename-to-an-existing-name to merge into any other tag).
+- **Process slip (Phase 4 / 26):** my commit chain ran the notes commit after the gate had failed, so the file-import code (item 26) went into the commit titled "Notes for Phase 4" (4209756) instead of its own commit, with one test assertion wrong. The next commit (7188223, titled "Phase 4 / 26 follow-up") fixes the assertion. I did not rewrite pushed history. Item 26's code is in 4209756.
