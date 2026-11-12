@@ -565,7 +565,7 @@ const COLORS=['#111111','#6b7280','#dc2626','#f97316','#facc15','#22c55e','#0596
 const CNAME={'#111111':'Black','#6b7280':'Gray','#dc2626':'Red','#f97316':'Orange','#facc15':'Yellow','#22c55e':'Light green','#059669':'Green','#06b6d4':'Light blue','#2563eb':'Blue','#7c3aed':'Purple','#db2777':'Pink','#92400e':'Brown'};
 const SHAPES={rect:ico('rect'),ellipse:ico('ellipse'),tri:ico('tri'),diamond:ico('diamond'),star:ico('star')},LINES={line:ico('line'),arrow:ico('arrow')};
 const HF={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5]};
-let S={erase:'whole',esize:20,pin:false,tool:'select',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]}; // a pinned tools drawer stays pinned in the next class too
+let S={erase:'whole',esize:20,pin:false,tool:'pen',color:'#111111',size:4,pen:'pen',dash:'solid',fill:'none',shape:'rect',text:32,wheel:false,hsv:[220,.85,.93]}; // a pinned tools drawer stays pinned in the next class too
 let uid=1;const nid=()=>uid++;
 let objs=[],synced=new Map(),loaded=false;
 let sel=null,editing=null,g=null,cur=null,locked=false,frozen=false,lastTap={id:0,t:0};
