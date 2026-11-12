@@ -288,10 +288,10 @@ function onmsg(m) {
     case 'board': S.board = m.on; ui(); break;
     case 'note': toast(m.m); break;
     case 'join': addStu(m.s); break;
-    case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.dirty = true; } break;
+    case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.dirty = true; subSoon(); } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
-    case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; } break;
-    case 'all': if (s) { s.objs = m.objs; s.dirty = true; } break;
+    case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; subSoon(); } break;
+    case 'all': if (s) { s.objs = m.objs; s.dirty = true; subSoon(); } break;
     case 'q': setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
       S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.pulse = null; x.dirty = true; });
       // the server has already taken everyone off the projector; do the same here so no card stays outlined
@@ -416,6 +416,14 @@ $('#pfreeze').onclick = e => { e.stopPropagation(); freezeMenu($('#pfreeze')); }
 $('#frzoff').onclick = $('#frzoff2').onclick = () => ws.send({ t: 'freeze', on: false });
 
 // ---- rendering ----
+// "X of N have started": recounted on every drawing change, but painted at most twice a second
+function paintSub() {
+  const n = S.stu.size, isSort = S.q.kind === 'sort';
+  const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
+  $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
+}
+let subT = 0;
+function subSoon() { if (subT) return; subT = setTimeout(() => { subT = 0; paintSub(); }, 500); }
 function ui() {
   const n = S.stu.size, tot = TM.roster.length;
   if (S.conn) $('#cnt').textContent = n + (tot ? ' of ' + tot : '') + ' ha' + (n === 1 && !tot ? 's' : 've') + ' joined';
@@ -424,8 +432,7 @@ function ui() {
   const isSort = S.q.kind === 'sort';
   $('#grid').hidden = isSort; $('#sres').hidden = !isSort; $('#sctlhost').hidden = !isSort; $('#csize').hidden = isSort;
   const rb = $('#revbtn'); rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
-  const drawn = [...S.stu.values()].filter(s => isSort ? s.done : s.objs && s.objs.length).length;
-  $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
+  paintSub();
   $('#hide').classList.toggle('on', !S.hide); $('#hide').setAttribute('role', 'switch'); $('#hide').setAttribute('aria-checked', S.hide ? 'false' : 'true');
   $('#lbproj').classList.toggle('on', S.board);
   const gridEmpty = $('#grid .empty:not(.filtered)');
