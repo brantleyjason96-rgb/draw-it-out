@@ -71,6 +71,21 @@ canvas{border:0}
 #foot{flex:none;position:relative;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:2vw;padding:0 3vw;height:var(--fh);background:var(--c-stage-2);border-top:1px solid var(--c-stage-3);font-size:clamp(20px,2.7vh,30px)}
 #foot .logo{display:flex;align-items:center;gap:1vw;font-family:var(--font-display);font-weight:700;color:#fff}
 #foot .logo svg{height:1.5em;width:1.5em;flex:none}
+#ftimer{display:flex;align-items:baseline;gap:.5em;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+#ftimer[hidden]{display:none}
+#fdig{font-family:var(--font-display);font-size:calc(var(--fh) * .8);line-height:1}
+#fw{color:var(--c-stage-accent)}
+#ftimer.low #fdig,#tbig.low #tbd{color:var(--c-warn-on-dark)}
+#ftimer.up #fdig,#tbig.up #tbd{color:var(--c-bad-on-dark)}
+#chime{display:inline-flex;align-items:center;gap:.4em;background:none;border:2px solid var(--c-stage-3);border-radius:99px;color:var(--c-stage-mut);font:inherit;font-size:.7em;padding:.2em .8em;cursor:pointer;opacity:0;transition:opacity .2s}
+#foot:hover #chime,#chime:focus-visible,#chime[aria-pressed=true]{opacity:.85}
+#chime svg{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#tbig{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#tbig[hidden]{display:none}
+#tbd{font-family:var(--font-display);font-weight:800;font-variant-numeric:tabular-nums;font-size:min(34vh,26vw);line-height:1;color:#fff}
+#tbw{font-size:clamp(28px,5vh,60px);font-weight:800;color:var(--c-stage-accent);min-height:1.2em;margin-top:1vh}
+#tbig.low #tbw{color:var(--c-warn-on-dark)}
+#tbig.up #tbw{color:var(--c-bad-on-dark)}
 #foot .joinline{color:var(--c-stage-mut)}
 #foot .site{color:var(--c-stage-ink);font-weight:600}
 #foot b{color:#fff;font-weight:800;letter-spacing:.14em;margin-left:.3em;font-size:1.12em}
@@ -96,10 +111,11 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
  <div id="sb" hidden></div>
  <div id="sm" hidden></div>
  <div id="boards" hidden></div>
+ <div id="tbig" role="timer" aria-label="Time left" hidden><div id="tbd"></div><div id="tbw"></div></div>
  <div id="join"><div class="jl">Go to <span id="url"></span><b id="code"></b></div><div class="jr"><div id="qr" role="img" aria-label="QR code to join"></div><div class="jcap">or scan to join</div></div></div>
  <div id="who"></div>
 </main>
-<div id="foot"><div class="logo"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</div><div class="joinline">Join at <span class="site" id="fsite"></span> · code <b id="fcode"></b></div></div>
+<div id="foot"><div class="logo"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</div><div id="ftimer" role="timer" aria-label="Time left" hidden><span id="fdig"></span><span id="fw"></span></div><div class="joinline">Join at <span class="site" id="fsite"></span> · code <b id="fcode"></b></div><button type="button" id="chime" aria-pressed="false" title="Play a soft chime when time is up (this screen only)"><svg data-i="bell"></svg><span>Chime off</span></button></div>
 <div id="frz" role="alertdialog" aria-label="Class frozen">
  <div id="frzflakes" aria-hidden="true"></div>
  <span class="fi" aria-hidden="true">✋</span><b>Class frozen</b><p>Look at your teacher.</p>
@@ -108,6 +124,7 @@ body.frozen main{filter:blur(3px) saturate(.6);opacity:.35}
 <script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
+<script src="/timerkit.js"></script>
 <script>
 const code = (new URLSearchParams(location.search).get('code') || '').toUpperCase();
 $('#url').textContent = location.host; $('#code').textContent = code;
@@ -122,7 +139,7 @@ function onmsg(m) {
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
     case 'state': S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; S.frozen = !!m.frozen; setQ(m.q);
-      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {}, pulse: d.pulse || null, d: true })); S.sres = !!m.sres; S.sum = null; if (S.frozen) makeFlakes(); break;
+      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {}, pulse: d.pulse || null, d: true })); S.sres = !!m.sres; S.sum = null; TK.set(m.timer); if (S.frozen) makeFlakes(); break;
     case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {}, pulse: m.s.pulse || null, d: true }); break;
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.d = true; } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.d = true; } } break;
@@ -135,6 +152,7 @@ function onmsg(m) {
     case 'sum': S.sum = m; break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; break;
     case 'pulse': if (s) s.pulse = m.c; break;
+    case 'timer': TK.handle(m); break;
     case 'freeze': S.frozen = m.on; if (m.on) makeFlakes(); break;
     case 'score': S.teams = m.teams; S.scores = m.scores; break;
     case 'board': S.board = m.on; break;
@@ -205,6 +223,32 @@ function sortSummary() {
   box.append(res);
 }
 let raf = 0;
+// ---- class timer: digits in the footer on every view; huge when nothing else is showing; optional soft chime at zero ----
+let upT = 0;
+function timerPaint(t) {
+  const up = !!upT, on = up || (t && t.running), low = !up && t.running && t.secs <= 10 && !t.paused;
+  const dig = up ? '0:00' : t.running ? TK.fmt(t.secs) : '', word = up ? 'Time is up' : t.running ? (t.paused ? 'Paused' : low ? 'Almost time' : '') : '';
+  for (const [d, w, box] of [['#fdig', '#fw', '#ftimer'], ['#tbd', '#tbw', '#tbig']]) {
+    if ($(d).textContent !== dig) $(d).textContent = dig; $(w).textContent = word;
+    $(box).classList.toggle('low', low); $(box).classList.toggle('up', up);
+  }
+  $('#ftimer').hidden = !on;
+  if (!!S.tOn !== !!on) { S.tOn = !!on; draw(); }
+}
+TK.onTick(t => { if (upT) { if (!t.running) return; clearTimeout(upT); upT = 0; } timerPaint(t); });
+TK.onDone(() => { upT = setTimeout(() => { upT = 0; timerPaint({ running: false }); }, 5000); timerPaint({ running: false }); chimeNow(); });
+// the chime is off unless someone on this screen turns it on (a click is also what lets the browser play sound)
+let chimeOn = false, actx = null; try { chimeOn = localStorage.do_pchime === '1'; } catch {}
+function chimeUI() { const b = $('#chime'); b.setAttribute('aria-pressed', chimeOn ? 'true' : 'false'); b.querySelector('span').textContent = chimeOn ? 'Chime on' : 'Chime off'; }
+function chimeNow() {
+  if (!chimeOn) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume();
+    [[659.25, 0], [880, .28]].forEach(([f, at]) => { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + at; o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(.16, t0 + .04); g.gain.exponentialRampToValueAtTime(.0001, t0 + 1.1); o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + 1.2); });
+  } catch {}
+}
+$('#chime').onclick = () => { chimeOn = !chimeOn; try { localStorage.do_pchime = chimeOn ? '1' : '0'; } catch {} if (chimeOn) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {} chimeNow(); } chimeUI(); };
+chimeUI(); timerPaint({ running: false });
 function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
 addEventListener('resize', () => { S.stu.forEach(s => (s.d = true)); draw(); }); // panels grow or shrink with the window
 function paint() {
@@ -221,7 +265,9 @@ function paint() {
   $('#boards').hidden = !drawings.length;
   $('#sb').hidden = !(one && sort);
   $('#sm').hidden = !sum;
-  $('#join').hidden = !!picks.length || !!lb || !!sum;
+  const tbig = S.tOn && !picks.length && !lb && !sum; // a full-screen countdown only when nothing else is on the screen
+  $('#tbig').hidden = !tbig;
+  $('#join').hidden = !!picks.length || !!lb || !!sum || tbig;
   $('#lb').hidden = !lb; if (!lb) $('#lbnote').hidden = true;
   if (lb) board();
   if (sum) sortSummary();
