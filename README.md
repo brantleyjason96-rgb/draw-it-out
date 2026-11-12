@@ -68,8 +68,30 @@ Draw It Out is one small Node process (HTTP + WebSocket) with **no database**. C
 
 Environment variables: `PORT` (default 3000), `MAX_ROOMS` (default 200).
 
+## Class timer
+- **Timer** next to **Freeze** (and in the phone header): 30 seconds to 10 minutes, or a custom time like `4`, `1.5` or `1:30` (5 seconds to 60 minutes). While it runs the button shows the time and offers **+1 minute**, **Pause** and **Stop**.
+- Every student page, the projector and the teacher see the same countdown. The server sends **time remaining in milliseconds**, never a clock time, so a device with the wrong clock still shows the right number. A late joiner or a refreshed page picks up what is left.
+- Under 10 seconds the student's pill changes colour **and** says "Almost time"; at zero it says "Time is up. Finish your thought." for 5 seconds. Drawing is not locked and there is no sound on student devices.
+- Two options, off by default and remembered per class: **Freeze the class when time is up** and **Start this timer with every new question**.
+- The projector shows the digits in its footer on every view and full-screen when nothing else is showing, with an optional soft chime (projector only, off by default).
+
+## Build with AI, and tags
+- **Question sets → Build with AI** writes a prompt (type, learning goal, tags, grade, 3 to 10 questions, language support, lanes and cards for sort questions). Paste it into any AI tool, paste the answer back, and the app checks it. **The app never calls an AI service**: no key, no cost, no student data.
+- The check uses one validator (`public/sortkit.js`, a copy of the server's limits) shared with the question editor and file import. Problems are listed per question in plain words and the good questions can be added while the bad ones are skipped.
+- **Tags** say what each question assesses (up to 5 per question, 30 characters, plain text; "rock cycle" and "Rock Cycle" are one tag and the first spelling typed is shown). A set can have tags too. Add them in the editor, to several questions at once, or let Build with AI add them. Filter sets by tag, and rename, merge or delete tags from the **Tags** dialog (saved lesson history follows).
+- Tags are teacher-only. They are never sent to the server, students or the projector, and they travel in export, import, backup, restore and share links.
+
+## Lesson history and the Dashboard
+- When a question ends (the next question, **Clear class**, or leaving the page) the class screen saves one record in **this browser** (IndexedDB): the question, its tags, and for each student their confidence colour, your mark and their sort score. Students are matched by class-list id, or by nickname when there is no class list. Records older than 12 months are trimmed; **Delete lesson history** is on each class card.
+- **Teacher marks**: on a drawing, **Got it / Almost / Not yet** (keys 1, 2, 3 on the focused card; also on the phone). Marks are private: the server holds them by anonymous student id for teacher screens only.
+- **Mastery** per student per tag: sort questions count the percent of cards right; a drawing counts only when marked (Got it 100, Almost 50, Not yet 0); the most recent three data points count double. Under two data points shows "not enough data". Bands: **Not yet** under 50, **Getting there** 50 to 79, **Secure** 80 and up.
+- The **Dashboard** tab shows who needs help, mastery by tag (click a row for students, questions and the ideas most often missed), and confidence against mastery, with CSV and a copyable summary. It says plainly what the app measures: sort accuracy, confidence and your marks. Code: `public/mastery.js` (pure, tested), `public/dashboard.js`.
+
 ## Privacy design
 - No student accounts or sign-in. Students use a nickname or tap their initials.
+- **Lesson history with student names is stored only in the teacher's browser**, and in backup files the teacher chooses to make. **Back up everything** includes it only when "Include class lists" is chosen.
+- A student's rejoin secret is a separate token returned only to that student's page; the ids that teacher and projector screens see cannot be used to join.
+- The server holds teacher marks by anonymous student id (no names) and sends them to teacher screens only. Tags never reach the server.
 - A class list (real names) is read in the teacher's browser and is never sent to the server; only initials and a team are.
 - Teams, scores and question sets live in the teacher's browser. Teachers can back everything up to one file.
 - Question-set share links carry the questions inside the link itself (no server storage).
