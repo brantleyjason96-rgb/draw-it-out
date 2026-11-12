@@ -50,7 +50,7 @@ dialog.dlg .dbtns button:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);
   document.head.append(st);
 }
 // core: buttons = [{ label, value, kind: 'pri' | 'danger' | '' }]; `input` adds a text box whose text is returned by the button flagged `submit`.
-function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
+function dlgOpen({ title, text, input, buttons, cancel = null, focus, node }) {
   return new Promise(res => {
     dlgCss();
     const d = document.createElement('dialog'); d.className = 'dlg';
@@ -63,8 +63,10 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
       f.append(el('label', { textContent: input.label || '', htmlFor: id + 'i' }));
       inp = el(input.multiline ? 'textarea' : 'input', { id: id + 'i', value: input.value || '', readOnly: !!input.readOnly });
       if (input.max) inp.maxLength = input.max;
+      if (input.list && input.list.length) { const dl = el('datalist', { id: id + 'l' }); input.list.forEach(v => dl.append(el('option', { value: v }))); inp.setAttribute('list', id + 'l'); f.append(dl); }
       f.append(inp);
     }
+    if (node) f.append(node);
     const row = el('div', { className: 'dbtns' }); f.append(row);
     let out = cancel, firstPri = null, safe = null;
     // a blank answer to a required box keeps the dialog open and says why, in words
@@ -77,20 +79,22 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
     if (inp) inp.addEventListener('input', () => { err.hidden = true; inp.removeAttribute('aria-invalid'); });
     buttons.forEach(b => {
       const bt = el('button', { type: 'button', textContent: b.label, className: b.kind || '' });
-      bt.onclick = () => { if (b.submit && inp && !checkReq()) return; out = b.submit && inp ? inp.value : b.value; d.close(); };
+      bt.onclick = () => { if (b.submit && inp && !checkReq()) return; out = b.fn ? b.fn() : b.submit && inp ? inp.value : b.value; d.close(); };
       row.append(bt); if (b.kind === 'pri' || b.kind === 'danger') firstPri = firstPri || bt; if (b.safe) safe = bt;
     });
     if (inp && !input.readOnly) inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !input.multiline) { e.preventDefault(); const b = buttons.find(x => x.submit); if (b && checkReq()) { out = inp.value; d.close(); } } });
     d.addEventListener('close', () => { d.remove(); res(out); });
     document.body.append(d); d.showModal();
     // a destructive confirm starts on the safe button, a text box on the box, everything else on the main button
-    (focus === 'input' && inp ? inp : safe || (inp && !input.readOnly ? inp : firstPri) || row.firstChild).focus();
+    (focus === 'node' && node ? node.querySelector('input') : focus === 'input' && inp ? inp : safe || (inp && !input.readOnly ? inp : firstPri) || row.firstChild).focus();
     if (inp) { if (input.readOnly) inp.select(); else inp.select(); }
   });
 }
 const ask = (text, o = {}) => dlgOpen({ title: o.title, text, cancel: false, buttons: [{ label: o.cancel || 'Cancel', value: false, safe: !!o.danger }, { label: o.ok || 'OK', value: true, kind: o.danger ? 'danger' : 'pri' }] });
-const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max, required: o.required, check: o.check }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
+const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max, required: o.required, check: o.check, list: o.list }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
 const tell = (text, o = {}) => dlgOpen({ title: o.title, text, buttons: [{ label: o.ok || 'OK', value: true, kind: 'pri' }] });
+// a dialog holding a tag box: resolves to the list of tags, or null on Cancel
+const askTags = (title, value, o = {}) => { const box = tagInput({ value, label: o.label || 'Tags', id: 'dlgtags' }); return dlgOpen({ title, text: o.text, node: box, cancel: null, focus: 'node', buttons: [{ label: 'Cancel', value: null }, { label: o.ok || 'Save tags', kind: 'pri', fn: () => box.getTags() }] }); };
 const choose = (text, buttons, o = {}) => dlgOpen({ title: o.title, text, cancel: null, buttons });
 const showCopy = (label, text) => dlgOpen({ title: label, input: { label: 'Select the text and copy it', value: text, readOnly: true, multiline: true }, buttons: [{ label: 'Done', value: true, kind: 'pri' }] });
 const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); Object.assign(e, props); kids.forEach(k => e.append(k)); return e; };
