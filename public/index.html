@@ -308,6 +308,8 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
  #qt{margin-left:auto}
 }
 
+#netbar{position:fixed;left:50%;top:8px;width:max-content;transform:translateX(-50%);z-index:60;max-width:min(92vw,520px);padding:10px 16px;border-radius:var(--r-pill);background:var(--c-warn-soft);color:var(--c-warn-strong);border:1px solid var(--c-warn-line);font-weight:700;font-size:var(--fs-sm);box-shadow:0 4px 14px rgba(0,0,0,.18);text-align:center}
+#netbar[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -376,6 +378,8 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
   <div id="smsg" hidden>Answer sent. Wait for your teacher.</div>
  </div>
 
+ <div id="netbar" role="status" aria-live="polite" hidden>Reconnecting… keep drawing, your work is saved.</div>
+
  <div id="frz" role="alertdialog" aria-label="Class frozen">
   <div id="frzflakes" aria-hidden="true"></div>
   <div id="frzcard"><span class="fi" aria-hidden="true">✋</span><b>Frozen</b><p>Look at your teacher. Your work is saved. You can start again soon.</p></div>
@@ -393,8 +397,18 @@ $('#name').value = localStorage.do_name || '';
 let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null, quick = [], qteam = null;
 
 let waking = false;
+// A dropped connection must be visible to a student: after a moment offline (and only once they are in a class) a banner says so.
+let netT = 0;
+function netState(ok) {
+  clearTimeout(netT); const bar = $('#netbar');
+  if (ok) { bar.hidden = true; return; }
+  netT = setTimeout(() => { // sits just under the question bar so it never covers it
+    const qb = $('#qbox'); bar.style.top = (qb && qb.offsetHeight ? qb.getBoundingClientRect().bottom + 8 : 8) + 'px';
+    bar.hidden = !(id || (target && !$('#play').hidden));
+  }, 1200);
+}
 const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textContent = ''; ws.send({ t: 'peek', code: target0 }); } if (target) sendJoin(); }, ok => {
-  $('#dot').classList.toggle('ok', ok); $('#dot').title = $('#dot').ariaLabel = ok ? 'Connected' : 'Reconnecting…';
+  $('#dot').classList.toggle('ok', ok); $('#dot').title = $('#dot').ariaLabel = ok ? 'Connected' : 'Reconnecting…'; netState(ok);
 });
 SS.init(o => ws.send(o));
 function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, tok: id ? sessionStorage['do_tok_' + target.code] || null : null, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
