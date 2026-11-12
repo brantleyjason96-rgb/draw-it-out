@@ -1,6 +1,6 @@
 # Draw It Out — Plan: movable models ("Place It")
 
-**Status: Phases A, B and C are built (see "what was built" under each at the end). Phase D is not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+**Status: Phases A, B and C are built (see "what was built" under each at the end). Phase D (Build with AI) is planned in `MODELS_AI_PLAN.md` and not built.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
 
 Open `mockups/place-it.html` in a browser: tab 1 is the editor, tab 2 the student page (drag, draw, keyboard, Reveal, Freeze, phone shape), tab 3 the teaching screen. Changes in tab 1 show up in tabs 2 and 3.
 
