@@ -1,6 +1,8 @@
 # Draw It Out — Plan: movable models ("Place It")
 
-**Status: proposed, nothing built.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+**Status: decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+
+Open `mockups/place-it.html` in a browser: tab 1 is the editor, tab 2 the student page (drag, draw, keyboard, Reveal, Freeze, phone shape), tab 3 the teaching screen. Changes in tab 1 show up in tabs 2 and 3.
 
 ---
 
@@ -108,6 +110,14 @@ Rotation (with a tolerance of its own), outlines-and-snap mode polish, cut-out p
 The prompt writes model questions (pieces, spots, ideas) and the shared validator checks them, as for Sort.
 
 ---
+
+## What the mock-up showed (changes to the plan)
+
+- **Upright phones make the board small.** A 16:10 stage on a phone held upright is about 310 px wide, so a 108-unit piece is about 33 px: under the 44 px touch size, and labels crowd. **Add a stage shape option, Wide (16:10, default) or Tall (10:16),** chosen per question in the editor (next to Background). Tall suits a diagram a student will do on a phone; Wide suits Chromebooks. The editor shows a warning when pieces would be under 44 px on a phone-shaped page.
+- **Reveal works best with a ghost, not only a ring.** A wrong piece gets a red ring and ✕, and a dashed ghost with “*Northern summer* goes here” at the right spot. The ghost sits under the pieces so it never hides one.
+- **Pieces are inert while drawing,** and the bottom bar says so (“Pieces are locked while you draw. Choose Pieces to move them again.”). That removes the grab-or-draw confusion, but a student must know to switch tools, so the Pieces tool is selected when the question starts and the hint is always on screen.
+- **Overlapping answer spots are a real mistake teachers will make** (two spots closer than the tolerance). The editor now lists it in plain words, as it does for pieces sitting on top of each other at the start.
+- **Outline mode needs a rule for which outline a piece takes.** The mock-up slips a piece into the nearest free outline within 80 units; the check is still against that piece’s own spot, so putting a piece in the wrong outline is wrong.
 
 ## Risks and how the plan handles them
 

@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Place It Editor, Student and Teaching Screens</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Mock-up for MODELS_PLAN.md. Three tabs: 1 the set editor (public/sets.html), 2 the student page (public/index.html), 3 the teaching screen (public/class.html).
+   Nothing is saved and nothing is connected to the app. Colours are the app's tokens (public/tokens.css). */
+:root{--ink:#17212B;--ink2:#394551;--mut:#5B6772;--line:#E1E6EB;--line2:#CBD3DA;--ctl:#76838F;--bg:#F3F5F7;--pri:#0B6BCB;--pri-d:#0B5CAD;--pri-l:#F1F7FE;--pri-t:#DCEBFB;--good:#0E7C4A;--good-s:#0A5A36;--good-l:#E6F4EC;--bad:#B3261E;--bad-s:#8C1D18;--bad-l:#FBE4E1;--warn-l:#FFF4DC;--warn-b:#F0D79A;--warn-d:#5E4300;--dark:#17212B;--dark2:#2A3846;--dline:#3A4856;--q:#1E3A8A;--note:#FDE68A;--noteink:#422006;--frost:#0C4A6E;--frost-l:#E0F2FE;--gap:#E5E7EB;
+--disp:'Bricolage Grotesque','Figtree',system-ui,sans-serif;--body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:16px/1.4 var(--body);color:var(--ink);background:var(--bg)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+h1,h2,h3{font-family:var(--disp);margin:0;line-height:1.15}
+.mut{color:var(--mut)}
+.lbl{font-size:14px;font-weight:700;color:var(--mut)}
+:focus-visible{outline:3px solid #7DB8F5;outline-offset:2px}
+svg{display:block}
+.tb{height:64px;background:var(--dark);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.tb .grp{display:flex;align-items:center;gap:12px;min-width:0}
+.tb h1{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line2);background:#fff;color:var(--ink);font-weight:600;font-size:15px;white-space:nowrap}
+.b:disabled{opacity:.45;cursor:not-allowed}
+.b.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.b.dk{background:transparent;border-color:var(--dline);color:#fff}
+.b.sm{min-height:36px;min-width:36px;padding:0 10px;font-size:14px}
+.b.sq{min-width:44px;padding:0 10px}
+.b.danger{color:var(--bad)}
+.b.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip{font-size:13px;font-weight:700;border-radius:99px;padding:3px 10px;white-space:nowrap;background:#E8EDF2;color:#394551;display:inline-block}
+.chip.k{background:var(--pri-t);color:var(--pri-d)}
+.chip.later{background:var(--warn-l);color:var(--warn-d);border:1px solid var(--warn-b)}
+.inp{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--ctl);border-radius:10px;background:#fff;min-width:0}
+textarea.inp{padding:10px 12px;min-height:96px;resize:vertical;font-size:18px;line-height:1.4}
+.seg{display:flex;border:1px solid var(--ctl);border-radius:10px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:#fff;font-weight:600;padding:0 8px}
+.seg button.on{background:var(--pri-l);color:var(--pri-d);font-weight:700;box-shadow:inset 0 0 0 2px var(--pri)}
+.seg button:disabled{color:#8B96A1;cursor:not-allowed}
+.tog{display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--ctl);background:#fff;font-weight:600;width:100%;justify-content:space-between;text-align:left}
+.tog i{position:relative;flex:none;width:44px;height:26px;border-radius:99px;background:#9AA5B0;transition:background .15s}
+.tog i:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.tog.on i{background:var(--good)}.tog.on i:after{left:21px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:12px 20px;border-radius:12px;z-index:1200;max-width:90vw;text-align:center}
+
+/* page tabs (mock-up only) */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.tabs .mut{margin-left:auto;font-size:14px}
+.banner{background:var(--warn-l);border-bottom:1px solid var(--warn-b);color:var(--warn-d);padding:8px 16px;font-size:14px}
+
+/* ===== 1. editor (same grid as sets.html) ===== */
+.wrap{display:grid;grid-template-columns:300px 430px minmax(0,1fr);min-height:calc(100vh - 160px)}
+.col{padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.list,.edit{background:#fff;border-right:1px solid var(--line)}
+.q{border:2px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#fff;text-align:left;width:100%}
+.q.on{border-color:var(--pri);background:var(--pri-l)}
+.q .t{display:flex;gap:10px;align-items:flex-start}
+.q .n{flex:none;width:28px;height:28px;border-radius:50%;background:#E8EDF2;color:#394551;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.q.on .n{background:var(--pri);color:#fff}
+.q .x{font-size:15px;line-height:1.35;font-weight:500;flex:1}
+.q .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec h2{font-size:20px}
+.hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.bgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bgs button{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:#fff;padding:0;display:flex;flex-direction:column}
+.bgs button.on{border:3px solid var(--pri)}
+.bgs .sw{height:46px;background:#fff}
+.bgs .lb{height:34px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.bgs button.on .lb{background:var(--pri-l);font-weight:700}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 112px 44px;gap:6px;align-items:center}
+.prow .sub{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.prow .sub select{width:auto;flex:1;min-width:120px;min-height:36px;font-size:14px}
+.prow .sub label{font-size:14px;color:var(--mut);display:flex;gap:6px;align-items:center}
+.pcard{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.issues{border:1px solid var(--warn-b);background:var(--warn-l);color:var(--warn-d);border-radius:10px;padding:10px 12px;font-size:15px}
+.issues ul{margin:4px 0 0;padding-left:20px}
+.okmsg{border:1px solid #9AD3B5;background:var(--good-l);color:var(--good-s);border-radius:10px;padding:10px 12px;font-weight:600;font-size:15px}
+.prev{padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.fit{position:relative;width:100%;aspect-ratio:16/10;background:var(--gap);border-radius:12px;overflow:hidden}
+
+/* ===== the stage: pieces on a 1000 x 625 board ===== */
+.stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;overflow:hidden;touch-action:none}
+.stage>svg.bg{position:absolute;inset:0;width:100%;height:100%}
+.stage canvas.ink{position:absolute;inset:0;width:100%;height:100%}
+.stage .spot{position:absolute;border:2px dashed #0B6BCB;border-radius:50%;background:rgba(11,107,203,.06)}
+.stage .tolr{position:absolute;border:2px dashed #0B6BCB;border-radius:50%;background:rgba(11,107,203,.10);pointer-events:none}
+.stage .tolr b{position:absolute;left:50%;top:-1px;transform:translate(-50%,-100%);font-size:12px;font-weight:700;color:var(--pri-d);background:#fff;border-radius:99px;padding:0 6px;white-space:nowrap}
+.pc{position:absolute;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:50%}
+.pc.mv{cursor:grab}
+.pc.mv:active{cursor:grabbing}
+.pc.mv:hover svg.art,.pc.mv:focus-visible svg.art{filter:drop-shadow(0 3px 6px rgba(23,33,43,.45))}
+.pc svg.art{width:100%;height:100%;filter:drop-shadow(0 1px 2px rgba(23,33,43,.35))}
+.pc .l{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;white-space:nowrap;font-weight:700;color:var(--ink);background:rgba(255,255,255,.88);border-radius:6px;padding:0 5px;line-height:1.25}
+.pc.card{border-radius:8px;background:var(--note);color:var(--noteink);box-shadow:0 1px 3px rgba(23,33,43,.3);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;line-height:1.15;padding:4px;overflow-wrap:anywhere}
+.pc.focusring:focus-visible{outline:3px solid #7DB8F5;outline-offset:2px}
+.pc .bd{position:absolute;right:-6px;top:-6px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;border:2px solid #fff;line-height:1}
+.pc .bd.y{background:var(--good)}
+.pc .bd.n{background:var(--bad)}
+.pc.rg{box-shadow:0 0 0 4px var(--good)}
+.pc.wr{box-shadow:0 0 0 4px var(--bad)}
+.ghost{position:absolute;border:3px dashed var(--bad);border-radius:50%;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;color:var(--bad-s);font-weight:800;background:rgba(179,38,30,.07)}
+.ghost span{transform:translateY(105%);background:#fff;border-radius:6px;padding:0 5px;white-space:nowrap}
+
+/* ===== 2. student page (public/index.html: question bar, tool rail, page, bottom bar) ===== */
+.mockbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:#EEF3F8;border-bottom:1px solid var(--line);font-size:14px}
+.mockbar .grp{display:flex;gap:6px;align-items:center}
+.mockbar .lab{font-weight:700;color:var(--mut)}
+.stu{display:flex;flex-direction:column;height:calc(100vh - 215px);min-height:520px;background:var(--gap)}
+.qbar{background:var(--q);color:#fff;padding:12px 18px;font-size:19px;line-height:1.35;font-weight:600;display:flex;align-items:flex-start;gap:12px}
+.qbar .score{margin-left:auto;background:#fff;color:var(--ink);border-radius:99px;padding:2px 12px;font-size:15px;font-weight:700;white-space:nowrap}
+.mid{flex:1;display:flex;min-height:0}
+.rail{flex:none;width:76px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;padding:8px 6px;overflow:auto}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;width:100%;border:0;border-radius:10px;background:none;font-size:13px;font-weight:600;color:var(--ink2)}
+.tool:hover{background:#E8EDF2}
+.tool.on{background:var(--ink);color:#fff}
+.tool svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rail .sw{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--ctl);margin:4px auto}
+.rail .sw.on{box-shadow:0 0 0 3px var(--pri)}
+.rail hr{width:100%;border:0;border-top:1px solid var(--line);margin:4px 0}
+.paper{flex:1;display:grid;place-items:center;padding:12px;min-width:0}
+.page{position:relative;background:#D1D5DB;overflow:hidden;box-shadow:0 0 0 1px var(--line2)}
+.bot{flex:none;background:#fff;border-top:1px solid var(--line);padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:60px}
+.bot b{font-size:16px}
+.frozen{position:absolute;inset:0;z-index:5;background:rgba(224,242,254,.78);backdrop-filter:blur(6px);display:grid;place-items:center;text-align:center;padding:20px}
+.frozen div{background:#fff;border-radius:16px;padding:20px 26px;box-shadow:0 4px 14px rgba(23,33,43,.25);color:var(--frost);max-width:380px}
+.frozen h2{font-size:24px;margin-bottom:6px}
+.hint{font-size:14px;color:var(--mut)}
+.sr{position:absolute;left:-9999px}
+
+/* ===== 3. teaching screen ===== */
+.tch{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:calc(100vh - 215px)}
+.tch .main{padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.card .top{display:flex;align-items:center;gap:8px}
+.card .nm{font-weight:700;flex:1}
+.card .th{position:relative;width:100%;aspect-ratio:16/10;border-radius:8px;overflow:hidden;background:var(--gap)}
+.side{background:#fff;border-left:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:14px}
+.bar{display:grid;grid-template-columns:132px 1fr 44px;gap:8px;align-items:center;font-size:14px}
+.bar .tr{height:16px;background:#E8EDF2;border-radius:99px;overflow:hidden}
+.bar .fl{height:100%;border-radius:99px}
+.bar .pc2{text-align:right;font-weight:700}
+.tier{display:inline-block;font-weight:700;font-size:13px;padding:2px 8px;border-radius:99px}
+.tier.good{background:var(--good-l);color:var(--good-s)}.tier.mid{background:var(--warn-l);color:var(--warn-d)}.tier.bad{background:var(--bad-l);color:var(--bad-s)}
+
+.notes{max-width:1100px;margin:0 auto;padding:22px 16px 40px;display:grid;gap:12px}
+.notes ul{margin:6px 0 0;padding-left:20px}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tch{grid-template-columns:1fr}.side{border-left:0;border-top:1px solid var(--line)}}
+@media(max-width:640px){.tb{padding:10px 12px;height:auto;flex-wrap:wrap}.tb .grp{flex-wrap:wrap}.rail{width:60px}.qbar{font-size:17px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="banner"><b>Mock-up.</b> Nothing here is saved or connected to the app. Drag pieces, change options in tab 1 and watch tabs 2 and 3 follow. The question is “Seasons”.</div>
+<div class="tabs" role="tablist" aria-label="Screens">
+  <button class="b on" role="tab" data-tab="1" aria-selected="true">1 · Question editor</button>
+  <button class="b" role="tab" data-tab="2" aria-selected="false">2 · Student screen</button>
+  <button class="b" role="tab" data-tab="3" aria-selected="false">3 · Teaching screen</button>
+  <span class="mut">Plan: MODELS_PLAN.md</span>
+</div>
+
+<!-- ============ 1. EDITOR ============ -->
+<section id="tab1">
+  <div class="tb"><div class="grp"><button class="b dk" disabled>← Question sets</button><h1>Earth in Space · Unit 4</h1></div><div class="grp"><button class="b dk" id="send">Send now</button><button class="b pri" id="save">Save</button></div></div>
+  <div class="wrap">
+    <div class="col list">
+      <div class="lbl">Questions (3)</div>
+      <button class="q on" type="button"><div class="t"><div class="n">1</div><div class="x" id="qlistq">Seasons</div></div><div class="meta"><span class="chip k" id="qchip">Draw · 4 pieces</span></div></button>
+      <button class="q" type="button" disabled style="opacity:.7"><div class="t"><div class="n">2</div><div class="x">Draw and label the rock cycle.</div></div><div class="meta"><span class="chip">Graph paper</span></div></button>
+      <button class="q" type="button" disabled style="opacity:.7"><div class="t"><div class="n">3</div><div class="x">Sort the rocks into igneous, sedimentary and metamorphic.</div></div><div class="meta"><span class="chip k">Sort · 6 cards</span></div></button>
+      <div class="hint">Questions 2 and 3 are not part of the mock-up.</div>
+    </div>
+
+    <div class="col edit">
+      <div class="sec"><div class="lbl">Question type</div>
+        <div class="seg" role="group" aria-label="Question type"><button class="on">Draw</button><button disabled title="Not part of this mock-up">Sort cards into lanes</button></div></div>
+      <div class="sec"><label class="lbl" for="qtext">Question</label>
+        <textarea class="inp" id="qtext">Place Earth at the right spot in its orbit for each season in the northern hemisphere. Then draw an arrow showing which way Earth’s axis tilts.</textarea></div>
+      <div class="sec"><div class="lbl">Background</div><div class="bgs" id="bgs"></div></div>
+      <hr class="hr">
+      <div class="sec">
+        <h2>Movable pieces</h2>
+        <button class="tog on" id="pon" type="button" aria-pressed="true"><span>Students move pieces, then draw on top</span><i></i></button>
+        <div id="pbody" class="sec">
+          <div id="plist" class="sec"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b sm" id="padd">+ Add piece</button><button class="b sm" id="pscat">Scatter the start positions</button><span class="hint" id="pcount" style="align-self:center"></span></div>
+          <div class="lbl" style="margin-top:6px">Can students see where the spots are?</div>
+          <div class="seg" id="spotseg" role="group" aria-label="Spots"><button data-v="hidden">Students find the spot</button><button data-v="shown">Show outlines</button></div>
+          <div class="hint" id="spothint"></div>
+          <div class="lbl" style="margin-top:6px">How close counts as right?</div>
+          <div class="seg" id="tolseg" role="group" aria-label="Closeness"><button data-v="35">Tight</button><button data-v="60">Normal</button><button data-v="90">Loose</button></div>
+          <div class="lbl" style="margin-top:6px">Show students if they are right</div>
+          <select class="inp" id="fbsel" aria-label="When students see if they are right"><option value="reveal">Only when I press Reveal answers</option><option value="now">Right away, as they place each piece</option></select>
+          <div id="issues"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prev">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="lbl" id="prevlbl">Answer key and student view</div></div>
+      <div class="seg" id="vseg" role="group" aria-label="Right panel view"><button data-v="key" class="on">Answer key</button><button data-v="start">Student start</button></div>
+      <div class="fit" id="edstage"></div>
+      <div class="hint" id="edhint"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. STUDENT ============ -->
+<section id="tab2" hidden>
+  <div class="mockbar">
+    <span class="lab">Mock controls</span>
+    <div class="grp"><span>Screen:</span><div class="seg" id="devseg" style="width:auto"><button data-v="wide" class="on" style="min-height:36px">Chromebook</button><button data-v="phone" style="min-height:36px">Phone, upright</button></div></div>
+    <div class="grp"><span>Teacher:</span><button class="b sm" id="revbtn">Reveal answers</button><button class="b sm" id="frzbtn">❄ Freeze</button></div>
+    <span class="hint">The grey bars on a phone are the stage fitting the page, the way photos do today. Look at how small the pieces get: the plan adds a “Tall” stage shape for questions meant for phones.</span>
+  </div>
+  <div class="stu" id="stu">
+    <div class="qbar"><div id="sqtext"></div><span class="score" id="score" hidden></span></div>
+    <div class="mid">
+      <div class="rail" id="rail" role="toolbar" aria-label="Tools"></div>
+      <div class="paper" id="paper"><div class="page" id="page"></div></div>
+    </div>
+    <div class="bot" id="bot"></div>
+    <div class="sr" id="live" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============ 3. TEACHING SCREEN ============ -->
+<section id="tab3" hidden>
+  <div class="tb"><div class="grp"><h1>Period 3 · Earth in Space</h1><span class="chip" style="background:#2A3846;color:#fff">Question 1 of 3</span></div><div class="grp"><button class="b dk" id="t-rev">Reveal answers</button><button class="b dk" disabled>❄ Freeze</button><button class="b dk" disabled>Timer</button></div></div>
+  <div class="tch">
+    <div class="main">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>Students are answering</b><span class="chip k">Draw · 4 pieces</span><span class="hint">Green and red rings are only on your screen. Students see them when you press Reveal.</span></div>
+      <div class="grid" id="tgrid"></div>
+    </div>
+    <div class="side">
+      <div><div class="lbl">Pieces: who placed it right</div><div id="bars" class="sec" style="margin-top:8px"></div></div>
+      <div><div class="lbl">By idea</div><div id="ideas" class="sec" style="margin-top:8px"></div></div>
+      <div><div class="lbl">Small group for tomorrow</div><div id="missed" class="hint" style="margin-top:6px"></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b sm" disabled>Save results (CSV)</button><button class="b sm" disabled>Show class % on projector</button></div>
+    </div>
+  </div>
+</section>
+
+<div class="notes">
+  <div class="card" style="padding:16px"><h2 style="font-size:20px">What this mock-up shows, and where it lands in the app</h2>
+  <ul>
+    <li><b>Tab 1</b> is the new <i>Movable pieces</i> section under Draw in <code>public/sets.html</code> (new <code>public/modeledit.js</code>). Two views like Sort: <i>Answer key</i> (drag each piece to where it belongs; the dashed ring is how close counts) and <i>Student start</i> (drag to set the scattered start).</li>
+    <li><b>Tab 2</b> adds a <i>Pieces</i> tool to the student rail in <code>public/index.html</code>. Pieces move only in that tool; the pen and arrow draw over them. Keyboard: Tab to a piece, arrow keys move it (Shift for bigger steps), and a live region says where it went.</li>
+    <li><b>Tab 3</b> draws the same board through <code>paintBoard</code>, plus rings from the key that only the teacher sees. Results reuse the Sort results panel.</li>
+    <li>Rotation is shown disabled (<i>Later</i>): Phase C. Picture cut-outs are also Phase C; version 1 has labels and built-in pictures.</li>
+  </ul></div>
+</div>
+<div id="toast" hidden role="status"></div>
+
+<script>
+// ---------- shared model of the one question ----------
+const SW = 1000, SH = 625, A = 108;            // the stage is 1000 x 625 units; a piece's picture is 108 units wide
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ART = { earth: 'Earth', sun: 'Sun', moon: 'Moon', arrow: 'Arrow', card: 'Text card' };
+const IDEAS = ['', 'Tilt toward the Sun', 'Equinox'];
+const M = {
+  q: $('#qtext').value, on: true, bg: 'orbit', spots: 'hidden', tol: 60, fb: 'reveal', next: 5,
+  pieces: [
+    { id: 1, label: 'Northern summer', art: 'earth', x: 860, y: 105, kx: 190, ky: 312, idea: 'Tilt toward the Sun' },
+    { id: 2, label: 'Autumn', art: 'earth', x: 130, y: 120, kx: 500, ky: 520, idea: 'Equinox' },
+    { id: 3, label: 'Northern winter', art: 'earth', x: 140, y: 500, kx: 810, ky: 312, idea: 'Tilt toward the Sun' },
+    { id: 4, label: 'Spring', art: 'earth', x: 860, y: 500, kx: 500, ky: 105, idea: 'Equinox' }
+  ]
+};
+const S = { pl: {}, tool: 'move', color: '#111111', ink: [], revealed: false, frozen: false, device: 'wide', view: 'key' };
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const posOf = p => (S.pl[p.id] && S.pl[p.id].moved ? S.pl[p.id] : { x: p.x, y: p.y });
+const movedOf = p => !!(S.pl[p.id] && S.pl[p.id].moved);
+const isOk = (p, pos) => Math.hypot(pos.x - p.kx, pos.y - p.ky) <= M.tol;
+const toast = (t) => { const e = $('#toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (e.hidden = true), 2200); };
+
+// ---------- pictures (built in; drawn as SVG here, as canvas shapes in the app) ----------
+function artSVG(a) {
+  const f = {
+    earth: '<circle cx="50" cy="50" r="46" fill="#3B82F6"/><path d="M22 34c8-8 18-6 22 2s-6 12-10 18-14 4-14-4 0-10 2-16zM56 54c8-4 18 0 20 8s-8 16-14 14-10-14-6-22z" fill="#4ADE80"/><path d="M30 12l40 76" stroke="#17212B" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="30" cy="12" r="4" fill="#fff" stroke="#17212B" stroke-width="2"/>',
+    sun: '<g stroke="#F59E0B" stroke-width="6" stroke-linecap="round"><path d="M50 3v12M50 85v12M3 50h12M85 50h12M17 17l8 8M75 75l8 8M83 17l-8 8M25 75l-8 8"/></g><circle cx="50" cy="50" r="30" fill="#FBBF24"/>',
+    moon: '<circle cx="50" cy="50" r="44" fill="#CBD5E1"/><circle cx="36" cy="38" r="8" fill="#94A3B8"/><circle cx="62" cy="58" r="11" fill="#94A3B8"/><circle cx="44" cy="72" r="5" fill="#94A3B8"/>',
+    arrow: '<path d="M8 40h52V22l32 28-32 28V60H8z" fill="#EF4444" stroke="#7F1D1D" stroke-width="3" stroke-linejoin="round"/>'
+  }[a] || '';
+  return '<svg class="art" viewBox="0 0 100 100" aria-hidden="true">' + f + '</svg>';
+}
+function bgSVG(bg) {
+  let s = '<rect width="1000" height="625" fill="#F8FAFC"/>';
+  if (bg === 'graph') { for (let i = 0; i <= 1000; i += 25) s += `<path d="M${i} 0V625" stroke="#cfe3f4"/>`; for (let i = 0; i <= 625; i += 25) s += `<path d="M0 ${i}H1000" stroke="#cfe3f4"/>`; }
+  if (bg === 'orbit') {
+    s += '<ellipse cx="500" cy="312" rx="310" ry="213" fill="none" stroke="#94A3B8" stroke-width="3" stroke-dasharray="10 8"/>';
+    [[190, 312], [500, 520], [810, 312], [500, 105]].forEach(([x, y]) => (s += `<path d="M${x - 24} ${y + 66}L${x + 24} ${y - 66}" stroke="#64748B" stroke-width="3" stroke-dasharray="4 5"/>`));
+    s += '<g transform="translate(281 463) rotate(35)"><path d="M-14 -11L16 0L-14 11z" fill="#64748B"/></g><text x="150" y="545" font-size="20" fill="#475569" font-weight="700">Earth moves this way</text>';
+    s += '<g stroke="#F59E0B" stroke-width="7" stroke-linecap="round"><path d="M500 232v14M500 378v14M420 312h14M566 312h14M444 256l10 10M546 358l10 10M556 256l-10 10M454 358l-10 10"/></g><circle cx="500" cy="312" r="46" fill="#FBBF24"/><text x="500" y="318" text-anchor="middle" font-size="20" font-weight="800" fill="#7C2D12">Sun</text>';
+  }
+  return '<svg class="bg" viewBox="0 0 1000 625" preserveAspectRatio="none" aria-hidden="true">' + s + '</svg>';
+}
+
+// ---------- draw ink (strokes are kept in stage units so every screen shows the same drawing) ----------
+function paintInk(cv, strokes, u) {
+  const d = Math.min(window.devicePixelRatio || 1, 2); cv.width = SW * u * d; cv.height = SH * u * d;
+  const x = cv.getContext('2d'); x.setTransform(d * u, 0, 0, d * u, 0, 0); x.lineCap = 'round'; x.lineJoin = 'round';
+  strokes.forEach(s => {
+    x.strokeStyle = x.fillStyle = s.c; x.lineWidth = 5; x.beginPath(); s.pts.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.stroke();
+    if (s.arrow && s.pts.length > 1) { const a = s.pts[0], b = s.pts[s.pts.length - 1], t = Math.atan2(b[1] - a[1], b[0] - a[0]); x.beginPath(); x.moveTo(b[0], b[1]); x.lineTo(b[0] - 24 * Math.cos(t - .45), b[1] - 24 * Math.sin(t - .45)); x.moveTo(b[0], b[1]); x.lineTo(b[0] - 24 * Math.cos(t + .45), b[1] - 24 * Math.sin(t + .45)); x.stroke(); }
+  });
+}
+
+// ---------- the stage: one function paints it for the editor, the student page and the teacher thumbnails ----------
+// o: { posOf(p), drag:'key'|'start'|'student'|null, spots, tolRings, fb:'student'|'teacher'|null, ink, inkTool, onDrop() }
+function mount(root, o) {
+  const w = root.clientWidth, h = root.clientHeight, u = Math.min(w / SW, h / SH); if (!(u > 0)) return null;
+  const keep = document.activeElement && root.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+  root.textContent = '';
+  const st = document.createElement('div'); st.className = 'stage'; st.style.width = SW * u + 'px'; st.style.height = SH * u + 'px'; root.append(st);
+  st.insertAdjacentHTML('beforeend', bgSVG(M.bg));
+  const px = v => v * u + 'px';
+  if (o.spots) M.pieces.forEach(p => { const e = document.createElement('div'); e.className = 'spot'; Object.assign(e.style, { left: px(p.kx - A / 2 - 6), top: px(p.ky - A / 2 - 6), width: px(A + 12), height: px(A + 12) }); st.append(e); });
+  if (o.tolRings) M.pieces.forEach((p, i) => { const e = document.createElement('div'); e.className = 'tolr'; Object.assign(e.style, { left: px(p.kx - M.tol), top: px(p.ky - M.tol), width: px(M.tol * 2), height: px(M.tol * 2) }); e.dataset.for = p.id; e.innerHTML = '<b>' + (i + 1) + '</b>'; st.append(e); });
+  if (o.ghosts) M.pieces.forEach(p => { if (movedOf(p) && !isOk(p, posOf(p))) { const e = document.createElement('div'); e.className = 'ghost'; Object.assign(e.style, { left: px(p.kx - A / 2), top: px(p.ky - A / 2), width: px(A), height: px(A), fontSize: Math.max(9, 17 * u) + 'px' }); e.innerHTML = '<span>' + esc(p.label) + ' goes here</span>'; st.append(e); } });
+  const els = {};
+  M.pieces.forEach((p, i) => {
+    const pos = o.posOf(p), d = document.createElement('div'), card = p.art === 'card';
+    d.className = 'pc' + (card ? ' card' : '') + (o.drag ? ' mv focusring' : ''); d.dataset.id = p.id; els[p.id] = d;
+    Object.assign(d.style, { left: px(pos.x - A / 2), top: px(pos.y - (card ? A * .35 : A / 2)), width: px(A), height: px(card ? A * .7 : A), fontSize: Math.max(9, (card ? 19 : 21) * u) + 'px' });
+    d.innerHTML = card ? esc(p.label) : artSVG(p.art) + '<span class="l">' + esc(p.label) + '</span>';
+    if (o.fb && movedOf(p) || (o.fb === 'teacher' && o.moved && o.moved(p))) {
+      const ok = isOk(p, pos); d.classList.add(ok ? 'rg' : 'wr'); d.insertAdjacentHTML('beforeend', '<span class="bd ' + (ok ? 'y' : 'n') + '" aria-hidden="true">' + (ok ? '✓' : '✕') + '</span>');
+    }
+    if (o.drag) { d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', p.label + '. Press the arrow keys to move it.'); }
+    st.append(d);
+    if (o.drag) wireDrag(d, st, u, p, o);
+  });
+  if (o.ink) { const cv = document.createElement('canvas'); cv.className = 'ink'; st.append(cv); paintInk(cv, o.ink, u); cv.style.pointerEvents = o.inkTool ? 'auto' : 'none'; if (o.inkTool) wireInk(cv, st, u, o); }
+  if (keep) { const e = st.querySelector('.pc[data-id="' + keep + '"]'); if (e) e.focus({ preventScroll: true }); }
+  return { st, u, els };
+}
+function setPos(o, p, x, y) {
+  if (o.drag === 'key') { p.kx = x; p.ky = y; } else if (o.drag === 'start') { p.x = x; p.y = y; }
+  else S.pl[p.id] = { x, y, moved: true };
+}
+function wireDrag(d, st, u, p, o) {
+  d.addEventListener('pointerdown', e => {
+    if (e.button > 0) return; e.preventDefault(); d.setPointerCapture(e.pointerId);
+    const r = st.getBoundingClientRect(), pos = o.posOf(p), dx = (e.clientX - r.left) / u - pos.x, dy = (e.clientY - r.top) / u - pos.y; let moved = false;
+    const mv = ev => {
+      const x = clamp((ev.clientX - r.left) / u - dx, A / 2, SW - A / 2), y = clamp((ev.clientY - r.top) / u - dy, A / 2, SH - A / 2); moved = true;
+      d.style.left = (x - A / 2) * u + 'px'; d.style.top = (y - (p.art === 'card' ? A * .35 : A / 2)) * u + 'px'; setPos(o, p, x, y);
+      if (o.drag === 'key') { const t = st.querySelector('.tolr[data-for="' + p.id + '"]'); if (t) { t.style.left = (x - M.tol) * u + 'px'; t.style.top = (y - M.tol) * u + 'px'; } }
+    };
+    const up = () => { d.removeEventListener('pointermove', mv); d.removeEventListener('pointerup', up); d.removeEventListener('pointercancel', up); if (moved) { if (o.drag === 'student') snap(p); o.onDrop && o.onDrop(p); } };
+    d.addEventListener('pointermove', mv); d.addEventListener('pointerup', up); d.addEventListener('pointercancel', up);
+  });
+  d.addEventListener('keydown', e => {
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return; e.preventDefault();
+    const pos = o.posOf(p), s = e.shiftKey ? 40 : 12; setPos(o, p, clamp(pos.x + k[0] * s, A / 2, SW - A / 2), clamp(pos.y + k[1] * s, A / 2, SH - A / 2));
+    if (o.drag === 'student') snap(p); o.onDrop && o.onDrop(p, true);
+  });
+}
+// "Show outlines": a piece let go near an outline slips into it
+function snap(p) {
+  if (M.spots !== 'shown') return; const pos = S.pl[p.id]; let best = null, bd = 80;
+  M.pieces.forEach(q => { const d = Math.hypot(pos.x - q.kx, pos.y - q.ky); if (d < bd && !M.pieces.some(z => z !== p && movedOf(z) && Math.hypot(S.pl[z.id].x - q.kx, S.pl[z.id].y - q.ky) < 20)) { bd = d; best = q; } });
+  if (best) { pos.x = best.kx; pos.y = best.ky; }
+}
+function wireInk(cv, st, u, o) {
+  cv.style.touchAction = 'none'; cv.style.cursor = 'crosshair'; let cur = null;
+  const pt = e => { const r = st.getBoundingClientRect(); return [clamp((e.clientX - r.left) / u, 0, SW), clamp((e.clientY - r.top) / u, 0, SH)]; };
+  cv.addEventListener('pointerdown', e => { if (S.frozen) return; cv.setPointerCapture(e.pointerId); cur = { c: S.color, pts: [pt(e)], arrow: S.tool === 'arrow' }; S.ink.push(cur); });
+  cv.addEventListener('pointermove', e => { if (!cur) return; const p = pt(e); if (cur.arrow) cur.pts = [cur.pts[0], p]; else cur.pts.push(p); paintInk(cv, S.ink, u); });
+  const end = () => { if (cur) { cur = null; renderAll(); } }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+}
+
+// ---------- 1. editor ----------
+const issuesNow = () => {
+  const out = [], P = M.pieces;
+  if (P.length < 2) out.push('Add at least 2 pieces.');
+  if (P.some(p => !p.label.trim())) out.push('A piece has no label.');
+  for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+    if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < A * .9) { out.push('“' + (P[i].label || 'A piece') + '” and “' + (P[j].label || 'a piece') + '” sit on top of each other at the start. Drag one in Student start, or press Scatter.'); i = P.length; break; }
+    if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < M.tol) { out.push('“' + (P[i].label || 'A piece') + '” and “' + (P[j].label || 'a piece') + '” have answer spots closer than “how close counts”. Move one, or choose Tight.'); i = P.length; break; }
+  }
+  return out;
+};
+function renderEditor() {
+  $('#qlistq').textContent = (M.q || '').slice(0, 20) ? 'Seasons' : '(no text)';
+  $('#qchip').textContent = M.on ? 'Draw · ' + M.pieces.length + ' pieces' : 'Draw';
+  // backgrounds
+  const bgs = $('#bgs'); bgs.textContent = '';
+  [['orbit', 'Orbit diagram'], ['graph', 'Graph paper'], ['blank', 'Blank']].forEach(([k, t]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = M.bg === k ? 'on' : ''; b.innerHTML = '<div class="sw" style="' + (k === 'graph' ? 'background-image:linear-gradient(#cfe3f4 1px,transparent 1px),linear-gradient(90deg,#cfe3f4 1px,transparent 1px);background-size:12px 12px' : k === 'orbit' ? 'background:radial-gradient(circle at 50% 50%,#FBBF24 0 9px,transparent 10px),#F8FAFC' : '') + '"></div><div class="lb">' + t + '</div>';
+    b.onclick = () => { M.bg = k; renderAll(); }; bgs.append(b);
+  });
+  $('#pon').classList.toggle('on', M.on); $('#pon').setAttribute('aria-pressed', M.on); $('#pbody').hidden = !M.on;
+  // piece rows
+  const pl = $('#plist'); pl.textContent = '';
+  M.pieces.forEach((p, i) => {
+    const c = document.createElement('div'); c.className = 'pcard';
+    c.innerHTML = '<div class="prow"><input class="inp" maxlength="24" value="' + esc(p.label) + '" placeholder="Piece ' + (i + 1) + ' label" aria-label="Piece ' + (i + 1) + ' label"><select class="inp" aria-label="Picture for piece ' + (i + 1) + '">' + Object.entries(ART).map(([k, t]) => '<option value="' + k + '"' + (k === p.art ? ' selected' : '') + '>' + t + '</option>').join('') + '</select><button class="b sq danger" type="button" aria-label="Remove piece ' + (i + 1) + '" title="Remove piece">✕</button><div class="sub"><select class="inp" aria-label="Idea for piece ' + (i + 1) + '">' + IDEAS.map(t => '<option value="' + t + '"' + (t === p.idea ? ' selected' : '') + '>' + (t || 'No idea') + '</option>').join('') + '</select><label><input type="checkbox" disabled> Can turn</label><span class="chip later">Later</span></div></div>';
+    const [inp, art, rm] = [c.querySelector('input'), c.querySelectorAll('select')[0], c.querySelector('button')], idea = c.querySelectorAll('select')[1];
+    inp.oninput = () => { p.label = inp.value; paintAll(); renderIssues(); }; art.onchange = () => { p.art = art.value; renderAll(); }; idea.onchange = () => { p.idea = idea.value; renderAll(); };
+    rm.onclick = () => { M.pieces.splice(i, 1); delete S.pl[p.id]; renderAll(); };
+    pl.append(c);
+  });
+  $('#padd').disabled = M.pieces.length >= 12; $('#pcount').textContent = M.pieces.length + ' of 12 pieces';
+  $$('#spotseg button').forEach(b => b.classList.toggle('on', b.dataset.v === M.spots));
+  $('#spothint').textContent = M.spots === 'hidden' ? 'The answer spots are never sent to students or the projector. The app checks each piece against your key.' : 'Faint outlines show on every student’s page and pieces slip into them. The spots are public by design, so this is a puzzle more than a check.';
+  $$('#tolseg button').forEach(b => b.classList.toggle('on', +b.dataset.v === M.tol));
+  $('#fbsel').value = M.fb;
+  $$('#vseg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
+  $('#edhint').textContent = S.view === 'key' ? 'Drag each piece to where it belongs. The dashed ring is how close counts as right. These spots stay on the server.' : 'This is what a student sees first. Drag pieces to change where they start, or press Scatter.';
+  renderIssues(); paintEditorStage();
+}
+function renderIssues() {
+  const list = issuesNow(), box = $('#issues'); box.textContent = '';
+  if (list.length) { const d = document.createElement('div'); d.className = 'issues'; d.innerHTML = '<b>Still to fix</b><ul>' + list.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'; box.append(d); }
+  else { const d = document.createElement('div'); d.className = 'okmsg'; d.textContent = 'Ready. ' + M.pieces.length + ' pieces, all with an answer spot.'; box.append(d); }
+  $('#save').disabled = $('#send').disabled = !!(M.on && list.length);
+}
+function paintEditorStage() {
+  const key = S.view === 'key';
+  mount($('#edstage'), { posOf: p => (key ? { x: p.kx, y: p.ky } : { x: p.x, y: p.y }), drag: M.on ? (key ? 'key' : 'start') : null, tolRings: key && M.on, spots: !key && M.spots === 'shown',
+    onDrop: () => { renderAll(); } });
+  if (!M.on) { const r = $('#edstage'); r.textContent = ''; mount(r, { posOf: () => ({ x: -999, y: -999 }) }); }
+}
+$('#pon').onclick = () => { M.on = !M.on; renderAll(); };
+$('#padd').onclick = () => { const id = M.next++; M.pieces.push({ id, label: '', art: 'earth', x: 100 + (id * 90) % 800, y: 565, kx: 500, ky: 312, idea: '' }); renderAll(); const i = $$('#plist input[type=text],#plist .prow>input'); i[i.length - 1].focus(); };
+$('#pscat').onclick = () => {
+  const spots = []; M.pieces.forEach((p, i) => { const c = i % 4, e = Math.floor(i / 4); spots.push([c < 2 ? 120 + e * 110 : 880 - e * 110, c % 2 === 0 ? 105 + e * 60 : 520 - e * 60]); });
+  M.pieces.forEach((p, i) => { p.x = spots[i][0]; p.y = spots[i][1]; }); S.view = 'start'; renderAll(); toast('Start positions scattered.');
+};
+$$('#spotseg button').forEach(b => (b.onclick = () => { M.spots = b.dataset.v; renderAll(); }));
+$$('#tolseg button').forEach(b => (b.onclick = () => { M.tol = +b.dataset.v; renderAll(); }));
+$('#fbsel').onchange = e => { M.fb = e.target.value; renderAll(); };
+$$('#vseg button').forEach(b => (b.onclick = () => { S.view = b.dataset.v; renderAll(); }));
+$('#qtext').oninput = e => { M.q = e.target.value; renderStudentBars(); };
+$('#save').onclick = () => toast('Saved (mock-up: nothing is stored).');
+$('#send').onclick = () => { resetStudent(); show('2'); toast('Sent to Period 3 (mock-up).'); };
+
+// ---------- 2. student ----------
+const ICO = {
+  move: '<path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>', pen: '<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z"/>', arrow: '<path d="M5 19L19 5M10 5h9v9"/>',
+  undo: '<path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>', reset: '<path d="M4 12a8 8 0 108-8H7M10 1L7 4l3 3"/>'
+};
+function tool(id, t, label, on, fn) { const b = document.createElement('button'); b.className = 'tool' + (on ? ' on' : ''); b.type = 'button'; b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', on); b.innerHTML = '<svg viewBox="0 0 24 24">' + ICO[id] + '</svg>' + t; b.onclick = fn; return b; }
+function renderStudentBars() {
+  $('#sqtext').textContent = M.q;
+  const rail = $('#rail'); rail.textContent = '';
+  if (!M.on && S.tool === 'move') S.tool = 'pen';
+  if (M.on) rail.append(tool('move', 'Pieces', 'Move pieces', S.tool === 'move', () => { S.tool = 'move'; renderAll(); }));
+  rail.append(tool('pen', 'Draw', 'Draw', S.tool === 'pen', () => { S.tool = 'pen'; renderAll(); }), tool('arrow', 'Arrow', 'Arrow', S.tool === 'arrow', () => { S.tool = 'arrow'; renderAll(); }));
+  rail.append(document.createElement('hr'));
+  ['#111111', '#dc2626', '#2563eb'].forEach(c => { const s = document.createElement('button'); s.className = 'sw' + (S.color === c ? ' on' : ''); s.style.background = c; s.setAttribute('aria-label', 'Colour ' + c); s.onclick = () => { S.color = c; if (S.tool === 'move') S.tool = 'pen'; renderAll(); }; rail.append(s); });
+  rail.append(document.createElement('hr'), tool('undo', 'Undo', 'Undo drawing', false, () => { S.ink.pop(); renderAll(); }), tool('trash', 'Clear', 'Clear drawing', false, () => { S.ink = []; renderAll(); }));
+}
+function renderStudent() {
+  renderStudentBars();
+  const dev = S.device, pg = $('#page'), paper = $('#paper');
+  const aw = paper.clientWidth - 24, ah = paper.clientHeight - 24;
+  let w, h; if (dev === 'wide') { w = aw; h = ah; } else { h = ah; w = Math.min(aw, h * .56); }
+  pg.style.width = Math.max(100, w) + 'px'; pg.style.height = Math.max(100, h) + 'px';
+  const movable = M.on && S.tool === 'move', showFb = M.on && (S.revealed || M.fb === 'now');
+  mount(pg, { posOf, drag: movable ? 'student' : null, spots: M.on && M.spots === 'shown', fb: showFb ? 'student' : null, ghosts: M.on && S.revealed, ink: S.ink, inkTool: !movable, onDrop: (p, kb) => { renderAll(); if (kb) $('#live').textContent = p.label + ' moved. ' + movedCount() + ' of ' + M.pieces.length + ' pieces moved.'; } });
+  if (S.frozen) { const f = document.createElement('div'); f.className = 'frozen'; f.innerHTML = '<div><h2>Frozen. Look at your teacher.</h2><div>Your work is saved.</div></div>'; pg.append(f); }
+  pg.querySelectorAll('.pc').forEach(e => (e.style.pointerEvents = S.frozen ? 'none' : ''));
+  const n = M.pieces.length, mv = movedCount(), right = M.pieces.filter(p => movedOf(p) && isOk(p, posOf(p))).length, sc = $('#score');
+  sc.hidden = !(showFb && mv === n); sc.textContent = 'You got ' + right + ' of ' + n;
+  const bot = $('#bot'); bot.textContent = '';
+  if (M.on) {
+    const b = document.createElement('b'); b.textContent = mv + ' of ' + n + ' pieces moved'; bot.append(b);
+    const r = document.createElement('button'); r.className = 'b sm'; r.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICO.reset + '</svg> Reset pieces'; r.onclick = () => { S.pl = {}; renderAll(); }; bot.append(r);
+    const h = document.createElement('span'); h.className = 'hint'; h.textContent = S.tool === 'move' ? 'Drag a piece, or Tab to it and use the arrow keys. Choose Draw or Arrow to draw on top.' : 'Pieces are locked while you draw. Choose Pieces to move them again.'; bot.append(h);
+    if (S.revealed) { const c = document.createElement('span'); c.className = 'chip k'; c.textContent = 'Your teacher revealed the answers'; bot.append(c); }
+  } else bot.innerHTML = '<span class="hint">Movable pieces are off for this question: it is an ordinary Draw question.</span>';
+}
+const movedCount = () => M.pieces.filter(movedOf).length;
+function resetStudent() { S.pl = {}; S.ink = []; S.revealed = false; S.frozen = false; S.tool = M.on ? 'move' : 'pen'; syncMock(); }
+function syncMock() { $('#revbtn').classList.toggle('on', S.revealed); $('#revbtn').textContent = S.revealed ? 'Hide answers' : 'Reveal answers'; $('#t-rev').textContent = S.revealed ? 'Hide answers' : 'Reveal answers'; $('#frzbtn').classList.toggle('on', S.frozen); renderAll(); }
+$('#revbtn').onclick = $('#t-rev').onclick = () => { S.revealed = !S.revealed; syncMock(); };
+$('#frzbtn').onclick = () => { S.frozen = !S.frozen; syncMock(); };
+$$('#devseg button').forEach(b => (b.onclick = () => { S.device = b.dataset.v; $$('#devseg button').forEach(x => x.classList.toggle('on', x === b)); renderAll(); }));
+
+// ---------- 3. teaching screen: a few made-up students, plus “Maya”, who is whatever you did in tab 2 ----------
+function fakes() {
+  const P = M.pieces, jig = (p, n) => ({ x: clamp(p.kx + ((p.id * 37 + n) % 41) - 20, A / 2, SW - A / 2), y: clamp(p.ky + ((p.id * 53 + n) % 37) - 18, A / 2, SH - A / 2) });
+  const mk = (name, spec, ink) => ({ name, ink, pos: Object.fromEntries(P.map((p, i) => { const s = spec[i] || 'none'; if (s === 'ok') return [p.id, { ...jig(p, name.length), moved: true }]; if (s === 'none') return [p.id, { x: p.x, y: p.y, moved: false }]; if (s === 'swap') { const q = P[(i + 1) % P.length]; return [p.id, { x: q.kx, y: q.ky, moved: true }]; } return [p.id, { x: clamp(p.kx + 150, A / 2, SW - A / 2), y: clamp(p.ky + 90, A / 2, SH - A / 2), moved: true }]; })) });
+  return [
+    mk('Omar', ['ok', 'ok', 'ok', 'ok'], [{ c: '#dc2626', arrow: true, pts: [[190, 250], [215, 160]] }]),
+    mk('Priya', ['ok', 'ok', 'ok', 'swap'], [{ c: '#2563eb', arrow: true, pts: [[500, 380], [640, 440]] }]),
+    mk('Leo', ['swap', 'ok', 'swap', 'far'], []),
+    mk('Ana', ['ok', 'none', 'none', 'none'], [])
+  ];
+}
+function renderTeacher() {
+  const grid = $('#tgrid'); grid.textContent = '';
+  const rows = [{ name: 'Maya (you, from tab 2)', pos: Object.fromEntries(M.pieces.map(p => [p.id, { ...posOf(p), moved: movedOf(p) }])), ink: S.ink }, ...fakes()];
+  rows.forEach(r => {
+    const c = document.createElement('div'); c.className = 'card'; const right = M.pieces.filter(p => r.pos[p.id] && r.pos[p.id].moved && isOk(p, r.pos[p.id])).length, mv = M.pieces.filter(p => r.pos[p.id] && r.pos[p.id].moved).length;
+    c.innerHTML = '<div class="top"><span class="nm">' + esc(r.name) + '</span><span class="chip ' + (mv ? 'k' : '') + '">' + (mv ? right + ' of ' + M.pieces.length + ' right' : 'not started') + '</span></div><div class="th"></div>';
+    grid.append(c);
+    mount(c.querySelector('.th'), { posOf: p => r.pos[p.id] || { x: p.x, y: p.y }, fb: 'teacher', moved: p => !!(r.pos[p.id] && r.pos[p.id].moved), ink: r.ink });
+  });
+  const tot = rows.length, per = M.pieces.map(p => ({ p, n: rows.filter(r => r.pos[p.id] && r.pos[p.id].moved && isOk(p, r.pos[p.id])).length }));
+  const tier = v => (v >= 75 ? 'good' : v >= 55 ? 'mid' : 'bad'), word = v => (v >= 75 ? 'Solid' : v >= 55 ? 'Close' : 'Reteach'), col = { good: '#0E7C4A', mid: '#D99A12', bad: '#B3261E' };
+  const bars = $('#bars'); bars.textContent = '';
+  per.forEach(({ p, n }) => { const v = Math.round(100 * n / tot), d = document.createElement('div'); d.className = 'bar'; d.innerHTML = '<span>' + esc(p.label || '(no label)') + '</span><div class="tr"><div class="fl" style="width:' + v + '%;background:' + col[tier(v)] + '"></div></div><span class="pc2">' + v + '%</span>'; bars.append(d); });
+  const ideas = $('#ideas'); ideas.textContent = '';
+  [...new Set(M.pieces.map(p => p.idea).filter(Boolean))].forEach(id => { const ps = per.filter(x => x.p.idea === id), v = Math.round(100 * ps.reduce((a, x) => a + x.n, 0) / (ps.length * tot)); const d = document.createElement('div'); d.className = 'bar'; d.innerHTML = '<span>' + esc(id) + '</span><div class="tr"><div class="fl" style="width:' + v + '%;background:' + col[tier(v)] + '"></div></div><span class="pc2">' + v + '%</span>'; ideas.append(d); const t = document.createElement('div'); t.innerHTML = '<span class="tier ' + tier(v) + '">' + word(v) + '</span>'; ideas.append(t); });
+  if (!ideas.children.length) ideas.innerHTML = '<span class="hint">No ideas tagged.</span>';
+  const worst = per.slice().sort((a, b) => a.n - b.n)[0];
+  const who = rows.filter(r => !(r.pos[worst.p.id] && r.pos[worst.p.id].moved && isOk(worst.p, r.pos[worst.p.id]))).map(r => r.name.split(' ')[0]);
+  $('#missed').innerHTML = worst ? '<b>' + esc(worst.p.label || 'A piece') + '</b> was missed by ' + (who.length ? esc(who.join(', ')) : 'nobody') + '.' : '';
+}
+
+// ---------- tabs, painting ----------
+function show(n) {
+  ['1', '2', '3'].forEach(k => { $('#tab' + k).hidden = k !== n; });
+  $$('.tabs [data-tab]').forEach(b => { const on = b.dataset.tab === n; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  renderAll();
+}
+$$('.tabs [data-tab]').forEach(b => (b.onclick = () => show(b.dataset.tab)));
+function paintAll() { if (!$('#tab1').hidden) paintEditorStage(); if (!$('#tab2').hidden) renderStudent(); if (!$('#tab3').hidden) renderTeacher(); }
+function renderAll() { if (!$('#tab1').hidden) renderEditor(); if (!$('#tab2').hidden) renderStudent(); if (!$('#tab3').hidden) renderTeacher(); }
+let rz = 0; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 120); });
+document.fonts && document.fonts.ready.then(renderAll);
+renderAll(); syncMock();
+</script>
+</body>
+</html>
