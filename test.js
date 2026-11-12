@@ -755,6 +755,23 @@ await test('size: an empty page takes a new shape; a page with a drawing does no
   assert.deepEqual([(await back.wait('joined')).bw, back.last('joined').bh], [780, 330]);
 });
 
+
+await test('routes: /Teacher, /teacher/, /join and /favicon.ico work; unknown pages get a friendly 404', async () => {
+  const get = async p => { const r = await fetch('http://localhost:' + PORT + p, { redirect: 'manual' }); return { s: r.status, t: r.headers.get('content-type'), b: await r.text() }; };
+  for (const p of ['/teacher', '/teacher/', '/Teacher', '/TEACHER/', '/class/?code=ABCD', '/Sets']) { const r = await get(p); assert.equal(r.s, 200, p); assert.match(r.t, /text\/html/, p); }
+  assert.match((await get('/join')).b, /<title>Draw It Out<\/title>/, '/join is the student page');
+  assert.match((await get('/join/')).b, /<title>Draw It Out<\/title>/);
+  const fav = await get('/favicon.ico'); assert.equal(fav.s, 200); assert.match(fav.t, /svg/);
+  const nf = await get('/no-such-page'); assert.equal(nf.s, 404); assert.match(nf.t, /text\/html/);
+  assert.match(nf.b, /href="\/"/); assert.match(nf.b, /href="\/teacher"/); assert.match(nf.b, /Join a class/);
+  assert.equal((await get('/nope.html')).s, 404);
+  const js = await get('/missing.js'); assert.equal(js.s, 404); assert.equal(js.b, 'Not found', 'missing files are a plain 404, not a page');
+  assert.equal((await get('/../server.js')).s, 404, 'no way out of the public folder');
+  assert.equal((await get('/%2e%2e/server.js')).s, 404);
+  assert.equal((await get('/%E0%A4%A')).s, 400, 'a broken address does not crash the server');
+  assert.equal((await get('/healthz')).b, 'ok');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

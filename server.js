@@ -8,17 +8,26 @@ import { WebSocketServer } from 'ws';
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const MAX_STU = 60, MAX_ROOMS = +process.env.MAX_ROOMS || 200;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };
-const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/projector': 'projector.html', '/start': 'landing.html' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.svg': 'image/svg+xml' };
+const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/projector': 'projector.html', '/start': 'landing.html', '/join': 'index.html', '/favicon.ico': 'favicon.svg' };
 
 // ---- static files ----
 const server = http.createServer((req, res) => {
-  const p = new URL(req.url, 'http://x').pathname;
+  let p; try { p = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.statusCode = 400; return res.end('Bad request'); }
   if (p === '/healthz') return res.end('ok');
-  const f = path.join(PUB, ROUTES[p] || p);
-  if (!f.startsWith(PUB + path.sep) || !TYPES[path.extname(f)]) { res.statusCode = 404; return res.end('Not found'); }
+  // /Teacher, /teacher/ and /join all work: page names ignore capitals and a trailing slash
+  const route = ROUTES[p] || ROUTES[(p.length > 1 ? p.replace(/\/+$/, '') : p).toLowerCase()];
+  const f = path.join(PUB, route || p);
+  // a page address (no file extension, or .html) that does not exist gets a friendly page; anything else is a plain 404
+  const wantsPage = !path.extname(p) || path.extname(p) === '.html';
+  const missing = () => {
+    res.statusCode = 404; res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (!wantsPage) return res.end('Not found');
+    fs.readFile(path.join(PUB, 'notfound.html'), (e, d) => { res.setHeader('Content-Type', TYPES['.html']); res.setHeader('Cache-Control', 'no-cache'); res.end(e ? 'Not found' : d); });
+  };
+  if (!f.startsWith(PUB + path.sep) || !TYPES[path.extname(f)]) return missing();
   fs.readFile(f, (err, data) => {
-    if (err) { res.statusCode = 404; return res.end('Not found'); }
+    if (err) return missing();
     res.setHeader('Content-Type', TYPES[path.extname(f)]);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer'); // class codes and shared-set links are never leaked to other sites
