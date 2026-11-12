@@ -30,7 +30,7 @@ const NL = (() => {
     }
     const words = l.split(' ');
     if (words.some(w => sameWord(w, t))) return 'exact';
-    const slack = t.length >= 9 ? 2 : t.length >= 5 ? 1 : 0;
+    const slack = t.length >= 11 ? 3 : t.length >= 9 ? 2 : t.length >= 5 ? 1 : 0; // long words get more room: sound-it-out spellings like condensashun are off by 3
     return slack && words.some(w => w.length >= 4 && lev(w, t) <= slack) ? 'close' : null;
   }
   const pct = (a, b) => (b ? Math.round(100 * a / b) : 0);
@@ -41,34 +41,56 @@ const NL = (() => {
     const people = new Map();
     const who = s => {
       const k = s.rid || s.id; let p = people.get(k);
-      if (!p) people.set(k, p = { key: k, name: nameOf(s), over: [], aware: [], under: [], shown: [], labels: [], greens: 0, drew: false });
+      if (!p) people.set(k, p = { key: k, name: nameOf(s), over: [], aware: [], under: [], shown: [], labels: [], greens: 0, drew: false, seq: [] });
       return p;
     };
 
-    // ---- confidence vs accuracy, and what was mixed up (sort questions) ----
+    // ---- confidence vs accuracy, and what was mixed up ----
+    // Accuracy is the sort answer on a sort question, and the point the teacher gave on a drawing question.
     const calib = [], cards = [], ideaMap = new Map();
-    qs.filter(q => q.kind === 'sort' && q.sort).forEach(q => {
-      const total = q.sort.cards.length, lane = new Map(q.sort.lanes.map(l => [l.id, l.name])), skip = q.sort.feedback === 'now';
-      const row = { n: q.n, q: q.q, answered: 0, noAnswer: 0, solid: 0, over: 0, under: 0, aware: 0, mixed: 0, none: 0, skipped: skip };
-      const cs = q.sort.cards.map(c => ({ n: q.n, q: q.q, text: c.text, lane: lane.get(c.lane) || c.lane, idea: c.idea, placed: 0, right: 0, wrong: {}, confWrong: 0, id: c.id, key: c.lane }));
-      q.students.forEach(s => {
-        const p = who(s);
-        if (!s.sort || !s.sort.placed) { row.noAnswer++; return; }
-        row.answered++;
-        const acc = s.sort.correct == null ? null : s.sort.correct / total;
-        cs.forEach(c => {
-          const at = s.sort.place[c.id]; if (!at) return;
-          c.placed++;
-          if (at === c.key) c.right++;
-          else { const nm = lane.get(at) || at; c.wrong[nm] = (c.wrong[nm] || 0) + 1; if (!skip && s.pulse === 'g') c.confWrong++; }
+    // seq is the colours a student tapped, in order; a red that turned out right ("under") does not count as a red flag
+    const tally = (p, s, under) => { if (s.pulse) p.seq.push(under ? 'u' : s.pulse); };
+    qs.forEach(q => {
+      if (q.kind === 'sort' && q.sort) {
+        const total = q.sort.cards.length, lane = new Map(q.sort.lanes.map(l => [l.id, l.name])), skip = q.sort.feedback === 'now';
+        const row = { n: q.n, q: q.q, basis: 'sort', answered: 0, noAnswer: 0, solid: 0, over: 0, under: 0, aware: 0, mixed: 0, none: 0, skipped: skip ? 'feedback' : null };
+        const cs = q.sort.cards.map(c => ({ n: q.n, q: q.q, text: c.text, lane: lane.get(c.lane) || c.lane, idea: c.idea, placed: 0, right: 0, wrong: {}, confWrong: 0, id: c.id, key: c.lane }));
+        q.students.forEach(s => {
+          const p = who(s);
+          if (!s.sort || !s.sort.placed) { row.noAnswer++; tally(p, s, false); return; }
+          row.answered++;
+          const acc = s.sort.correct == null ? null : s.sort.correct / total;
+          cs.forEach(c => {
+            const at = s.sort.place[c.id]; if (!at) return;
+            c.placed++;
+            if (at === c.key) c.right++;
+            else { const nm = lane.get(at) || at; c.wrong[nm] = (c.wrong[nm] || 0) + 1; if (!skip && s.pulse === 'g') c.confWrong++; }
+          });
+          if (skip || acc == null) { tally(p, s, false); return; } // instant feedback means the colour came after the answer was known
+          let under = false;
+          if (!s.pulse) row.none++;
+          else if (s.pulse === 'g') { if (acc >= T.right) row.solid++; else { row.over++; p.over.push({ n: q.n, got: s.sort.correct, of: total }); } }
+          else if (s.pulse === 'r') { if (acc >= T.right) { row.under++; p.under.push(q.n); under = true; } else if (acc < T.wrong) { row.aware++; p.aware.push(q.n); } else row.mixed++; }
+          else row.mixed++;
+          tally(p, s, under);
         });
-        if (skip || acc == null) return; // instant feedback means the colour came after the answer was known
-        if (!s.pulse) row.none++;
-        else if (s.pulse === 'g') { if (acc >= T.right) row.solid++; else { row.over++; p.over.push({ n: q.n, got: s.sort.correct, of: total }); } }
-        else if (s.pulse === 'r') { if (acc >= T.right) { row.under++; p.under.push(q.n); } else if (acc < T.wrong) { row.aware++; p.aware.push(q.n); } else row.mixed++; }
-        else row.mixed++;
-      });
-      calib.push(row); cards.push(...cs);
+        calib.push(row); cards.push(...cs);
+      } else if (q.kind === 'draw') {
+        // With one point per team, a missing point says nothing about a student, so those questions are not compared.
+        const given = q.students.filter(s => s.awarded).length;
+        const row = { n: q.n, q: q.q, basis: 'points', given, answered: q.students.length, noAnswer: 0, solid: 0, over: 0, under: 0, aware: 0, mixed: 0, none: 0, skipped: q.capped ? 'capped' : given ? null : 'nopoints' };
+        q.students.forEach(s => {
+          const p = who(s);
+          if (row.skipped) { tally(p, s, false); return; }
+          let under = false;
+          if (!s.pulse) row.none++;
+          else if (s.pulse === 'g') { if (s.awarded) row.solid++; else { row.over++; p.over.push({ n: q.n, point: true }); } }
+          else if (s.pulse === 'r') { if (s.awarded) { row.under++; p.under.push(q.n); under = true; } else { row.aware++; p.aware.push(q.n); } }
+          else row.mixed++;
+          tally(p, s, under);
+        });
+        calib.push(row);
+      }
     });
     cards.forEach(c => {
       c.pct = pct(c.right, c.placed); c.mix = topWrong(c);
@@ -100,7 +122,8 @@ const NL = (() => {
     const said = new Map();
     drawers.forEach(p => new Set(p.labels.map(norm).filter(l => l.length > 1)).forEach(l => said.set(l, (said.get(l) || 0) + 1)));
     const vocab = { drawers: drawers.length, terms: termRows, top: [...said.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 12).map(([label, n]) => ({ label, n })),
-      confidentNoWords: terms.length ? drawers.filter(p => p.greens && !used.has(p.key)).map(p => p.name) : [] };
+      confidentNoWords: terms.length ? drawers.filter(p => p.greens && p.labels.length && !used.has(p.key)).map(p => p.name) : [],
+      noLabels: drawers.filter(p => !p.labels.length).length };
 
     const all = [...people.values()];
     const sc = { g: 0, y: 0, r: 0, none: 0 };
@@ -109,15 +132,31 @@ const NL = (() => {
       rows: all.filter(p => p.shown.length).sort((a, b) => b.shown.length - a.shown.length || (a.name < b.name ? -1 : 1)).map(p => ({ name: p.name, times: p.shown.length })),
       never: all.filter(p => !p.shown.length).map(p => p.name).sort() };
 
-    const watch = all.filter(p => p.over.length || p.aware.length).sort((a, b) => b.over.length - a.over.length || b.aware.length - a.aware.length)
-      .map(p => ({ name: p.name, over: p.over, aware: p.aware }));
+    // who to check in with: said "I understand" but missed it, or asked for help (twice, or last), whether or not accuracy is known
+    const watch = all.map(p => ({ name: p.name, over: p.over, aware: p.aware, reds: p.seq.filter(x => x === 'r').length, lastRed: p.seq[p.seq.length - 1] === 'r' }))
+      .filter(w => w.over.length || w.aware.length || w.lastRed || w.reds >= 2)
+      .sort((a, b) => b.over.length - a.over.length || b.reds - a.reds || b.aware.length - a.aware.length || (a.name < b.name ? -1 : 1));
     const boost = all.filter(p => p.under.length).map(p => p.name);
 
-    const out = { students: all.length, sortQs: calib.length, drawQs: qs.filter(q => q.kind === 'draw').length, calib, totals, cards, shaky, ideas, watch, boost, vocab, projector };
+    const out = { students: all.length, sortQs: calib.filter(r => r.basis === 'sort').length, drawQs: qs.filter(q => q.kind === 'draw').length, usable: calib.some(r => !r.skipped), calib, totals, cards, shaky, ideas, watch, boost, vocab, projector };
     out.priorities = priorities(out, terms);
     return out;
   }
 
+  // one line saying why a student is on the check-in list
+  const why = w => {
+    const r = [];
+    if (w.over.length) r.push('said “I understand” but ' + w.over.map(x => (x.point ? 'earned no point on Q' + x.n : 'got ' + x.got + ' of ' + x.of + ' on Q' + x.n)).join(', '));
+    if (w.reds >= 2) r.push('tapped “I need help” on ' + w.reds + ' questions');
+    else if (w.lastRed) r.push('ended on “I need help”');
+    else if (w.aware.length) r.push('knew they needed help');
+    return r.join('; ');
+  };
+  const skipNote = k => ({ feedback: 'Instant feedback was on, so confidence is not compared here.', capped: 'Points are limited to one per team here, so a missing point is not counted as a miss.', nopoints: 'No points were given on this question, so there is nothing to compare.' }[k] || '');
+  // how one question's comparison reads in words
+  const rowText = r => (r.skipped ? skipNote(r.skipped) : r.basis === 'points'
+    ? r.solid + ' confident and got the point, ' + r.over + ' confident but no point, ' + r.aware + ' unsure and no point, ' + r.under + ' unsure but got the point' + (r.mixed ? ', ' + r.mixed + ' in between' : '') + (r.none ? ', ' + r.none + ' gave no colour' : '')
+    : r.solid + ' confident and right, ' + r.over + ' confident but missed some, ' + r.aware + ' unsure and wrong, ' + r.under + ' unsure but right' + (r.mixed ? ', ' + r.mixed + ' in between' : '') + (r.none ? ', ' + r.none + ' gave no colour' : '') + (r.noAnswer ? ', ' + r.noAnswer + ' did not answer' : ''));
   const mixText = c => (c.mix ? '“' + c.text + '” was put in ' + c.mix[0] + ' instead of ' + c.lane + ' by ' + c.mix[1] + (c.mix[1] === 1 ? ' student' : ' students') : '');
   const list = (a, n = 8) => a.slice(0, n).join(', ') + (a.length > n ? ' and ' + (a.length - n) + ' more' : '');
   // the short list at the top: what to do with the first ten minutes tomorrow
@@ -138,14 +177,16 @@ const NL = (() => {
   // plain text for a doc, an email, or a planning note
   function text(a, m = {}) {
     const L = ['Next lesson report' + (m.cls ? ' — ' + m.cls : '') + (m.date ? ' (' + m.date + ')' : ''), ''];
-    if (!a.priorities.length) L.push('Nothing stood out yet. Confidence needs sort questions, and vocabulary needs drawing questions plus the words you want to see.');
+    if (!a.priorities.length) L.push('Nothing stood out yet. Confidence is compared with sort answers or the points you give, and vocabulary needs drawing questions plus the words you want to see.');
     a.priorities.forEach(x => L.push(x.h + ': ' + x.t));
-    if (a.sortQs) {
-      L.push('', 'Confidence vs accuracy (sort questions)');
+    if (a.calib.length) {
+      L.push('', 'Confidence vs accuracy (sort answers, or the points you gave on drawing questions)');
       const t = a.totals; L.push('  Confident and right ' + t.solid + ' · Confident but missed some ' + t.over + ' · Unsure but right ' + t.under + ' · Unsure and wrong ' + t.aware + ' · In between ' + t.mixed + ' · No colour ' + t.none);
-      a.calib.forEach(r => L.push('  Q' + r.n + ' ' + r.q + ': ' + (r.skipped ? 'instant feedback, so confidence is not compared' : r.solid + ' confident and right, ' + r.over + ' confident but missed some, ' + r.aware + ' unsure and wrong, ' + r.under + ' unsure but right') + (r.noAnswer ? ' (' + r.noAnswer + ' did not answer)' : '')));
-      if (a.watch.length) L.push('  Check in with: ' + a.watch.map(w => w.name + (w.over.length ? ' (said “I understand” but ' + w.over.map(x => 'got ' + x.got + ' of ' + x.of + ' on Q' + x.n).join(', ') + ')' : ' (knew they needed help)')).join('; '));
-      if (a.boost.length) L.push('  Know more than they think: ' + a.boost.join(', '));
+      a.calib.forEach(r => L.push('  Q' + r.n + ' ' + r.q + ' (' + (r.basis === 'points' ? 'points' : 'sort') + '): ' + rowText(r)));
+    }
+    if (a.watch.length) L.push('', 'Check in with', ...a.watch.map(w => '  ' + w.name + ': ' + why(w)));
+    if (a.boost.length) L.push('', 'Know more than they think: ' + a.boost.join(', '));
+    if (a.sortQs) {
       L.push('', 'What was mixed up');
       (a.ideas.length ? a.ideas : []).forEach(i => L.push('  ' + i.name + ': ' + i.pct + '% right' + (i.confWrong ? ' · ' + i.confWrong + ' wrong from confident students' : '')));
       a.shaky.slice(0, 10).forEach(c => L.push('  Q' + c.n + ' “' + c.text + '”: ' + c.pct + '% right. ' + mixText(c)));
@@ -154,6 +195,7 @@ const NL = (() => {
       L.push('', 'Vocabulary (' + a.vocab.drawers + ' students on drawing questions)');
       a.vocab.terms.forEach(r => L.push('  ' + r.term + ': used by ' + r.exact + (r.close ? ', spelled differently by ' + r.close : '') + ', not used by ' + r.none));
       if (a.vocab.top.length) L.push('  Most-typed labels: ' + a.vocab.top.map(x => x.label + ' ×' + x.n).join(', '));
+      if (a.vocab.noLabels) L.push('  ' + a.vocab.noLabels + (a.vocab.noLabels === 1 ? ' student typed' : ' students typed') + ' no labels');
       if (a.vocab.confidentNoWords.length) L.push('  Said “I understand” but used none of your words: ' + a.vocab.confidentNoWords.join(', '));
     }
     L.push('', 'On the projector');
@@ -163,5 +205,5 @@ const NL = (() => {
     if (pr.never.length) L.push('  Not yet shown: ' + pr.never.join(', '));
     return L.join('\n');
   }
-  return { T, analyze, text, parseTerms, match, norm, mixText };
+  return { T, analyze, text, parseTerms, match, norm, mixText, why, rowText, skipNote };
 })();

@@ -227,3 +227,31 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 #demobar .b{min-height:40px}
 @media(max-width:1000px){#demobar .dsteps{display:none}#demobar{justify-content:space-between}}
 @media(max-width:700px){#demobar .dsub{display:none}#demobar{gap:8px}}
+
+/* the printed / PDF version of the end-of-lesson report: only #nlprint is shown on paper */
+#nlprint{display:none}
+@media print{
+ @page{size:Letter;margin:.6in}
+ html,body{height:auto!important;overflow:visible!important;background:#fff!important}
+ body>*:not(#nlprint){display:none!important}
+ #nlprint{display:block;color:#111;font-size:10.5pt;line-height:1.4}
+ #nlprint,#nlprint *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ #nlprint h1{font-family:var(--disp);font-size:22pt;margin:0 0 2pt;line-height:1.1}
+ #nlprint .pr-sub{color:#555;margin:0 0 6pt;font-size:10pt}
+ #nlprint h2{font-family:var(--disp);font-size:13pt;margin:16pt 0 3pt;padding-bottom:3pt;border-bottom:1.5pt solid #111;break-after:avoid}
+ #nlprint h3{font-size:9pt;text-transform:uppercase;letter-spacing:.05em;color:#555;margin:10pt 0 2pt;break-after:avoid}
+ #nlprint .hint{color:#555;font-size:9pt;margin:0 0 5pt}
+ #nlprint p{margin:3pt 0}
+ #nlprint .strong{font-weight:700}
+ #nlprint table{width:100%;border-collapse:collapse;margin:3pt 0}
+ #nlprint th{text-align:left;font-size:8pt;text-transform:uppercase;letter-spacing:.05em;color:#555;border-bottom:1pt solid #999;padding:3pt 8pt 3pt 0}
+ #nlprint td{padding:4pt 8pt 4pt 0;border-bottom:.5pt solid #ddd;vertical-align:top}
+ #nlprint tr{break-inside:avoid}
+ #nlprint .cover td:first-child{width:105pt;font-weight:700}
+ #nlprint .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6pt;margin:5pt 0 8pt}
+ #nlprint .tiles>div{border:.75pt solid #bbb;padding:5pt 8pt;break-inside:avoid}
+ #nlprint .tiles .n{font-size:20pt;font-weight:800;line-height:1.05;font-family:var(--disp)}
+ #nlprint .keep{break-inside:avoid}
+ #nlprint .stack{height:8pt;min-width:80pt;border-radius:2pt;background:#e5e7eb}
+ #nlprint .foot{margin-top:16pt;font-size:8.5pt;color:#555;border-top:.5pt solid #bbb;padding-top:5pt}
+}

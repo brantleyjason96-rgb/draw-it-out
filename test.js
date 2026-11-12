@@ -435,7 +435,7 @@ await test('export: a drawing question keeps the words typed, colour and project
   xa.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[0, 0], [30, 40]] } });
   xa.send({ t: 'set', o: { id: 2, k: 'text', c: '#dc2626', x: 100, y: 100, w: 120, size: 20, t: ' magma ' } });
   xa.send({ t: 'set', o: { id: 3, k: 'text', c: '#dc2626', x: 100, y: 200, w: 120, size: 20, t: '   ' } });
-  xa.send({ t: 'pulse', c: 'g' }); xh.send({ t: 'spot', ids: [xa.id], hide: true });
+  xa.send({ t: 'pulse', c: 'g' }); xh.send({ t: 'spot', ids: [xa.id], hide: true }); xh.send({ t: 'award', id: xa.id, on: true });
   await sleep(120);
   let rec = await pull();
   assert.equal(rec.questions.length, 1); assert.equal(rec.questions[0].live, true, 'the question on screen is marked live');
@@ -445,9 +445,11 @@ await test('export: a drawing question keeps the words typed, colour and project
   const q = rec.questions[0], a = q.students.find(x => x.id === xa.id), b = q.students.find(x => x.id === xb.id);
   assert.equal(q.live, false); assert.equal(q.kind, 'draw'); assert.equal(q.q, 'Draw the rock cycle', 'markup is stripped');
   assert.equal(a.pulse, 'g'); assert.equal(a.shown, true); assert.deepEqual(a.labels, ['magma'], 'typed words only, trimmed, blanks dropped');
+  assert.equal(a.awarded, true, 'the point the teacher gave'); assert.equal(q.students.find(x => x.id === xb.id).awarded, false); assert.equal(q.capped, false);
   assert.ok(!('objs' in a) && !('drawing' in a), 'no drawing content is kept');
   assert.deepEqual(b.labels, []); assert.equal(b.pulse, null); assert.equal(b.shown, false, 'a student who did nothing is still listed');
   assert.equal(rec.questions[1].students.find(x => x.id === xa.id).shown, false, 'each question starts with nobody shown');
+  assert.equal(rec.questions[1].students.find(x => x.id === xa.id).awarded, false, 'and with no points given');
 });
 
 await test('export: a sort question carries the key tags and each answer; confidence is read at hand-in', async () => {
@@ -510,7 +512,8 @@ const an = NL.analyze(REC, { terms: ['magma', 'sediment', 'metamorphic'] });
 
 await test('report: confidence vs accuracy sorts each student into the right bucket, and skips instant-feedback questions', () => {
   assert.deepEqual(an.totals, { solid: 1, over: 1, under: 1, aware: 1, mixed: 0, none: 1 }, 'Q2 only: Q3 gave instant feedback');
-  assert.equal(an.calib[0].noAnswer, 1); assert.equal(an.calib[1].skipped, true);
+  assert.equal(an.calib[0].skipped, 'nopoints', 'the drawing question had no points given, so nothing to compare');
+  assert.equal(an.calib[1].noAnswer, 1); assert.equal(an.calib[2].skipped, 'feedback');
   assert.deepEqual(an.watch.map(w => w.name), ['BEN', 'CY']); assert.deepEqual(an.watch[0].over, [{ n: 2, got: 0, of: 2 }]);
   assert.deepEqual(an.boost, ['DEE']);
 });
@@ -521,7 +524,54 @@ await test('report: tapping green and landing under 80% counts as missing some, 
   const r = { questions: [{ n: 1, kind: 'sort', q: 'q', live: false, sort: { feedback: 'reveal', lanes, cards: cs }, students: [mk('p', 'g', 4), mk('q', 'g', 3), mk('r', 'y', 1), mk('s', 'r', 2), mk('t', 'r', 3)] }] };
   const x = NL.analyze(r);
   assert.deepEqual(x.totals, { solid: 1, over: 1, under: 0, aware: 1, mixed: 2, none: 0 }, '4 of 5 is right (80%); 3 of 5 on green is missed-some; red at 2 of 5 is unsure and wrong; red at 3 of 5 and any amber are in between');
-  assert.deepEqual(x.watch.map(w => w.name), ['Q', 'S']); assert.deepEqual(x.watch[0].over, [{ n: 1, got: 3, of: 5 }]);
+  assert.deepEqual(x.watch.map(w => w.name), ['Q', 'S', 'T'], 'Q missed some; S and T asked for help and ended on red'); assert.deepEqual(x.watch[0].over, [{ n: 1, got: 3, of: 5 }]);
+});
+
+await test('report: on a drawing question, confidence is compared with the points the teacher gave', () => {
+  const d = (id, pulse, awarded, labels = []) => stu(id, pulse, { awarded, labels });
+  const r = { questions: [{ n: 1, kind: 'draw', q: 'Draw it', live: false, capped: false, students: [d('a', 'g', true), d('b', 'g', false), d('c', 'r', true), d('d', 'r', false), d('e', 'y', false), d('f', null, true)] }] };
+  const x = NL.analyze(r), row = x.calib[0];
+  assert.equal(row.basis, 'points'); assert.equal(row.given, 3);
+  assert.deepEqual([row.solid, row.over, row.under, row.aware, row.mixed, row.none], [1, 1, 1, 1, 1, 1]);
+  assert.deepEqual(x.totals, { solid: 1, over: 1, under: 1, aware: 1, mixed: 1, none: 1 });
+  assert.deepEqual(x.watch.find(w => w.name === 'B').over, [{ n: 1, point: true }]);
+  assert.match(NL.why(x.watch.find(w => w.name === 'B')), /said “I understand” but earned no point on Q1/);
+  assert.deepEqual(x.boost, ['C'], 'asked for help but got the point');
+  assert.ok(!x.watch.some(w => w.name === 'C'), 'a red that turned out right is not a red flag');
+  assert.ok(x.watch.some(w => w.name === 'D'), 'asked for help and got no point is');
+  assert.ok(x.usable);
+});
+
+await test('report: points are not compared when capped to one per team, or when none were given', () => {
+  const d = (id, pulse, awarded) => stu(id, pulse, { awarded, labels: [] });
+  const mk = (capped, a) => ({ questions: [{ n: 1, kind: 'draw', q: 'q', live: false, capped, students: [d('a', 'g', a), d('b', 'g', false)] }] });
+  const capped = NL.analyze(mk(true, true)), none = NL.analyze(mk(false, false));
+  assert.equal(capped.calib[0].skipped, 'capped'); assert.equal(none.calib[0].skipped, 'nopoints');
+  assert.equal(capped.totals.over, 0, 'a missing point is not a miss when only one per team can be given'); assert.equal(capped.usable, false);
+  assert.deepEqual(capped.watch, [], 'nobody is flagged from points that cannot tell us anything');
+  assert.match(NL.rowText(capped.calib[0]), /one per team/); assert.match(NL.rowText(none.calib[0]), /No points were given/);
+});
+
+await test('report: a whiteboard-only lesson still gives a check-in list from the red taps', () => {
+  const d = (id, labels, pulse) => stu(id, pulse, { labels });
+  const r = { questions: [
+    { n: 1, kind: 'draw', q: 'one', live: false, capped: false, students: [d('a', [], 'r'), d('b', [], 'r'), d('c', [], 'g'), d('e', [], 'r')] },
+    { n: 2, kind: 'draw', q: 'two', live: true, capped: false, students: [d('a', [], 'r'), d('b', [], 'g'), d('c', [], 'y'), d('e', [], null)] }] };
+  const x = NL.analyze(r);
+  assert.deepEqual(x.watch.map(w => w.name), ['A', 'E'], 'A asked twice; B recovered to green; E asked once and never changed it');
+  assert.equal(NL.why(x.watch[0]), 'tapped “I need help” on 2 questions'); assert.equal(NL.why(x.watch[1]), 'ended on “I need help”');
+  const one = NL.analyze({ questions: [r.questions[0]] }).watch.map(w => [w.name, NL.why(w)]);
+  assert.deepEqual(one, [['A', 'ended on “I need help”'], ['B', 'ended on “I need help”'], ['E', 'ended on “I need help”']]);
+  assert.match(NL.text(x), /Check in with\n  A: tapped “I need help” on 2 questions/);
+});
+
+await test('report: sound-it-out spellings count as close, and unlabeled students are counted rather than accused', () => {
+  assert.equal(NL.match('Condensashun', 'condensation'), 'close'); assert.equal(NL.match('metamorfic', 'metamorphic'), 'close');
+  assert.equal(NL.match('rack', 'rock'), null, 'short words stay strict');
+  const d = (id, labels, pulse) => stu(id, pulse, { labels });
+  const x = NL.analyze({ questions: [{ n: 1, kind: 'draw', q: 'q', live: false, capped: false, students: [d('a', ['cloud'], 'g'), d('b', [], 'g'), d('c', ['rain'], 'y')] }] }, { terms: ['condensation'] });
+  assert.deepEqual(x.vocab.confidentNoWords, ['A'], 'said green and typed words, but none of yours'); assert.equal(x.vocab.noLabels, 1);
+  assert.match(NL.text(x), /1 student typed no labels/);
 });
 
 await test('report: names the mix-up per card and per idea, and counts confident-but-wrong', () => {
@@ -567,7 +617,7 @@ await test('report: an empty or drawing-only lesson does not break, and the text
   const d = NL.analyze({ questions: [REC.questions[0]] }, { terms: ['magma'] });
   assert.equal(d.sortQs, 0); assert.equal(d.vocab.terms[0].exact, 2);
   const text = NL.text(an, { cls: '3rd Hour', date: '11/11/2026' });
-  assert.match(text, /^Next lesson report — 3rd Hour/); assert.match(text, /Confident but missed some 1/); assert.match(text, /BEN \(said “I understand” but got 0 of 2 on Q2\)/); assert.match(text, /Not yet shown: BEN, DEE, ELI, FAY/); assert.match(text, /4 showings \(2 from students on green, 0 amber, 2 red/);
+  assert.match(text, /^Next lesson report — 3rd Hour/); assert.match(text, /Confident but missed some 1/); assert.match(text, /BEN: said “I understand” but got 0 of 2 on Q2/); assert.match(text, /Not yet shown: BEN, DEE, ELI, FAY/); assert.match(text, /4 showings \(2 from students on green, 0 amber, 2 red/);
   assert.ok(!/undefined|NaN/.test(text));
   assert.ok(!/undefined|NaN/.test(NL.text(e)));
 });

@@ -246,7 +246,7 @@ const pulseCount = s => s.pulse === 'g' || s.pulse === 'y' || s.pulse === 'r' ? 
 // Drawings are not kept. A drawing question keeps only the words the student typed; a sort question keeps the whole answer.
 // Only initials or nicknames are here; the teacher's browser joins real names on its own computer.
 function stuRecord(r, s) {
-  const sq = sortOf(r), o = { id: s.id, rid: s.rid || null, ini: s.name, shown: !!s.shown };
+  const sq = sortOf(r), o = { id: s.id, rid: s.rid || null, ini: s.name, shown: !!s.shown, awarded: !!s.aw }; // awarded = the teacher gave their team a point for this question
   if (sq) {
     const place = s.sort || {};
     // confidence is read at hand-in, so instant feedback or a reveal can't change what the student said they were sure of
@@ -264,7 +264,7 @@ function sortDetail(r, sq) {
 }
 function qRecord(r, live) {
   const sq = sortOf(r);
-  const rec = { n: r.qn, kind: sq ? 'sort' : 'draw', q: plainQ(r.q), live, students: [...r.students.values()].map(s => stuRecord(r, s)) };
+  const rec = { n: r.qn, kind: sq ? 'sort' : 'draw', q: plainQ(r.q), live, capped: !!r.cap, students: [...r.students.values()].map(s => stuRecord(r, s)) };
   if (sq && r.sk) rec.sort = sortDetail(r, sq);
   return rec;
 }

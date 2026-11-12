@@ -49,7 +49,7 @@ Three things the teacher runs from the teaching screen (`/class`), all of which 
 - One number for the lesson — green counts 100, amber 50, red 0 — with a plain reading (*"The class felt mostly comfortable"*), a stacked bar per question, the number who answered nothing, and how confidence moved from the first question to the last.
 - **Who to check in with**: students who ended the last question on red, or were red twice or more, by name. **By team** for the same view against your team points.
 - **Save report (CSV)** writes the per-question table and a student × question grid in one file; **Copy summary** puts the same thing on the clipboard for a doc or an email home.
-- **More → End-of-lesson report** is the one to open when planning the next lesson: confidence vs accuracy on sort questions, what was mixed up (by card and idea), vocabulary students typed against the words you wanted, and whose work reached the projector, with a short "Cover next time" list. See [NEXT_LESSON_REPORT.md](NEXT_LESSON_REPORT.md).
+- **More → End-of-lesson report** is the one to open when planning the next lesson: confidence vs accuracy on sort questions, what was mixed up (by card and idea), vocabulary students typed against the words you wanted, and whose work reached the projector, with a short "Cover next time" list. It can be printed or saved as a PDF. See [NEXT_LESSON_REPORT.md](NEXT_LESSON_REPORT.md).
 - The server keeps the last 40 questions' colours (never names — those are joined in on your computer), so a refresh of the teaching screen doesn't lose the report. **Clear class** starts a fresh one.
 
 

@@ -171,7 +171,8 @@
  <div id="nlbody" style="padding:16px 24px 18px;display:flex;flex-direction:column;gap:22px;max-height:calc(100dvh - 230px);overflow:auto"></div>
  <div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 24px;border-top:1px solid var(--line);flex-wrap:wrap">
   <button class="b" id="nlcopy">Copy summary</button>
-  <button class="b pri" id="nlsave">Save as text file</button>
+  <button class="b" id="nlsave">Save as text file</button>
+  <button class="b pri" id="nlpdf">Print / save as PDF</button>
  </div>
 </dialog>
 
@@ -801,28 +802,27 @@ function drawNL() {
   box.append(nlSec('Cover next time', 'The first ten minutes of tomorrow, from what this class did',
     ...(a.priorities.length ? a.priorities.map(p => el('div', { style: 'display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 12px;padding:8px 0;border-top:1px solid var(--line)' },
       el('b', { textContent: p.h }), el('div', { textContent: p.t, style: 'overflow-wrap:anywhere' })))
-      : [nlNote('Nothing stood out yet. Confidence vs accuracy needs a sort question, and vocabulary needs a drawing question and the words you want to see.')])));
+      : [nlNote('Nothing stood out yet. Confidence is compared with sort answers or the points you give, and vocabulary needs a drawing question and the words you want to see.')])));
 
-  // 2. confidence vs accuracy
-  if (!a.sortQs) box.append(nlSec('Confidence vs accuracy', '', nlNote('This needs a sort question, because that is where the right answer is known. Students now tap their colour on sort questions too.')));
-  else {
-    const t = a.totals, tiles = [['Confident and right', t.solid, PULSES.g.c, 'Moving on is safe'], ['Confident but missed some', t.over, PULSES.r.c, 'They will not ask for help'], ['Unsure and wrong', t.aware, PULSES.y.c, 'They know they need help'], ['Unsure but right', t.under, 'var(--c-muted)', 'Know more than they think']];
-    const rows = a.calib.map(r => el('div', { style: 'padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-md)' },
-      el('b', { textContent: 'Q' + r.n + ' ' }), r.q,
-      el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: r.skipped ? 'Instant feedback was on, so confidence is not compared here.' :
-        [r.solid + ' confident and right', r.over + ' confident but missed some', r.aware + ' unsure and wrong', r.under + ' unsure but right', r.mixed ? r.mixed + ' in between' : '', r.none ? r.none + ' gave no colour' : '', r.noAnswer ? r.noAnswer + ' did not answer' : ''].filter(Boolean).join(' · ') })));
-    const who = [];
-    if (a.watch.length) who.push(el('div', {}, el('div', { className: 'lbl', textContent: 'Check in with', style: 'margin-bottom:4px' }),
-      ...a.watch.slice(0, 12).map(w => el('div', { style: 'display:flex;gap:10px;padding:5px 0;border-top:1px solid var(--line)' }, el('b', { textContent: w.name, style: 'flex:1;min-width:0' }),
-        el('span', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: w.over.length ? 'said “I understand” but ' + w.over.map(x => 'got ' + x.got + ' of ' + x.of + ' on Q' + x.n).join(', ') : 'knew they needed help' })))));
-    if (a.boost.length) who.push(nlNote('Know more than they think: ' + a.boost.join(', ')));
-    box.append(nlSec('Confidence vs accuracy', 'Sort questions only. The colour counted is the one they had when they handed in.',
-      el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px' },
-        ...tiles.map(([l, n, c, note]) => el('div', { style: 'border:1px solid var(--line);border-left:6px solid ' + c + ';border-radius:var(--r-lg);padding:10px 12px' },
-          el('div', { className: 'big', textContent: n, style: 'font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);line-height:1' }), el('div', { textContent: l, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: note, style: 'font-size:var(--fs-xs)' })))),
-      el('div', {}, ...rows), ...who));
+  // 2. confidence vs accuracy: sort answers, and the points you gave on drawing questions
+  const t = a.totals, tiles = [['Confident and right', t.solid, PULSES.g.c, 'Moving on is safe'], ['Confident but missed some', t.over, PULSES.r.c, 'They will not ask for help'], ['Unsure and wrong', t.aware, PULSES.y.c, 'They know they need help'], ['Unsure but right', t.under, 'var(--c-muted)', 'Know more than they think']];
+  const crow = a.calib.map(r => el('div', { style: 'padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-md)' },
+    el('b', { textContent: 'Q' + r.n + ' ' }), r.q, el('span', { className: 'mut', style: 'font-size:var(--fs-xs)', textContent: '  ' + (r.basis === 'points' ? 'by points' : 'by sort answer') }),
+    el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: NL.rowText(r) })));
+  const who = [];
+  if (a.watch.length) who.push(el('div', {}, el('div', { className: 'lbl', textContent: 'Check in with', style: 'margin-bottom:4px' }),
+    ...a.watch.slice(0, 12).map(w => el('div', { style: 'display:flex;gap:10px;padding:5px 0;border-top:1px solid var(--line)' }, el('b', { textContent: w.name, style: 'flex:1;min-width:0' }),
+      el('span', { className: 'mut', style: 'font-size:var(--fs-sm);text-align:right', textContent: NL.why(w) })))));
+  if (a.boost.length) who.push(nlNote('Know more than they think: ' + a.boost.join(', ')));
+  box.append(nlSec('Confidence vs accuracy', 'On a sort question, the colour counted is the one they had when they handed in. On a drawing question, “right” means you gave a point.',
+    a.usable ? el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px' },
+      ...tiles.map(([l, n, c, note]) => el('div', { style: 'border:1px solid var(--line);border-left:6px solid ' + c + ';border-radius:var(--r-lg);padding:10px 12px' },
+        el('div', { className: 'big', textContent: n, style: 'font-family:var(--disp);font-weight:800;font-size:var(--fs-3xl);line-height:1' }), el('div', { textContent: l, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: note, style: 'font-size:var(--fs-xs)' }))))
+      : nlNote('Nothing to compare yet. Use a sort question, or give points for correct diagrams (and turn off the one-point-per-team limit) so the report can see who got it.'),
+    el('div', {}, ...crow), ...who));
 
-    // 3. mix-ups
+  // 3. mix-ups (sort questions)
+  if (a.sortQs) {
     const bar = (name, p, sub) => el('div', { style: 'display:grid;grid-template-columns:minmax(0,1fr) 140px 48px;gap:4px 12px;align-items:center;padding:6px 0;border-top:1px solid var(--line)' },
       el('div', {}, el('b', { textContent: name }), sub ? el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: sub }) : ''),
       meter([[p, p < NL.T.shaky * 100 ? PULSES.r.c : PULSES.g.c, p + '% right']], 100), el('b', { textContent: p + '%', style: 'text-align:right' }));
@@ -844,7 +844,8 @@ function drawNL() {
       el('div', {}, el('b', { textContent: r.term }), el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: r.exact + ' used it' + (r.close ? ' · ' + r.close + ' spelled it differently' : '') + ' · ' + r.none + ' did not' })),
       meter([[r.exact, PULSES.g.c, r.exact + ' used it'], [r.close, PULSES.y.c, r.close + ' spelled differently']], v.drawers))));
     if (v.top.length) vk.push(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;padding-top:4px' }, ...v.top.map(x => chip(x.label + (x.n > 1 ? ' ×' + x.n : '')))));
-    if (v.confidentNoWords.length) vk.push(nlNote('Said “I understand” but used none of your words: ' + v.confidentNoWords.join(', ') + '. They may still know it, so look at their drawing.'));
+    if (v.noLabels) vk.push(nlNote(v.noLabels + (v.noLabels === 1 ? ' student typed' : ' students typed') + ' no labels at all.'));
+    if (v.confidentNoWords.length) vk.push(nlNote('Said “I understand” but typed none of your words: ' + v.confidentNoWords.join(', ') + '. They may still know it, so look at their drawing.'));
   }
   box.append(nlSec('Vocabulary', a.drawQs ? 'Words typed on drawing questions · ' + v.drawers + ' students' : '', ...vk));
 
@@ -883,6 +884,57 @@ $('#nlsave').onclick = () => {
   if (!nlAn) return;
   el('a', { href: URL.createObjectURL(new Blob([nlText()], { type: 'text/plain' })), download: 'next-lesson-' + code + '-' + new Date().toISOString().slice(0, 10) + '.txt' }).click();
 };
+
+// ---- print / save as PDF: a clean paper layout, built only when asked (the browser's Print window can save it as a PDF) ----
+function fillNLPrint() {
+  const a = nlAn, root = $('#nlprint') || document.body.appendChild(el('div', { id: 'nlprint' }));
+  root.replaceChildren();
+  const T = (tag, text, cls) => el(tag, { textContent: text, className: cls || '' });
+  const cell = c => (c instanceof Node ? el('td', {}, c) : T('td', c));
+  const table = (head, rows, cls) => el('table', { className: cls || '' }, head ? el('thead', {}, el('tr', {}, ...head.map(x => T('th', x)))) : '', el('tbody', {}, ...rows.map(r => el('tr', {}, ...r.map(cell)))));
+  const sec = (title, hint, ...kids) => el('section', {}, T('h2', title), hint ? T('p', hint, 'hint') : '', ...kids);
+  const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }), nq = nlRec.questions.length;
+  root.append(T('h1', 'Next lesson report'), T('p', per().name + ' · ' + date + ' · ' + nq + (nq === 1 ? ' question' : ' questions') + ' · ' + a.students + ' students', 'pr-sub'));
+  root.append(sec('Cover next time', '', a.priorities.length ? table(null, a.priorities.map(p => [p.h, p.t]), 'cover') : T('p', 'Nothing stood out yet.')));
+  const t = a.totals;
+  const tiles = [['Confident and right', t.solid, PULSES.g.c], ['Confident but missed some', t.over, PULSES.r.c], ['Unsure and wrong', t.aware, PULSES.y.c], ['Unsure but right', t.under, '#5B6772']];
+  const kids = [];
+  if (a.usable) kids.push(el('div', { className: 'tiles' }, ...tiles.map(([l, n, c]) => el('div', { style: 'border-left:5pt solid ' + c }, T('div', String(n), 'n'), T('div', l)))));
+  kids.push(table(['Question', 'Basis', 'Result'], a.calib.map(r => ['Q' + r.n + ' ' + r.q, r.basis === 'points' ? 'Points you gave' : 'Sort answer', NL.rowText(r)])));
+  if (a.watch.length) kids.push(el('div', { className: 'keep' }, T('h3', 'Check in with'), table(['Student', 'Why'], a.watch.map(w => [w.name, NL.why(w)]))));
+  if (a.boost.length) kids.push(T('p', 'Know more than they think: ' + a.boost.join(', ')));
+  root.append(sec('Confidence vs accuracy', 'Colour is what students tapped. On a sort question it is the colour they had when they handed in; on a drawing question, “right” means you gave a point.', ...kids));
+  if (a.sortQs) {
+    const rows = (a.ideas.length ? a.ideas.map(i => [i.name, i.pct + '%', meter([[i.pct, i.pct < NL.T.shaky * 100 ? PULSES.r.c : PULSES.g.c]], 100), [i.worst && i.worst.mix ? NL.mixText(i.worst) : '', i.confWrong ? i.confWrong + ' wrong from students who said “I understand”' : ''].filter(Boolean).join('. ')])
+      : a.shaky.slice(0, 10).map(c => ['“' + c.text + '”', c.pct + '%', meter([[c.pct, PULSES.r.c]], 100), NL.mixText(c)]));
+    root.append(sec('What was mixed up', a.ideas.length ? 'By idea, weakest first. Under ' + NL.T.shaky * 100 + '% right is shaky.' : 'Cards under ' + NL.T.shaky * 100 + '% right.',
+      rows.length ? table(['Idea', 'Right', '', 'What happened'], rows) : T('p', 'No card was under ' + NL.T.shaky * 100 + '% right.'),
+      ...(a.ideas.length && a.shaky.length ? [T('h3', 'Cards to look at'), table(['Card', 'Right', 'Mix-up'], a.shaky.slice(0, 8).map(c => ['Q' + c.n + ' “' + c.text + '”', c.pct + '%', NL.mixText(c)]))] : [])));
+  }
+  if (a.drawQs) {
+    const v = a.vocab, vk = [];
+    if (v.terms.length) vk.push(table(['Word', 'Used', 'Spelled differently', 'Not used', ''], v.terms.map(r => [r.term, String(r.exact), String(r.close), String(r.none), meter([[r.exact, PULSES.g.c], [r.close, PULSES.y.c]], v.drawers)])));
+    else vk.push(T('p', 'No target words were entered.', 'hint'));
+    if (v.top.length) vk.push(T('p', 'Most typed: ' + v.top.map(x => x.label + (x.n > 1 ? ' ×' + x.n : '')).join(', ')));
+    if (v.noLabels) vk.push(T('p', v.noLabels + (v.noLabels === 1 ? ' student typed' : ' students typed') + ' no labels.'));
+    if (v.confidentNoWords.length) vk.push(T('p', 'Said “I understand” but typed none of the target words: ' + v.confidentNoWords.join(', ') + '. Look at their drawings before assuming.'));
+    root.append(sec('Vocabulary', 'Words typed on drawing questions · ' + v.drawers + ' students. Capitals, plurals, accents and small spelling slips count.', ...vk));
+  }
+  const pr = a.projector, pk = [];
+  pk.push(T('p', pr.total ? pr.total + (pr.total === 1 ? ' showing' : ' showings') + ': ' + pr.colours.g + ' from students on green, ' + pr.colours.y + ' amber, ' + pr.colours.r + ' red, ' + pr.colours.none + ' with no colour.' : 'Nobody’s work has been put on the projector yet.'));
+  if (pr.rows.length) pk.push(T('p', 'Shown: ' + pr.rows.map(r => r.name + (r.times > 1 ? ' ×' + r.times : '')).join(', ')));
+  if (pr.never.length) pk.push(T('p', 'Not yet shown: ' + pr.never.join(', '), 'strong'));
+  root.append(Object.assign(sec('On the projector', 'Whose work the class has seen', ...pk), { className: 'keep' }));
+  root.append(T('p', 'Made from what students tapped and did during the lesson. This page has student names on it: keep or share it as you would a gradebook.', 'foot'));
+}
+function printNL() {
+  if (!nlAn) return;
+  fillNLPrint();
+  const old = document.title; document.title = 'Next lesson report - ' + per().name + ' - ' + new Date().toISOString().slice(0, 10); // the PDF's default file name
+  const done = () => { document.title = old; $('#nlprint').replaceChildren(); removeEventListener('afterprint', done); };
+  addEventListener('afterprint', done); print();
+}
+$('#nlpdf').onclick = printNL;
 
 // ---- thumbnails: refresh at most every 150ms + 15ms per student, 3 per frame, longest-waiting first ----
 (function loop() {
