@@ -245,7 +245,7 @@ Two requests from a teacher using the continents question and the Got it / Almos
 
 ---
 
-## After the answer areas: continents from your pictures, more drawn diagrams, two starter sets
+## After the answer areas: continents from your pictures, more drawn diagrams, two starter sets (the continent pictures were replaced in the next section)
 Five continent pictures (North America, South America, Africa, Eurasia, Greenland) came with the request to build Whiteboard, Sort and Place It questions from them, and a second request for more diagrams to draw on. `npm test`: 126 tests (125 before; 1 new, 1 widened). Run in Chromium end to end: both sets added from the starter list, opened in the editor (rings and chips right, no console errors), every drawn diagram painted, every Place It question painted at its start and at its answer.
 
 **Pictures**
@@ -264,3 +264,20 @@ Five continent pictures (North America, South America, Africa, Eurasia, Greenlan
 - **India, Australia and Antarctica are not in yet.** Those three pictures arrived as images in the chat, not as files, so they could not be put into the set.
 - Eurasia includes India as drawn, so on the Pangaea board India sits with Eurasia rather than against Africa and Antarctica.
 - Only piece pictures can be your own: a *Draw* question's photo background has to be a JPEG, so the continents are pieces, not a background.
+
+
+---
+
+## After the slideshow: the eight real pieces, in colour
+The teacher's slideshow (*Continental Drift Puzzle Activity*, from the USGS *This Dynamic Planet* worksheets) was read through Google Drive (exported as a .pptx, because the image host is not reachable from here). Its 8 puzzle pieces are only 439 x 568 canvases with a small picture in each, the same resolution as the five that were sent by hand, so the pieces were taken instead from the **colour scan on the resource page** (Resource Page #1), which is about three times larger and is colour-coded.
+
+**What was built** `npm test`: 126 tests (same count; the starter test now expects 8 pieces and the worksheet key).
+- **All 8 pieces**: North America, South America, Africa, Eurasia, Greenland, India, Australia, Antarctica, cut out of the scan by outline (the inside of each continent is filled with a pale land colour), shrunk to about 3 to 10 KB each, 74 KB for the whole Pangaea question. The colours match the scan's own key: gray European flora, pink *Cynognathus*, blue *Lystrosaurus*, orange *Glossopteris*, green *Mesosaurus*, light green triangles for mountains. The questions now name the animals, because the key does.
+- **Fit**: positions come from matching the outlines of the pieces (least overlap, most contact), not from guessing. The orange *Glossopteris* band runs Africa, Antarctica, India, Australia; the blue *Lystrosaurus* areas meet in Africa, Antarctica and India; the mountain belt runs North America, Greenland, Eurasia. Answer area is *Loose* (90). The teacher's own slide says "the pieces may not fit exactly", and that is what Loose is for.
+- **Pieces start in two tidy rows** (Scatter cannot separate eight big pieces).
+- **Questions from the teacher's activity**: *Evidence or not?* is a Sort of the ten statements on the Analyzing Evidence worksheet, using the teacher's own key from slide 4 (evidence: 1, 2, 5, 6, 8, 9; not evidence: 3, 4, 7, 10). Two new Draw questions: what could make the continents move (the teacher's question 10) and why the coasts do not fit perfectly (question 5).
+
+**Known limits / to check**
+- The key marks statement 10 (earthworm fossils on several continents) as *not evidence*. That is how it is built. If it was meant to be evidence, move that card to *Evidence* in the editor.
+- The pictures are hand-coloured scans, so the colours are a little uneven.
+- The slideshow also has *The World Today* (a USGS world map). It is not used yet; it would suit a Place It background ("where is each continent today") but it labels every continent, and a photo background must be a JPEG of about 150 KB after shrinking.
