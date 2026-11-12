@@ -26,6 +26,7 @@
   </div>
   <div class="grp">
    <span class="chip" id="qtag" hidden style="background:var(--c-warn-soft);color:var(--c-warn-strong)">Quick mode on</span>
+   <button class="b dk" id="timer" aria-haspopup="true" title="Class timer: every screen shows the same countdown" aria-label="Class timer"><svg data-i="clock"></svg><span class="bl">Timer</span></button>
    <button class="b dk" id="freeze" aria-pressed="false" title="Freeze the class: every student's screen stops until you let go" aria-label="Freeze the class"><svg data-i="snow"></svg><span class="bl">Freeze</span></button>
    <button class="b sky" id="proj" title="Open the projector view in a new window" aria-label="Open the projector view"><svg data-i="screen"></svg><span class="bl">Projector</span></button>
    <button class="b dk" id="more" title="More" aria-label="More"><span class="bl">More</span><svg data-i="dots"></svg></button>
@@ -99,6 +100,7 @@
   <div class="ph-h">
    <div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="dotc" id="pdot" style="margin:0"></span><b id="pname" style="font-size:var(--fs-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></b><span class="code" id="pcode"></span></div>
    <button class="b sky" id="pproj">Projector</button>
+   <button class="b dk" id="ptimer" aria-haspopup="true" aria-label="Class timer" title="Class timer" style="min-width:44px;padding:0 10px"><svg data-i="clock"></svg></button>
    <button class="b dk" id="pfreeze" aria-pressed="false" aria-label="Freeze the class" title="Freeze the class" style="min-width:44px;padding:0 12px"><svg data-i="snow"></svg></button>
   </div>
   <div class="ph-body" id="pbody"></div>
@@ -177,6 +179,7 @@
 <script src="/icons.js"></script>
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
+<script src="/timerkit.js"></script>
 <script src="/tcommon.js"></script>
 <script src="/sortres.js"></script>
 <script>
@@ -266,7 +269,7 @@ function onmsg(m) {
       }
       break;
     case 'state': {
-      $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
+      TK.set(m.timer); $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
@@ -304,6 +307,7 @@ function onmsg(m) {
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
+    case 'timer': TK.handle(m); break;
     case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
@@ -406,6 +410,43 @@ function freezeMenu(btn) {
     { t: 'Freeze for 2 minutes', f: () => ws.send({ t: 'freeze', on: true, secs: 120 }) },
   ], 'top:52px;right:0;min-width:280px');
 }
+// ---- class timer: the Timer button, its menu, and the two per-class options ----
+// freeze: freeze the class at zero. auto: seconds of a timer to start with every new question (0 = off). Both are remembered per class.
+let TO = { freeze: false, auto: 0, last: 120 }; try { Object.assign(TO, JSON.parse(store['do_timer_' + code] || '{}')); } catch {}
+const saveTO = () => { try { store['do_timer_' + code] = JSON.stringify(TO); } catch {} };
+const timerWord = s => (s % 60 === 0 ? (s / 60) + (s === 60 ? ' minute' : ' minutes') : s < 60 ? s + ' seconds' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'));
+function startTimer(secs) { TO.last = secs; if (TO.auto) TO.auto = secs; saveTO(); ws.send({ t: 'timer', secs, freeze: TO.freeze }); }
+function timerMenu(btn) {
+  const running = TK.active(), s = TK.secs(), paused = running && TK.left() > 0 && document.getElementById('timer').dataset.paused === '1';
+  const opts = [
+    { t: 'Freeze the class when time is up', tog: TO.freeze, keep: true, f: () => { TO.freeze = !TO.freeze; saveTO(); if (running) toast('Applies to the next timer you start.'); closeMenu(); } },
+    { t: 'Start this timer with every new question', sub: TO.auto ? 'Now: ' + timerWord(TO.auto) + ' each time' : 'Uses the last time you picked (' + timerWord(TO.last) + ')', tog: !!TO.auto, keep: true, f: () => { TO.auto = TO.auto ? 0 : TO.last; saveTO(); closeMenu(); } },
+  ];
+  const items = running
+    ? [{ h: 'Time left ' + TK.fmt(s) }, { t: '+1 minute', f: () => ws.send({ t: 'timer', add: 60 }) }, { t: paused ? 'Resume' : 'Pause', f: () => ws.send({ t: 'timer', pause: !paused }) }, { t: 'Stop timer', danger: true, f: () => ws.send({ t: 'timer', off: true }) }, '-', ...opts]
+    : [{ h: 'Start a timer for' }, ...[30, 60, 120, 180, 300, 600].map(x => ({ t: timerWord(x), f: () => startTimer(x) })),
+      { t: 'Custom…', f: async () => {
+        const v = await askText('Minutes', TO.last % 60 ? TK.fmt(TO.last) : String(TO.last / 60), { title: 'Custom timer', text: 'Type minutes (like 4 or 1.5) or minutes and seconds (like 1:30). From 5 seconds to 60 minutes.', ok: 'Start timer', required: 'Type a time, like 4 or 1:30', max: 7,
+          check: x => { const q = TK.parse(x); return q == null ? 'Use a number like 4, 1.5 or 1:30' : q < 5 || q > 3600 ? 'Pick a time from 5 seconds to 60 minutes' : ''; } });
+        if (v !== null) startTimer(TK.parse(v));
+      } }, '-', ...opts];
+  openMenu(btn, items, 'top:52px;right:0;min-width:300px');
+}
+function timerUI(t) {
+  const b = $('#timer'), p = $('#ptimer'); if (!b) return;
+  const on = !!(t && t.running); b.dataset.paused = on && t.paused ? '1' : '';
+  b.classList.toggle('on', on); if (p) p.classList.toggle('on', on);
+  const label = on ? TK.fmt(t.secs) : 'Timer';
+  const sp = b.querySelector('.bl'); if (sp.textContent !== label) sp.textContent = label;
+  const ic = on && t.paused ? 'pause' : 'clock';
+  if (b.dataset.ic !== ic) { b.dataset.ic = ic; b.querySelector('svg').replaceWith(icoEl(ic)); }
+  b.title = on ? (t.paused ? 'Timer paused. Press for options.' : 'Timer running. Press to add time, pause or stop.') : 'Class timer: every screen shows the same countdown';
+  if (p) { p.replaceChildren(icoEl(ic), ...(on ? [el('span', { textContent: ' ' + TK.fmt(t.secs), style: 'font-weight:800;font-size:var(--fs-sm)' })] : [])); }
+}
+TK.onTick(timerUI); timerUI({ running: false });
+TK.onDone(() => { toast('Time is up.'); });
+$('#timer').onclick = e => { e.stopPropagation(); timerMenu($('#timer')); };
+$('#ptimer').onclick = e => { e.stopPropagation(); timerMenu($('#ptimer')); };
 function freezeUI() {
   const b = $('#freeze'); b.classList.toggle('on', S.frozen); b.setAttribute('aria-pressed', S.frozen ? 'true' : 'false');
   b.replaceChildren(icoEl('snow'), el('span', { className: 'bl', textContent: S.frozen ? 'Frozen' : 'Freeze' })); b.title = S.frozen ? 'Frozen. Press to unfreeze.' : 'Freeze the class: every student\'s screen stops until you let go';
@@ -528,6 +569,7 @@ function go(i) {
   if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true);
   const prev = cur, prevQ = S.q, hadWork = [...S.stu.values()].some(s => (s.objs && s.objs.length) || Object.keys(s.sort || {}).length);
   cur = i; setCurIdx(i); store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet();
+  if (TO.auto) ws.send({ t: 'timer', secs: TO.auto, freeze: TO.freeze }); // "start this timer with every new question"
   // a new question wipes every drawing, so for 15 seconds the teacher can take it back (the server keeps the old work that long)
   if (hadWork) toast('Question sent. Everyone\u2019s drawings were cleared.', { label: 'Undo', ms: 15000, f: () => { ws.send({ t: 'undoq' }); cur = prev; setCurIdx(prev); if (prev >= 0 && qs()[prev]) rememberQ(qs()[prev]); renderSet(); } });
 }

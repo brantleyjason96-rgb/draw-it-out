@@ -69,7 +69,11 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
     let out = cancel, firstPri = null, safe = null;
     // a blank answer to a required box keeps the dialog open and says why, in words
     const err = el('div', { className: 'derr', role: 'alert' }); err.hidden = true; if (inp) inp.after(err);
-    const checkReq = () => { if (!input.required || inp.value.trim()) { err.hidden = true; return true; } err.textContent = input.required; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); return false; };
+    const checkReq = () => {
+      const bad = input.required && !inp.value.trim() ? input.required : input.check ? input.check(inp.value) : '';
+      if (!bad) { err.hidden = true; return true; }
+      err.textContent = bad; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); return false;
+    };
     if (inp) inp.addEventListener('input', () => { err.hidden = true; inp.removeAttribute('aria-invalid'); });
     buttons.forEach(b => {
       const bt = el('button', { type: 'button', textContent: b.label, className: b.kind || '' });
@@ -85,7 +89,7 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
   });
 }
 const ask = (text, o = {}) => dlgOpen({ title: o.title, text, cancel: false, buttons: [{ label: o.cancel || 'Cancel', value: false, safe: !!o.danger }, { label: o.ok || 'OK', value: true, kind: o.danger ? 'danger' : 'pri' }] });
-const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max, required: o.required }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
+const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max, required: o.required, check: o.check }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
 const tell = (text, o = {}) => dlgOpen({ title: o.title, text, buttons: [{ label: o.ok || 'OK', value: true, kind: 'pri' }] });
 const choose = (text, buttons, o = {}) => dlgOpen({ title: o.title, text, cancel: null, buttons });
 const showCopy = (label, text) => dlgOpen({ title: label, input: { label: 'Select the text and copy it', value: text, readOnly: true, multiline: true }, buttons: [{ label: 'Done', value: true, kind: 'pri' }] });

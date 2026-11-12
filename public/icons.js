@@ -2,6 +2,7 @@
 // ico('check') returns an SVG string; icoEl('check') returns an element; <svg data-i="check"></svg> is filled on load.
 const ICONS = {
   back: 'M15 5l-7 7 7 7', next: 'M9 5l7 7-7 7', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6', chev: 'M6 9l6 6 6-6', chevup: 'M6 15l6-6 6 6',
+  clock: 'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 2', pause: 'M9 5v14M15 5v14', play: 'M8 5l11 7-11 7z',
   snow: 'M12 2v20M3.5 7l17 10M20.5 7l-17 10', screen: 'M3 5h18v11H3zM8 21h8M12 16v5', dots: 'M5 12h.01M12 12h.01M19 12h.01', list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
   plus: 'M12 5v14M5 12h14', minus: 'M5 12h14', x: 'M6 6l12 12M18 6L6 18', check: 'M5 12.5l4.5 4.5L19 7.5', send: 'M7 4l13 8-13 8z',
   report: 'M8 4h8l3 3v13H5V4h3M9 12h6M9 16h6', trophy: 'M8 4h8v5a4 4 0 01-8 0zM8 6H5a3 3 0 003 3M16 6h3a3 3 0 01-3 3M12 13v4M8 20h8',

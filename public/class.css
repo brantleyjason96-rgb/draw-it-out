@@ -70,6 +70,8 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;gap
 @media(any-pointer:coarse){#pulsesum .pb,#pstrip .pk,.srow .r2 .b{min-height:44px}}
 
 /* freeze */
+#timer{min-width:104px;font-variant-numeric:tabular-nums}
+#timer.on,#ptimer.on{background:var(--c-primary);border-color:var(--c-primary-strong);color:#fff;font-weight:800}
 #freeze{min-width:130px}
 #freeze.on{background:var(--c-frost);border-color:var(--c-frost-2);color:var(--c-frost-soft);font-weight:700}
 #frzbar{display:none;position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:26;align-items:center;gap:12px;background:var(--c-frost);color:var(--c-frost-soft);border:1px solid var(--c-frost-2);border-radius:var(--r-lg);padding:8px 10px 8px 16px;box-shadow:var(--sh-3);font-weight:600;max-width:calc(100% - 32px)}
@@ -126,7 +128,7 @@ body.scores-off #sstrip{display:flex}
 .stat #cnt{white-space:nowrap}
 @media(max-width:1100px){
  .tb{padding:0 12px;gap:8px}.tb .grp{gap:6px}.tb .b{padding:0 10px;font-size:var(--fs-sm)}.cpick{font-size:var(--fs-md)}.stat{font-size:var(--fs-sm)}.code{font-size:var(--fs-lg)}
- #freeze{min-width:0}
+ #freeze,#timer{min-width:0}
 }
 .tsep{width:1px;height:28px;background:var(--c-dark-line);flex:none}
 .tb .code{margin-left:6px}
