@@ -250,7 +250,8 @@ function chimeNow() {
 }
 $('#chime').onclick = () => { chimeOn = !chimeOn; try { localStorage.do_pchime = chimeOn ? '1' : '0'; } catch {} if (chimeOn) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {} chimeNow(); } chimeUI(); };
 chimeUI(); timerPaint({ running: false });
-function draw() { if (!raf) raf = requestAnimationFrame(paint); } // many updates in one frame = one repaint
+function draw() { if (!raf) raf = requestAnimationFrame(paint); }
+addEventListener('pieceimg', () => { S.stu.forEach(s => (s.d = true)); draw(); }); // a piece's own picture arrived // many updates in one frame = one repaint
 addEventListener('resize', () => { S.stu.forEach(s => (s.d = true)); draw(); }); // panels grow or shrink with the window
 function paint() {
   raf = 0;

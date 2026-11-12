@@ -1,6 +1,6 @@
 # Draw It Out — Plan: movable models ("Place It")
 
-**Status: Phases A and B are built (see "Phase A: what was built" and "Phase B: what was built" at the end). Phases C and D are not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+**Status: Phases A, B and C are built (see "what was built" under each at the end). Phase D is not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
 
 Open `mockups/place-it.html` in a browser: tab 1 is the editor, tab 2 the student page (drag, draw, keyboard, Reveal, Freeze, phone shape), tab 3 the teaching screen. Changes in tab 1 show up in tabs 2 and 3.
 
@@ -179,3 +179,25 @@ Class results, the projector summary, CSV, and lesson history, mastery and the D
 - A piece's percent on the teacher's screen is out of the students who moved it; on the projector it is out of all students who started (the same difference Sort has).
 - The panel has no per-team piece breakdown beyond the team bar.
 - Pieces results are not in the Dashboard's CSV beyond the existing mastery numbers.
+
+
+---
+
+## Phase C: what was built
+Rotation, drawn diagram backgrounds, pictures of your own, outline polish and the **Place It!** starter set. `npm test`: 116 tests (106 before; 10 new). Run in Chromium end to end: the starter set added and opened in the editor, turning in the editor (checkbox, ↺ ↻, dragging the handle, the angle tolerance), a picture upload (a white-backed PNG made see-through, toggled back, saved, round trip through a share link), a student picking a piece, dragging its handle, using Turn right, and `]` on the keyboard, Reveal with the faint correctly-facing copy, the results table with ↻, and all four diagrams on the student screen; no console or security-policy errors.
+
+**Choices made while building**
+- A piece that turns is `{ turn: true, a, ka }` (start angle, answer angle) and the model has `atol` (default 30°, held between 10° and 90°). A student's entry is `{ x, y, a }`; the server fills in the start angle if none is sent and drops an angle sent for a piece that cannot turn.
+- The answer angle (`ka`, `atol`) is a key, like the answer spot: only teachers get it, and students get it only with *Show outlines*.
+- Angle 0 is the picture as drawn (an arrow points right) and angles go clockwise. Moon phases are drawn lit on the right (or left with the `-l` pictures); a waning crescent is its own picture rather than a turned waxing one.
+- The picture is a data URL (PNG, JPEG or WebP, at most 140 KB, 700 KB in all). Anything else, or a picture over the budget, becomes a text card on the server and in the browser rules. A question with pictures is sent to every student and the projector, so the size limit is deliberately small.
+- The diagrams are drawn in code, around the middle of the page, so they take no storage and need no picture. They are made for the wide board; on the tall board they are smaller and centred.
+- `modelCheck` now needs place **and** angle; `modelMix` gains `SK.TURN` (-1) for "right place, wrong way", which is not counted as a swap.
+- Bug found and fixed in the browser run: the teacher screen's merged model did not carry the answer angles, so every turning piece looked wrong there. `modelFull()` in `class.html` now adds `ka` and `atol`.
+
+**Known limits (Phase C)**
+- A piece that turns is grabbed as a circle at any angle, so a long arrow can be grabbed slightly off its tip.
+- Moon-phase pieces do not turn (the lit side already faces the way the picture shows); a question that needs the lit side to turn would use an arrow or Earth.
+- Pictures of your own do not travel in share links (text only, by design); a teacher who wants to send a set with pictures exports it as a file.
+- The drawn diagrams are fixed pictures: there is no way yet to add labels or move parts of them. A photo background is still the way to use your own diagram.
+- Picture pieces do not use the "cut-out with a see-through background" step beyond the edge-white removal (no magic-wand or manual erase).

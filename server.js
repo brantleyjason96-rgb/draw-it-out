@@ -132,9 +132,10 @@ function cleanHtml(s) {
     return tok.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }).join('');
 }
+const BGS = ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates']; // the last four are drawn diagrams (public/common.js)
 function cleanQ(q = {}) {
   const img = typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,') && q.img.length < 4e6 ? q.img : null;
-  let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'graph';
+  let bg = BGS.includes(q.bg) ? q.bg : 'graph';
   if (bg === 'photo' && !img) bg = 'blank';
   return { question: cleanHtml(q.question), bg, img };
 }
@@ -171,25 +172,35 @@ function cleanPlace(r, p) {
 // Positions are stage units (wide 1000x625, tall 625x1000), the centre of the piece. The answer key (where each piece belongs, its idea, and
 // how close counts) is kept in r.sk = { pos, idea, tol } and is only ever sent to hosts. Students and the projector get the pieces and their
 // start spots. Only when the teacher chose "show outlines" (spots: 'shown') are the answer spots public, on purpose.
-const MAX_PIECES = 12, PIECE_A = 108, PIECE_ARTS = ['earth', 'sun', 'moon', 'arrow', 'card'];
+const MAX_PIECES = 12, PIECE_A = 108, IMG_MAX = 140000, IMG_TOTAL = 700000;
+const PIECE_ARTS = ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'];
+const imgOk = v => typeof v === 'string' && v.length <= IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v);
+const ang = v => ((Math.round(v) % 360) + 360) % 360;
+const angDiff = (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); };
 const STAGES = { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } };
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 function cleanModel(m) {
   if (!m || typeof m !== 'object') return null;
   const stage = m.stage === 'tall' ? 'tall' : 'wide', st = STAGES[stage], lo = PIECE_A / 2;
   const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
-  const pieces = [], seen = new Set(), pos = {}, idea = {};
+  const pieces = [], seen = new Set(), pos = {}, idea = {}, ka = {}; let imgBytes = 0;
   (Array.isArray(m.pieces) ? m.pieces : []).slice(0, MAX_PIECES).forEach(p => {
     if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
     const label = cstr(p.label, 24); if (!label || !isNum(p.x) || !isNum(p.y) || !isNum(p.kx) || !isNum(p.ky)) return;
-    seen.add(p.id); pieces.push({ id: p.id, label, art: PIECE_ARTS.includes(p.art) ? p.art : 'card', x: cx(p.x), y: cy(p.y) });
+    let art = PIECE_ARTS.includes(p.art) ? p.art : 'card', img = null;
+    if (art === 'img') { if (imgOk(p.img) && imgBytes + p.img.length <= IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
+    seen.add(p.id);
+    const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y) };
+    if (img) o.img = img;
+    if (p.turn === true) { o.turn = true; o.a = ang(isNum(p.a) ? p.a : 0); ka[p.id] = ang(isNum(p.ka) ? p.ka : 0); }
+    pieces.push(o);
     pos[p.id] = { x: cx(p.kx), y: cy(p.ky) };
     const i = cstr(p.idea, 30); if (i) idea[p.id] = i;
   });
   if (pieces.length < 2) return null;
-  const spots = m.spots === 'shown' ? 'shown' : 'hidden', tol = isNum(m.tol) ? Math.round(Math.min(150, Math.max(20, m.tol))) : 60;
-  if (spots === 'shown') pieces.forEach(p => { p.kx = pos[p.id].x; p.ky = pos[p.id].y; });
-  return { pub: { stage, spots, fb: m.fb === 'now' ? 'now' : 'reveal', pieces }, key: { pos, idea, tol } };
+  const spots = m.spots === 'shown' ? 'shown' : 'hidden', tol = isNum(m.tol) ? Math.round(Math.min(150, Math.max(20, m.tol))) : 60, atol = isNum(m.atol) ? Math.round(Math.min(90, Math.max(10, m.atol))) : 30;
+  if (spots === 'shown') pieces.forEach(p => { p.kx = pos[p.id].x; p.ky = pos[p.id].y; if (p.turn) p.ka = ka[p.id]; });
+  return { pub: { stage, spots, fb: m.fb === 'now' ? 'now' : 'reveal', pieces }, key: { pos, idea, tol, ang: ka, atol } };
 }
 // one door for every question that arrives: { nq, nk } or null when it is not complete
 function cleanQuestion(m) {
@@ -206,17 +217,20 @@ function cleanPl(r, p) {
   mq.pieces.forEach(c => {
     const v = p[c.id]; if (!v || typeof v !== 'object' || !isNum(v.x) || !isNum(v.y)) return;
     out[c.id] = { x: Math.round(Math.min(st.w - lo, Math.max(lo, v.x))), y: Math.round(Math.min(st.h - lo, Math.max(lo, v.y))) };
+    if (c.turn) out[c.id].a = ang(isNum(v.a) ? v.a : c.a || 0); // a piece that can turn always carries its angle; one that cannot never does
   });
   return out;
 }
 const placedAll = (r, s) => { const sq = sortOf(r); return !!sq && sq.cards.every(c => s.sort && s.sort[c.id]); };
 // right/wrong for a student: only when the question gives feedback right away, or the teacher pressed Reveal
+// right = within reach of its spot, and (for a piece that turns) facing within the angle tolerance
+const pieceRight = (r, id, p) => { const k = r.sk.pos[id]; if (!k || !p) return false; return Math.hypot(p.x - k.x, p.y - k.y) <= r.sk.tol && (!(id in r.sk.ang) || angDiff(p.a || 0, r.sk.ang[id]) <= r.sk.atol); };
 function fbOf(r, s) {
   const mq = modelOf(r);
   if (mq) { // pieces: right when the centre is within the teacher's distance of its spot; a wrong piece also learns where it belongs, on Reveal
     if (!r.sk || !(r.revealed || mq.fb === 'now')) return null;
     const ok = {}, where = {};
-    Object.keys(s.pl || {}).forEach(id => { const k = r.sk.pos[id], p = s.pl[id]; if (!k) return; ok[id] = Math.hypot(p.x - k.x, p.y - k.y) <= r.sk.tol; if (r.revealed && !ok[id]) where[id] = k; });
+    Object.keys(s.pl || {}).forEach(id => { const k = r.sk.pos[id], p = s.pl[id]; if (!k) return; ok[id] = pieceRight(r, id, p); if (r.revealed && !ok[id]) where[id] = id in r.sk.ang ? { x: k.x, y: k.y, a: r.sk.ang[id] } : k; });
     return { t: 'fb', ok, where };
   }
   const sq = sortOf(r); if (!sq || !r.sk || !(r.revealed || sq.fb === 'now')) return null;
@@ -239,7 +253,7 @@ function sortSummary(r) {
 function modelSummary(r) {
   const mq = modelOf(r); if (!mq || !r.sk) return null;
   const list = [...r.students.values()].filter(s => s.pl && Object.keys(s.pl).length);
-  const right = (s, id) => { const p = s.pl[id], k = r.sk.pos[id]; return !!p && !!k && Math.hypot(p.x - k.x, p.y - k.y) <= r.sk.tol; };
+  const right = (s, id) => pieceRight(r, id, s.pl[id]);
   const cards = mq.pieces.map(c => ({ id: c.id, text: c.label, pct: list.length ? Math.round(100 * list.filter(s => right(s, c.id)).length / list.length) : 0 }));
   const by = {}; mq.pieces.forEach(c => { const i = r.sk.idea[c.id]; if (i) (by[i] = by[i] || []).push(cards.find(x => x.id === c.id).pct); });
   return { t: 'sum', n: list.length, cards, ideas: Object.entries(by).map(([name, a]) => ({ name, pct: Math.round(a.reduce((x, y) => x + y, 0) / a.length) })) };

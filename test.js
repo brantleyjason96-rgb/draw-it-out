@@ -1411,6 +1411,130 @@ await test('mastery: pieces right out of all pieces is the score, the mark only 
   assert.deepEqual(row.qs.map(q => [q.model, q.avg]), [[true, 63], [true, 63]], 'class average per question (62.5 twice), model flagged');
 });
 
+// ---- Phase C: turning pieces, pictures of your own, diagram backgrounds, the Place It! starter set ----
+const PNG = 'data:image/png;base64,' + 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const TURNQ = (extra = {}, p2 = {}) => ({
+  t: 'q', question: 'Turn the arrows', bg: 'plates',
+  model: { stage: 'wide', spots: 'hidden', fb: 'reveal', tol: 60, atol: 30, pieces: [
+    { id: 1, label: 'Plate A', art: 'arrow', turn: true, x: 100, y: 100, a: 200, kx: 290, ky: 337, ka: 0 },
+    { id: 2, label: 'Plate B', art: 'arrow', turn: true, x: 900, y: 100, a: 90, kx: 710, ky: 337, ka: 180, ...p2 },
+    { id: 3, label: 'Sun', art: 'sun', x: 500, y: 520, kx: 500, ky: 520 }], ...extra }
+});
+
+await test('turning: the angle rules are the same in the browser and on the server, and wrap around 360', async () => {
+  assert.equal(SK.angDiff(350, 10), 20); assert.equal(SK.angDiff(0, 180), 180); assert.equal(SK.angDiff(-10, 350), 0); assert.equal(SK.ang(-90), 270); assert.equal(SK.ang(725.4), 5);
+  const code = 'TURNA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const input = TURNQ({ atol: 500 }, { a: -90, ka: 725 }); h.send(input); await sleep(100);
+  const srv = h.last('q'), mine = SK.cleanModel(input.model);
+  assert.equal(mine.atol, srv.sk.atol); assert.equal(mine.atol, 90, 'the angle tolerance is held between 10 and 90');
+  assert.deepEqual(Object.fromEntries(mine.pieces.filter(p => p.turn).map(p => [p.id, p.ka])), srv.sk.ang); assert.deepEqual(srv.sk.ang, { 1: 0, 2: 5 });
+  assert.deepEqual(mine.pieces.map(p => [p.id, !!p.turn, p.a]), srv.q.model.pieces.map(p => [p.id, !!p.turn, p.a]), 'start angles agree'); assert.equal(srv.q.model.pieces[1].a, 270);
+  assert.ok(!('turn' in srv.q.model.pieces[2]) && !('a' in srv.q.model.pieces[2]), 'a piece that cannot turn carries no angle');
+  h.ws.close();
+});
+
+await test('turning: the answer angle never reaches students unless the outlines are shown', async () => {
+  const code = 'TURNB', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Tia', bw: 800, bh: 500 }); await s.wait('joined');
+  const pr = client(); await pr.ready; pr.send({ t: 'watch', code }); await pr.wait('state'); s.clear(); pr.clear();
+  h.send(TURNQ()); await sleep(100);
+  for (const q of [s.last('q').q, pr.last('q').q]) { const txt = JSON.stringify(q); assert.ok(!/"ka"|"ang"|"atol"|"kx"/.test(txt), 'no answer angle in ' + txt); assert.equal(q.model.pieces[0].a, 200, 'the start angle is public'); }
+  s.clear(); h.send(TURNQ({ spots: 'shown' })); await sleep(100);
+  assert.equal(s.last('q').q.model.pieces[0].ka, 0); assert.equal(s.last('q').q.model.pieces[1].ka, 180); assert.ok(!/"atol"/.test(JSON.stringify(s.last('q').q)));
+  [h, s, pr].forEach(c => c.ws.close());
+});
+
+await test('turning: right needs the place and the angle; Reveal says where and which way', async () => {
+  const code = 'TURNC', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Uma', bw: 800, bh: 500 }); await s.wait('joined');
+  h.send(TURNQ()); await sleep(80); h.send({ t: 'reveal', on: true }); await sleep(60); s.clear();
+  s.send({ t: 'place', p: { 1: { x: 292, y: 335, a: 20 }, 2: { x: 710, y: 337, a: 100 }, 3: { x: 500, y: 520, a: 77 } } }); await sleep(100);
+  const fb = s.last('fb');
+  assert.deepEqual(fb.ok, { 1: true, 2: false, 3: true }, 'piece 1 is 20 degrees off (inside 30); piece 2 is in place but 80 degrees off');
+  assert.deepEqual(fb.where, { 2: { x: 710, y: 337, a: 180 } }, 'the ghost has the answer angle; a piece that cannot turn has none');
+  const pl = h.last('pl').p; assert.equal(pl[1].a, 20); assert.equal(pl[2].a, 100); assert.ok(!('a' in pl[3]), 'an angle sent for a piece that cannot turn is dropped');
+  s.send({ t: 'place', p: { 1: { x: 292, y: 335, a: 355 }, 2: { x: 710, y: 337 } } }); await sleep(100);
+  assert.deepEqual(s.last('fb').ok, { 1: true, 2: false }, '355 is 5 degrees from 0; a turning piece with no angle sent is judged at its start angle (90)');
+  assert.equal(h.last('pl').p[2].a, 90);
+  s.send({ t: 'place', p: { 1: { x: 292, y: 335, a: 'x' } } }); await sleep(80); assert.equal(h.last('pl').p[1].a, 200, 'a bad angle becomes the start angle');
+  [h, s].forEach(c => c.ws.close());
+});
+
+await test('turning: the projector percentages use the angle too', async () => {
+  const code = 'TURND', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const pr = client(); await pr.ready; pr.send({ t: 'watch', code }); await pr.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Vik', bw: 800, bh: 500 }); await s.wait('joined');
+  h.send(TURNQ()); await sleep(80); h.send({ t: 'sres', on: true }); await sleep(60); pr.clear();
+  s.send({ t: 'place', p: { 1: { x: 290, y: 337, a: 0 }, 2: { x: 710, y: 337, a: 0 } } }); await sleep(800);
+  assert.deepEqual(pr.last('sum').cards.map(c => [c.text, c.pct]), [['Plate A', 100], ['Plate B', 0], ['Sun', 0]]);
+  [h, s, pr].forEach(c => c.ws.close());
+});
+
+await test('turning: results tell a wrong place from a right place turned the wrong way', () => {
+  const m = SK.cleanModel(TURNQ().model);
+  const D = SK.modelStats(m, [
+    { id: 'a', name: 'A', team: null, pl: { 1: { x: 290, y: 337, a: 0 }, 2: { x: 710, y: 337, a: 180 } } },
+    { id: 'b', name: 'B', team: null, pl: { 1: { x: 290, y: 337, a: 90 }, 2: { x: 100, y: 100, a: 180 } } }]);
+  assert.deepEqual(D.all.map(s => s.g.right), [2, 0]); assert.equal(D.all[1].mix[1], SK.TURN, 'right place, wrong way');
+  assert.equal(D.all[1].mix[2], null, 'nowhere near a spot'); assert.deepEqual([D.stat[0].turned, D.stat[1].turned], [1, 0]);
+  assert.equal(D.worst, null, 'turned the wrong way is not a swap with another piece');
+});
+
+await test('turning: the editor rules scatter turning pieces away from the answer and flag one that already faces it', () => {
+  const m = SK.cleanModel(TURNQ().model); SK.scatter(m);
+  m.pieces.filter(p => p.turn).forEach(p => assert.ok(SK.angDiff(p.a, p.ka) >= 90, 'starts 90 or more degrees from its answer, got ' + SK.angDiff(p.a, p.ka)));
+  assert.deepEqual(SK.modelIssues(m), []);
+  m.pieces[1].a = m.pieces[1].ka + 10; assert.ok(SK.modelIssues(m).some(t => /already faces the right way/.test(t)));
+  m.pieces[1].a = 270; m.pieces[0].art = 'img'; m.pieces[0].img = null; assert.ok(SK.modelIssues(m).some(t => /has no picture yet/.test(t)));
+});
+
+await test('pictures of your own: only small PNG, JPEG or WebP data pictures are kept, and the rest become text cards', async () => {
+  const mkq = img => ({ question: 'x', bg: 'blank', model: { pieces: [{ id: 1, label: 'Mine', art: 'img', img, x: 100, y: 100, kx: 300, ky: 300 }, { id: 2, label: 'B', art: 'moon', x: 700, y: 100, kx: 700, ky: 300 }] } });
+  assert.equal(SK.cleanModel(mkq(PNG).model).pieces[0].art, 'img'); assert.equal(SK.cleanModel(mkq(PNG).model).pieces[0].img, PNG);
+  for (const bad of ['http://example.com/a.png', 'data:image/svg+xml;base64,PHN2Zz4=', 'data:text/html;base64,PGI+', PNG + '"onerror="x', 'data:image/png;base64,' + 'A'.repeat(140001), null]) {
+    assert.equal(SK.cleanModel(mkq(bad).model).pieces[0].art, 'card', 'not kept: ' + String(bad).slice(0, 30));
+  }
+  const code = 'PICA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state'); const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Wen', bw: 800, bh: 500 }); await s.wait('joined');
+  s.clear(); h.send({ t: 'q', ...mkq(PNG) }); await sleep(100); assert.equal(s.last('q').q.model.pieces[0].img, PNG, 'students get the picture'); assert.equal(h.last('q').q.model.pieces[0].art, 'img');
+  s.clear(); h.send({ t: 'q', ...mkq('data:image/svg+xml;base64,PHN2Zz4=') }); await sleep(100); assert.equal(s.last('q').q.model.pieces[0].art, 'card'); assert.ok(!('img' in s.last('q').q.model.pieces[0]));
+  const big = 'data:image/png;base64,' + 'A'.repeat(130000), many = { question: 'x', bg: 'blank', model: { pieces: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, label: 'P' + i, art: 'img', img: big, x: 100 + i * 100, y: 100, kx: 100 + i * 100, ky: 400 })) } };
+  const kept = SK.cleanModel(many.model).pieces.filter(p => p.art === 'img').length; assert.equal(kept, 5, 'about 700 KB of pictures in all: 5 of 130 KB');
+  s.clear(); h.send({ t: 'q', ...many }); await sleep(150); assert.equal(s.last('q').q.model.pieces.filter(p => p.art === 'img').length, kept, 'the server keeps the same ones');
+  const c = SK.checkQuestion({ question: 'x', model: { pieces: [{ label: 'a', art: 'img', img: 'nope', kx: 1, ky: 1 }, { label: 'b', kx: 5, ky: 5 }] } }); assert.ok(c.notes.some(n => /own picture/.test(n)));
+  [h, s].forEach(x => x.ws.close());
+});
+
+await test('backgrounds: the drawn diagrams are accepted by the browser rules and the server, anything else is not', async () => {
+  for (const bg of ['orbit', 'rings', 'phases', 'plates']) assert.equal(okQ({ question: 'Q', bg }).bg, bg);
+  const c = SK.checkQuestion({ question: 'Q', bg: 'spiral' }); assert.equal(c.q.bg, 'blank'); assert.match(c.notes[0], /orbit, rings, phases, plates/);
+  const code = 'BGSA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  for (const bg of ['orbit', 'rings', 'phases', 'plates']) { h.clear(); h.send({ t: 'q', question: 'Q', bg }); await sleep(60); assert.equal(h.last('q').q.bg, bg); }
+  h.clear(); h.send({ t: 'q', question: 'Q', bg: 'spiral' }); await sleep(60); assert.equal(h.last('q').q.bg, 'graph', 'an unknown background is the server default, as before'); h.ws.close();
+});
+
+await test('starter set Place It!: seasons, layers, moon phases and three plate boundaries, all valid, tagged and solvable', () => {
+  const st = JSON.parse(fs.readFileSync('public/starters.json', 'utf8')), set = st.find(s => s.id === 'es-placeit');
+  assert.ok(set, 'the set is there'); assert.equal(set.questions.length, 6); assert.equal(set.subject, 'Earth Science');
+  assert.equal(st.map(s => s.subject).join().match(/Earth Science(,Earth Science)*/)[0].split(',').length, st.filter(s => s.subject === 'Earth Science').length, 'with the other Earth Science sets');
+  assert.deepEqual(set.questions.map(q => q.bg), ['orbit', 'rings', 'phases', 'plates', 'plates', 'plates']);
+  for (const q of set.questions) {
+    const c = SK.checkQuestion(q); assert.deepEqual([c.problems, c.notes], [[], []], q.question.slice(0, 40));
+    const m = c.q.model, right = Object.fromEntries(m.pieces.map(p => [p.id, { x: p.kx, y: p.ky, ...(p.turn ? { a: p.ka } : {}) }]));
+    assert.equal(SK.modelCheck(m, right).right, m.pieces.length, 'every piece is right at its answer spot: ' + q.question.slice(0, 40));
+    assert.equal(SK.modelCheck(m, {}).right, 0); assert.deepEqual(SK.modelIssues(m), []);
+    m.pieces.forEach(p => assert.ok(!SK.modelCheck(m, { [p.id]: { x: p.x, y: p.y, ...(p.turn ? { a: p.a } : {}) } }).ok[p.id], 'a piece does not start already right: ' + p.label));
+  }
+  const arrows = set.questions.slice(3).map(q => q.model.pieces.map(p => p.ka)); assert.deepEqual(arrows, [[0, 180], [180, 0], [270, 90]], 'convergent, divergent, transform');
+});
+
+await test('diagrams: Scatter keeps pieces off the middle of a diagram (the Sun, the Earth, the layers)', () => {
+  for (const [bg, stage] of [['orbit', 'wide'], ['phases', 'wide'], ['rings', 'wide'], ['orbit', 'tall']]) {
+    const m = SK.cleanModel({ ...MODEL().model, stage }), av = SK.bgAvoid(bg, m); assert.equal(av.length, 1); SK.scatter(m, av);
+    m.pieces.forEach(p => assert.ok(Math.hypot(p.x - av[0].x, p.y - av[0].y) >= av[0].r, bg + '/' + stage + ': ' + p.label + ' starts on the diagram'));
+  }
+  assert.deepEqual(SK.bgAvoid('graph', SK.cleanModel(MODEL().model)), [], 'a plain background has nothing to avoid');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

@@ -28,28 +28,42 @@ const SK = {
   //   pieces:[{ id, label, art, x, y (where students find it), kx, ky (where it belongs), idea }] }.
   // Positions are in stage units (wide 1000 x 625, tall 625 x 1000), centre of the piece, so every screen shape agrees.
   // The server keeps kx, ky, idea and tol away from students unless spots is 'shown'.
-  MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card'], A: 108, TOL: [20, 150], STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
+  // ARTS: built-in pictures ('img' is the teacher's own picture, a data: image kept with the piece). The moon phases are as seen from Earth,
+  // lit on the right (or on the left with -l). Angles are degrees, clockwise, 0 = the picture as drawn (an arrow points right).
+  MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'],
+    A: 108, TOL: [20, 150], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
+  BGS: ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates'], // page backgrounds; the last four are drawn diagrams (common.js)
+  ang: v => ((Math.round(v) % 360) + 360) % 360,
+  angDiff: (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); },
+  imgOk: s => typeof s === 'string' && s.length <= SK.MODEL.IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s),
   stageOf: m => SK.MODEL.STAGES[m && m.stage === 'tall' ? 'tall' : 'wide'],
   // exact rules of the server's cleanModel. Returns null unless there are 2+ pieces with a label and an answer spot.
   cleanModel(m) {
     if (!m || typeof m !== 'object') return null;
     const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, num = v => typeof v === 'number' && isFinite(v);
     const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
-    const pieces = [], seen = new Set();
+    const pieces = [], seen = new Set(); let imgBytes = 0;
     (Array.isArray(m.pieces) ? m.pieces : []).slice(0, M.PIECES).forEach(p => {
       if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
       const label = SK.str(p.label, 24); if (!label || !num(p.x) || !num(p.y) || !num(p.kx) || !num(p.ky)) return;
-      seen.add(p.id); pieces.push({ id: p.id, label, art: M.ARTS.includes(p.art) ? p.art : 'card', x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) });
+      let art = M.ARTS.includes(p.art) ? p.art : 'card', img = null;
+      if (art === 'img') { if (SK.imgOk(p.img) && imgBytes + p.img.length <= M.IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
+      seen.add(p.id);
+      const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) };
+      if (img) o.img = img;
+      if (p.turn === true) { o.turn = true; o.a = SK.ang(num(p.a) ? p.a : 0); o.ka = SK.ang(num(p.ka) ? p.ka : 0); }
+      pieces.push(o);
     });
     if (pieces.length < 2) return null;
-    return { stage: m.stage === 'tall' ? 'tall' : 'wide', spots: m.spots === 'shown' ? 'shown' : 'hidden', fb: m.fb === 'now' ? 'now' : 'reveal', tol: num(m.tol) ? Math.round(Math.min(M.TOL[1], Math.max(M.TOL[0], m.tol))) : 60, pieces };
+    return { stage: m.stage === 'tall' ? 'tall' : 'wide', spots: m.spots === 'shown' ? 'shown' : 'hidden', fb: m.fb === 'now' ? 'now' : 'reveal', tol: num(m.tol) ? Math.round(Math.min(M.TOL[1], Math.max(M.TOL[0], m.tol))) : 60, atol: num(m.atol) ? Math.round(Math.min(M.ATOL[1], Math.max(M.ATOL[0], m.atol))) : 30, pieces };
   },
   // A tidy starting scatter: free spots on the stage that are well away from every answer spot, handed out in a shuffled order.
   // Used by the editor's Scatter button and for imported pieces that have no start position.
-  scatter(m) {
-    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, P = m.pieces, far = M.A * 1.3, gap = M.A * 1.15, cand = [];
+  // `avoid` = [{ x, y, r }]: parts of the background (a Sun, an Earth) that a piece should not start on top of; see bgAvoid.
+  scatter(m, avoid) {
+    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, P = m.pieces, far = M.A * 1.3, gap = M.A * 1.15, cand = [], av = avoid || [];
     for (let x = lo + 10; x <= st.w - lo - 10; x += 60) for (let y = lo + 10; y <= st.h - lo - 10; y += 60) {
-      const d = Math.min(...P.map(p => Math.hypot(x - p.kx, y - p.ky)));
+      const d = Math.min(...P.map(p => Math.hypot(x - p.kx, y - p.ky)), ...av.map(a => Math.hypot(x - a.x, y - a.y) - a.r));
       if (d >= far) cand.push({ x, y, d });
     }
     cand.sort((a, b) => b.d - a.d);
@@ -57,8 +71,13 @@ const SK = {
     cand.forEach(c => { if (pick.length < P.length && pick.every(q => Math.hypot(c.x - q.x, c.y - q.y) >= gap)) pick.push(c); });
     while (pick.length < P.length) pick.push({ x: lo + 10 + pick.length * 20, y: st.h - lo - 10 }); // a crowded stage: stack along the bottom rather than fail
     const ord = SK.order(P.map(p => ({ id: p.id })), 'scatter' + P.length, true).map(c => c.id);
-    P.forEach((p, i) => { const c = pick[ord.indexOf(p.id)]; p.x = Math.round(c.x); p.y = Math.round(c.y); });
+    P.forEach((p, i) => { const c = pick[ord.indexOf(p.id)]; p.x = Math.round(c.x); p.y = Math.round(c.y); if (p.turn) p.a = SK.ang((p.ka || 0) + 90 + (p.id * 53) % 181); }); // a turning piece starts 90 to 270 degrees from its answer
     return m;
+  },
+  // the middle of a drawn diagram (the Sun, the Earth, the layers), so pieces do not start on top of it
+  bgAvoid(bg, m) {
+    const st = SK.stageOf(m), k = Math.min(st.w / 1000, st.h / 625), r = { orbit: 70, phases: 60, rings: 220 }[bg];
+    return r ? [{ x: st.w / 2, y: st.h / 2, r: r * k }] : [];
   },
   // plain-language problems with a draft model, shown in the editor; an empty list means it can be saved
   modelIssues(m) {
@@ -72,20 +91,27 @@ const SK = {
     outer2: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
       if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < m.tol) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”. Move one, or choose Tight.'); break outer2; }
     }
+    const atol = m.atol || 30, face = P.find(p => p.turn && SK.angDiff(p.a || 0, p.ka || 0) <= atol);
+    if (face) out.push(nm(face) + ' already faces the right way at the start. Turn it in Student start.');
+    const noPic = P.find(p => p.art === 'img' && !SK.imgOk(p.img)); if (noPic) out.push(nm(noPic) + ' has no picture yet. Choose a picture, or pick a different one from the list.');
+    if (P.reduce((n, p) => n + (p.art === 'img' && SK.imgOk(p.img) ? p.img.length : 0), 0) > SK.MODEL.IMG_TOTAL) out.push('The pictures are too big together. Remove one, or use smaller pictures.');
     return out;
   },
-  // Is each placed piece within tol of its answer spot? m = full model; pl = { pieceId: { x, y } } (only pieces the student moved).
+  // Is each placed piece within tol of its answer spot (and, for a piece that turns, facing within atol of the answer)? m = full model; pl = { pieceId: { x, y, a? } } (only pieces the student moved).
   modelCheck(m, pl) {
     const ok = {}; let right = 0, put = 0;
-    m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol; if (ok[p.id]) right++; });
+    m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol && (!p.turn || SK.angDiff(q.a == null ? (p.a || 0) : q.a, p.ka || 0) <= (m.atol || 30)); if (ok[p.id]) right++; });
     return { ok, right, put, total: m.pieces.length };
   },
   // For each wrong piece a student placed: the piece whose answer spot it sits on (within "how close counts"), or null when it is nowhere near
   // any spot. { pieceId: otherPieceId | null }; right and unplaced pieces are not in it. This is the "biggest mix-up" the results panel shows.
+  // A piece in its own spot but turned the wrong way is SK.TURN (-1).
+  TURN: -1,
   modelMix(m, pl) {
-    const out = {};
+    const out = {}, ok = SK.modelCheck(m, pl).ok;
     m.pieces.forEach(p => {
-      const q = pl && pl[p.id]; if (!q || Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol) return;
+      const q = pl && pl[p.id]; if (!q || ok[p.id]) return;
+      if (Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol) { out[p.id] = SK.TURN; return; }
       let best = null, bd = m.tol;
       m.pieces.forEach(o => { if (o.id === p.id) return; const d = Math.hypot(q.x - o.kx, q.y - o.ky); if (d <= bd) { bd = d; best = o.id; } });
       out[p.id] = best;
@@ -99,8 +125,8 @@ const SK = {
     const started = all.filter(s => s.g.put > 0), waiting = all.filter(s => !s.g.put);
     const stat = m.pieces.map(p => {
       const ans = started.filter(s => s.pl[p.id]), right = ans.filter(s => s.g.ok[p.id]).length, swaps = {};
-      ans.forEach(s => { if (s.mix[p.id] != null) swaps[s.mix[p.id]] = (swaps[s.mix[p.id]] || 0) + 1; });
-      return { ...p, idea: p.idea || '', n: ans.length, right, pct: ans.length ? Math.round(100 * right / ans.length) : null, swaps };
+      ans.forEach(s => { if (s.mix[p.id] > 0) swaps[s.mix[p.id]] = (swaps[s.mix[p.id]] || 0) + 1; });
+      return { ...p, idea: p.idea || '', n: ans.length, right, pct: ans.length ? Math.round(100 * right / ans.length) : null, swaps, turned: ans.filter(s => s.mix[p.id] === SK.TURN).length };
     });
     const names = [...new Set(stat.map(k => k.idea).filter(Boolean))];
     const ideas = names.map(n => { const ks = stat.filter(k => k.idea === n && k.pct != null); return { name: n, pieces: stat.filter(k => k.idea === n).length, pct: ks.length ? Math.round(ks.reduce((a, k) => a + k.pct, 0) / ks.length) : null }; });
@@ -195,8 +221,8 @@ const SK = {
         }
       }
     } else {
-      let bg = ['graph', 'lined', 'blank', 'photo'].includes(raw.bg) ? raw.bg : null;
-      if (!bg) { bg = 'blank'; if (raw.bg != null && raw.bg !== '') notes.push('the background "' + SK.str(raw.bg, 20) + '" is not blank, graph or lined, so it was set to blank'); }
+      let bg = SK.BGS.includes(raw.bg) ? raw.bg : null;
+      if (!bg) { bg = 'blank'; if (raw.bg != null && raw.bg !== '') notes.push('the background "' + SK.str(raw.bg, 20) + '" is not one of ' + SK.BGS.filter(b => b !== 'photo').join(', ') + ', so it was set to blank'); }
       if (bg === 'photo' && !img) { bg = 'blank'; }
       let model = null;
       if (raw.model != null) {
@@ -215,14 +241,15 @@ const SK = {
             if (!p || typeof p !== 'object' || !lb) return problems.push('piece ' + (i + 1) + ' has no label');
             if (lb.length > 24) notes.push('the piece "' + lb.slice(0, 24) + '…" was shortened to 24 characters');
             if (!num(p.kx) || !num(p.ky)) return problems.push('the piece "' + lb.slice(0, 24) + '" has no answer spot (it needs "kx" and "ky", from 0 to ' + st.w + ' across and 0 to ' + st.h + ' down)');
-            if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.join(', ') + ', so the piece became a text card');
-            if (!num(p.x) || !num(p.y)) noStart++;
-            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
+            if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.filter(a => a !== 'img').join(', ') + ', so the piece became a text card');
+            if (p.art === 'img' && !SK.imgOk(p.img)) notes.push('the own picture for "' + lb.slice(0, 24) + '" is not a PNG, JPEG or WebP under ' + Math.round(M.IMG_MAX / 1000) + ' KB, so the piece became a text card');
+            if (!num(p.x) || !num(p.y) || (p.turn === true && !num(p.a))) noStart++;
+            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, img: p.img, turn: p.turn, a: p.a, ka: p.ka, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
           });
           if (!problems.length) {
             model = SK.cleanModel({ ...m, pieces });
             if (!model) problems.push('is not a complete model');
-            else { if (noStart) { SK.scatter(model); notes.push('the pieces had no start positions, so they were scattered'); } }
+            else { if (noStart) { SK.scatter(model, SK.bgAvoid(bg, model)); notes.push('the pieces had no start positions, so they were scattered'); } }
           }
         }
       }

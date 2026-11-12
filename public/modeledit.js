@@ -8,7 +8,8 @@
 const ME = (() => {
   let c = null, view = 'key', selId = null, cv = null, drag = null, raf = 0;
   const D = () => c.get();
-  const ART = { earth: 'Earth', sun: 'Sun', moon: 'Moon', arrow: 'Arrow', card: 'Text card' };
+  const ART = { earth: 'Earth', sun: 'Sun', moon: 'Moon', arrow: 'Arrow', card: 'Text card', 'moon-new': 'Moon: new', 'moon-crescent': 'Moon: crescent (lit right)', 'moon-quarter': 'Moon: quarter (lit right)', 'moon-gibbous': 'Moon: gibbous (lit right)', 'moon-full': 'Moon: full', 'moon-crescent-l': 'Moon: crescent (lit left)', 'moon-quarter-l': 'Moon: quarter (lit left)', 'moon-gibbous-l': 'Moon: gibbous (lit left)', img: 'Your own picture…' };
+  const STEP = 15;
   const lo = () => SK.MODEL.A / 2;
   const clampX = (m, v) => Math.round(Math.min(SK.stageOf(m).w - lo(), Math.max(lo(), v))), clampY = (m, v) => Math.round(Math.min(SK.stageOf(m).h - lo(), Math.max(lo(), v)));
   const nextId = m => m.pieces.reduce((n, p) => Math.max(n, p.id), 0) + 1;
@@ -27,7 +28,46 @@ const ME = (() => {
   }
   const touch = full => { c.changed(); paint(); report(); if (full) renderLists(); };
   function report() { c.issues(SK.modelIssues(D())); }
-  const plNow = () => (view === 'key' ? Object.fromEntries(D().pieces.map(p => [p.id, { x: p.kx, y: p.ky }])) : {});
+  const plNow = () => (view === 'key' ? Object.fromEntries(D().pieces.map(p => [p.id, p.turn ? { x: p.kx, y: p.ky, a: p.ka || 0 } : { x: p.kx, y: p.ky }])) : {});
+  const angNow = p => (view === 'key' ? p.ka || 0 : p.a || 0);
+  const setAng = (p, a) => { const v = SK.ang(a); if (view === 'key') p.ka = v; else p.a = v; };
+
+  // ---- your own pictures: shrunk to fit the question (at most IMG_MAX bytes), with the white around them made see-through ----
+  async function bitmapOf(file) {
+    if (window.createImageBitmap) { try { return await createImageBitmap(file); } catch {} }
+    return new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(file); });
+  }
+  // near-white pixels joined to the edge become see-through (the picture's own whites inside stay). false when it already has see-through parts.
+  function cutOut(cv) {
+    const x = cv.getContext('2d'), w = cv.width, h = cv.height, im = x.getImageData(0, 0, w, h), d = im.data;
+    for (let i = 3; i < d.length; i += 4) if (d[i] < 250) return false;
+    const near = k => d[k * 4] > 232 && d[k * 4 + 1] > 232 && d[k * 4 + 2] > 232, seen = new Uint8Array(w * h), q = [];
+    const add = (px, py) => { if (px < 0 || py < 0 || px >= w || py >= h) return; const k = py * w + px; if (seen[k] || !near(k)) return; seen[k] = 1; q.push(k); };
+    for (let i = 0; i < w; i++) { add(i, 0); add(i, h - 1); } for (let j = 0; j < h; j++) { add(0, j); add(w - 1, j); }
+    while (q.length) { const k = q.pop(), px = k % w, py = (k - px) / w; d[k * 4 + 3] = 0; add(px + 1, py); add(px - 1, py); add(px, py + 1); add(px, py - 1); }
+    x.putImageData(im, 0, 0); return true;
+  }
+  async function pieceImage(file, cut) {
+    const bmp = await bitmapOf(file), w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+    for (const side of [256, 192, 128, 96]) {
+      const k = Math.min(1, side / Math.max(w0, h0)), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w0 * k)); cv.height = Math.max(1, Math.round(h0 * k));
+      cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); if (cut) cutOut(cv);
+      const url = cv.toDataURL('image/png'); if (SK.imgOk(url)) return url;
+    }
+    return null;
+  }
+  function choosePicture(p) {
+    const f = el('input', { type: 'file', accept: 'image/*' });
+    f.onchange = async () => {
+      const file = f.files[0]; if (!file) return;
+      try {
+        const cut = await pieceImage(file, true), raw = await pieceImage(file, false);
+        if (!cut || !raw) return tell('Try a smaller or simpler picture. A piece picture can be about ' + Math.round(SK.MODEL.IMG_MAX / 1000) + ' KB.', { title: 'That picture is too big' });
+        p.art = 'img'; p.img = cut; p._pic = { cut, raw }; c.changed(); renderLists(); paint(); report();
+      } catch { tell('Choose a PNG, JPEG or WebP picture.', { title: 'That file could not be read as a picture' }); }
+    };
+    f.click();
+  }
 
   // ---- the board ----
   function paint() {
@@ -50,16 +90,19 @@ const ME = (() => {
     cv.setAttribute('role', 'application'); c.el.canvas.append(cv);
     cv.addEventListener('pointerdown', e => {
       const m = D(), st = SK.stageOf(m), t = toStage(e), hit = pieceAt(m, plNow(), st.w, st.h, t.x, t.y, 6);
-      if (!hit) { selId = null; paint(); return; }
-      e.preventDefault(); cv.setPointerCapture(e.pointerId); cv.focus(); selId = hit.id;
+      const sp = selId != null ? m.pieces.find(q => q.id === selId) : null;
+      if (sp && sp.turn && handleAt(m, plNow(), sp.id, st.w, st.h, t.x, t.y, 6)) { e.preventDefault(); cv.setPointerCapture(e.pointerId); drag = { id: sp.id, rot: true, moved: false }; return; }
+      if (!hit) { selId = null; paint(); renderLists(); return; }
+      e.preventDefault(); cv.setPointerCapture(e.pointerId); cv.focus(); const was = selId; selId = hit.id; if (was !== selId) renderLists();
       const pos = plNow()[hit.id] || { x: hit.x, y: hit.y }; drag = { id: hit.id, dx: pos.x - t.x, dy: pos.y - t.y, moved: false }; paint();
     });
-    cv.addEventListener('pointermove', e => { if (!drag) return; const p = D().pieces.find(q => q.id === drag.id), t = toStage(e); if (!p) return; setPos(p, t.x + drag.dx, t.y + drag.dy); drag.moved = true; paintSoon(); });
+    cv.addEventListener('pointermove', e => { if (!drag) return; const p = D().pieces.find(q => q.id === drag.id), t = toStage(e); if (!p) return; if (drag.rot) { const pos = plNow()[p.id] || { x: p.x, y: p.y }; setAng(p, Math.round(angleTo(pos, t.x, t.y) / 5) * 5); } else setPos(p, t.x + drag.dx, t.y + drag.dy); drag.moved = true; paintSoon(); });
     const up = () => { if (drag && drag.moved) { c.changed(); report(); } drag = null; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('keydown', e => {
-      const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return;
-      const p = D().pieces.find(q => q.id === selId); if (!p) return; e.preventDefault();
+      const p = D().pieces.find(q => q.id === selId); if (!p) return;
+      if (p.turn && (e.key === '[' || e.key === ']')) { e.preventDefault(); setAng(p, angNow(p) + (e.key === '[' ? -STEP : STEP)); touch(); return; }
+      const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return; e.preventDefault();
       const pos = view === 'key' ? { x: p.kx, y: p.ky } : { x: p.x, y: p.y }, s = e.shiftKey ? 30 : 6; setPos(p, pos.x + k[0] * s, pos.y + k[1] * s); touch();
     });
   }
@@ -75,12 +118,24 @@ const ME = (() => {
       const inp = el('input', { className: 'inp', value: p.label, maxLength: 24, placeholder: 'Piece ' + (i + 1) + ' label, like Summer' }); inp.setAttribute('aria-label', 'Piece ' + (i + 1) + ' label');
       inp.oninput = () => { p.label = inp.value; touch(); }; inp.onfocus = () => { selId = p.id; paint(); };
       const art = el('select', { className: 'inp', style: 'flex:none;width:112px' }); art.setAttribute('aria-label', 'Picture for piece ' + (i + 1));
-      Object.entries(ART).forEach(([v, t]) => art.append(el('option', { value: v, textContent: t }))); art.value = p.art; art.onchange = () => { p.art = art.value; touch(); };
+      Object.entries(ART).forEach(([v, t]) => art.append(el('option', { value: v, textContent: t }))); art.value = p.art; art.onchange = () => { p.art = art.value; touch(true); if (p.art === 'img' && !p.img) choosePicture(p); };
       const x = el('button', { className: 'b sq danger', title: 'Remove piece', disabled: m.pieces.length <= 2 }, icoEl('x')); x.setAttribute('aria-label', 'Remove piece ' + (i + 1));
       x.onclick = () => { m.pieces.splice(i, 1); if (selId === p.id) selId = null; touch(true); };
       const idea = el('input', { className: 'inp', value: p.idea || '', maxLength: 30, placeholder: 'Idea (optional), for results', style: 'font-size:var(--fs-sm);min-height:36px' }); idea.setAttribute('list', 'mideas'); idea.setAttribute('aria-label', 'Idea for piece ' + (i + 1));
       idea.oninput = () => { p.idea = SK.str(idea.value, 30); c.changed(); report(); };
-      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px' }, row(inp, art, x), idea));
+      // turning: the checkbox, and two buttons that turn the piece in the view you are looking at
+      const tl = el('label', { style: 'display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);white-space:nowrap' }), tb = el('input', { type: 'checkbox', checked: !!p.turn }); tb.setAttribute('aria-label', 'Piece ' + (i + 1) + ' can turn'); tl.append(tb, 'Students turn it');
+      tb.onchange = () => { if (tb.checked) { p.turn = true; p.ka = p.ka || 0; p.a = SK.ang(p.ka + 90 + (p.id * 53) % 181); selId = p.id; } else delete p.turn; touch(true); };
+      const turns = [];
+      if (p.turn) [['↺', -STEP, 'Turn left'], ['↻', STEP, 'Turn right']].forEach(([g, d, t]) => { const b = el('button', { type: 'button', className: 'b sm sq', textContent: g, title: t + ' (' + (view === 'key' ? 'the way it should face' : 'the way it starts') + ')' }); b.setAttribute('aria-label', t + ' piece ' + (i + 1)); b.onclick = () => { setAng(p, angNow(p) + d); selId = p.id; touch(); }; turns.push(b); });
+      const pic = [];
+      if (p.art === 'img') {
+        if (p.img) pic.push(el('img', { src: p.img, alt: '', style: 'height:36px;width:36px;object-fit:contain;background:var(--c-fill);border-radius:6px' }));
+        pic.push(el('button', { type: 'button', className: 'b sm', textContent: p.img ? 'Change picture' : 'Choose a picture', onclick: () => choosePicture(p) }));
+        if (p._pic && p._pic.raw !== p._pic.cut) { const cut = p.img === p._pic.cut; pic.push(el('button', { type: 'button', className: 'b sm', textContent: cut ? 'White is see-through' : 'White is kept', title: 'The white around the picture', onclick: () => { p.img = cut ? p._pic.raw : p._pic.cut; touch(true); } })); }
+        pic.push(el('span', { className: 'mut', style: 'font-size:var(--fs-xs)', textContent: 'PNG with a see-through background looks best.' }));
+      }
+      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;' + (selId === p.id ? 'border-color:var(--c-primary)' : '') }, row(inp, art, x), ...(pic.length ? [el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, ...pic)] : []), idea, el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, tl, ...turns)));
     });
     const add = el('button', { className: 'b sm', textContent: '+ Add piece', disabled: m.pieces.length >= SK.MODEL.PIECES });
     add.onclick = () => {
@@ -89,7 +144,7 @@ const ME = (() => {
       const f = E.rows.querySelectorAll('input.inp'); const labels = [...f].filter(i => i.placeholder.startsWith('Piece')); labels[labels.length - 1].focus();
     };
     const sc = el('button', { className: 'b sm', textContent: 'Scatter the start positions', title: 'Spread the pieces over free spots, away from the answer spots' });
-    sc.onclick = () => { SK.scatter(m); setView('start'); touch(); };
+    sc.onclick = () => { SK.scatter(m, SK.bgAvoid(c.bg().bg, m)); setView('start'); touch(); };
     E.rows.append(el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, add, sc, el('span', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: m.pieces.length + ' of ' + SK.MODEL.PIECES })));
 
     E.opts.textContent = '';
@@ -108,6 +163,7 @@ const ME = (() => {
         m.spots === 'hidden' ? 'The answer spots are never sent to students or the projector. The app checks each piece against your key.' : 'Faint outlines show on every student’s page and pieces slip into them. The spots are public, so this is a puzzle more than a check.'),
       seg('How close counts as right?', m.tol, [[35, 'Tight'], [60, 'Normal'], [90, 'Loose']], v => { m.tol = +v; touch(true); })
     );
+    if (m.pieces.some(p => p.turn)) E.opts.append(seg('How close must the turn be?', m.atol || 30, [[15, 'Tight (15°)'], [30, 'Normal (30°)'], [45, 'Loose (45°)']], v => { m.atol = +v; touch(true); }, 'In Answer key, turn each piece to the way it should face. In Student start, turn it to the way students first see it.'));
     const fb = el('select', { className: 'inp' }); fb.setAttribute('aria-label', 'When students see if they are right');
     [['reveal', 'Only when I press Reveal answers'], ['now', 'Right away, as they place each piece']].forEach(([v, t]) => fb.append(el('option', { value: v, textContent: t }))); fb.value = m.fb;
     fb.onchange = () => { m.fb = fb.value; touch(); };
@@ -120,7 +176,7 @@ const ME = (() => {
   }
   return {
     blank,
-    mount(ctx) { c = ctx; buildBoard(); c.el.tabs.querySelectorAll('button').forEach(b => (b.onclick = () => setView(b.dataset.v))); addEventListener('resize', () => paintSoon()); },
+    mount(ctx) { c = ctx; buildBoard(); c.el.tabs.querySelectorAll('button').forEach(b => (b.onclick = () => setView(b.dataset.v))); addEventListener('resize', () => paintSoon()); addEventListener('pieceimg', () => paintSoon()); },
     // call whenever the draft changes (another question picked, a model switched on)
     render() { selId = null; renderLists(); setView(view); report(); },
     preview() { paint(); },

@@ -221,7 +221,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <script>
 const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
 let set = null, sel = -1, draft = null, dirty = false, pim = null;
-const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo']];
+const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo'], ['orbit', 'Orbit diagram'], ['rings', 'Earth’s layers'], ['phases', 'Moon orbit'], ['plates', 'Plate boundary']]; // the last four are drawn diagrams (common.js), made for pieces
 const backUrl = classCode ? '/class?code=' + classCode : '/teacher';
 $('#back').href = backUrl; $('#backt').textContent = classCode ? ((periodOf(classCode) || {}).name || 'Class') : 'Today';
 $('#sendnow').hidden = !classCode;
@@ -317,7 +317,8 @@ function renderRest() {
   const bgs = $('#bgs'); bgs.innerHTML = '';
   BG.forEach(([k, label]) => {
     const b = el('button', { className: draft.bg === k ? 'on' : '' }); b.type = 'button';
-    const sw = el('div', { className: 'sw2' });
+    const sw = DIAG[k] ? el('canvas', { className: 'sw2', width: 160, height: 100, style: 'width:100%;height:50px;display:block' }) : el('div', { className: 'sw2' });
+    if (DIAG[k]) paintBg(sw.getContext('2d'), k, null, 160, 100);
     if (k === 'graph') { sw.style.backgroundImage = 'linear-gradient(#D9E7F4 1px,transparent 1px),linear-gradient(90deg,#D9E7F4 1px,transparent 1px)'; sw.style.backgroundSize = '12px 12px'; }
     if (k === 'lined') { sw.style.backgroundImage = 'linear-gradient(#D9E7F4 1px,transparent 1px)'; sw.style.backgroundSize = '100% 16px'; }
     if (k === 'photo') sw.style.backgroundImage = draft.img ? 'url(' + draft.img + ')' : 'linear-gradient(135deg,#C9D6E2,#E9EEF3)', sw.style.backgroundSize = 'cover';

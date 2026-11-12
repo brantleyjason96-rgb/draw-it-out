@@ -247,6 +247,360 @@
     ]
   },
   {
+    "id": "es-placeit",
+    "name": "Place It! Move the pieces",
+    "subject": "Earth Science",
+    "grade": "6-8",
+    "questions": [
+      {
+        "question": "Place Earth at the right spot in its orbit for each season in the <b>northern hemisphere</b>. Then draw an arrow showing which way Earth’s axis tilts.",
+        "bg": "orbit",
+        "tags": [
+          "Seasons",
+          "Earth’s tilt",
+          "MS-ESS1-1"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 60,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Northern summer",
+              "art": "earth",
+              "x": 904,
+              "y": 64,
+              "kx": 190,
+              "ky": 312,
+              "idea": "Tilt toward the Sun"
+            },
+            {
+              "id": 2,
+              "label": "Autumn",
+              "art": "earth",
+              "x": 244,
+              "y": 64,
+              "kx": 500,
+              "ky": 520,
+              "idea": "Equinox"
+            },
+            {
+              "id": 3,
+              "label": "Northern winter",
+              "art": "earth",
+              "x": 64,
+              "y": 544,
+              "kx": 810,
+              "ky": 312,
+              "idea": "Tilt toward the Sun"
+            },
+            {
+              "id": 4,
+              "label": "Spring",
+              "art": "earth",
+              "x": 64,
+              "y": 64,
+              "kx": 500,
+              "ky": 105,
+              "idea": "Equinox"
+            }
+          ]
+        }
+      },
+      {
+        "question": "Drag each label onto the <b>layer of Earth</b> it names. Then draw an arrow to the hottest layer.",
+        "bg": "rings",
+        "tags": [
+          "Layers of Earth",
+          "Labeling a diagram",
+          "MS-ESS2-1"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 40,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Crust",
+              "art": "card",
+              "x": 64,
+              "y": 544,
+              "kx": 500,
+              "ky": 82,
+              "idea": "Outside layers"
+            },
+            {
+              "id": 2,
+              "label": "Mantle",
+              "art": "card",
+              "x": 904,
+              "y": 544,
+              "kx": 333,
+              "ky": 312,
+              "idea": "Outside layers"
+            },
+            {
+              "id": 3,
+              "label": "Outer core",
+              "art": "card",
+              "x": 904,
+              "y": 64,
+              "kx": 592,
+              "ky": 312,
+              "idea": "The core"
+            },
+            {
+              "id": 4,
+              "label": "Inner core",
+              "art": "card",
+              "x": 64,
+              "y": 64,
+              "kx": 500,
+              "ky": 312,
+              "idea": "The core"
+            }
+          ]
+        }
+      },
+      {
+        "question": "Place each moon where it is in its orbit when we see that <b>phase</b> from Earth. The Sun’s light comes from the left.",
+        "bg": "phases",
+        "tags": [
+          "Moon phases",
+          "Earth, Sun and Moon",
+          "MS-ESS1-1"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 60,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "New moon",
+              "art": "moon-new",
+              "x": 64,
+              "y": 64,
+              "kx": 285,
+              "ky": 312,
+              "idea": "New and full"
+            },
+            {
+              "id": 2,
+              "label": "Waxing crescent",
+              "art": "moon-crescent",
+              "x": 64,
+              "y": 244,
+              "kx": 348,
+              "ky": 464,
+              "idea": "Waxing"
+            },
+            {
+              "id": 3,
+              "label": "First quarter",
+              "art": "moon-quarter",
+              "x": 904,
+              "y": 64,
+              "kx": 500,
+              "ky": 527,
+              "idea": "Waxing"
+            },
+            {
+              "id": 4,
+              "label": "Waxing gibbous",
+              "art": "moon-gibbous",
+              "x": 64,
+              "y": 544,
+              "kx": 652,
+              "ky": 464,
+              "idea": "Waxing"
+            },
+            {
+              "id": 5,
+              "label": "Full moon",
+              "art": "moon-full",
+              "x": 904,
+              "y": 244,
+              "kx": 715,
+              "ky": 312,
+              "idea": "New and full"
+            },
+            {
+              "id": 6,
+              "label": "Waning gibbous",
+              "art": "moon-gibbous-l",
+              "x": 844,
+              "y": 424,
+              "kx": 652,
+              "ky": 160,
+              "idea": "Waning"
+            },
+            {
+              "id": 7,
+              "label": "Third quarter",
+              "art": "moon-quarter-l",
+              "x": 904,
+              "y": 544,
+              "kx": 500,
+              "ky": 97,
+              "idea": "Waning"
+            },
+            {
+              "id": 8,
+              "label": "Waning crescent",
+              "art": "moon-crescent-l",
+              "x": 124,
+              "y": 424,
+              "kx": 348,
+              "ky": 160,
+              "idea": "Waning"
+            }
+          ]
+        }
+      },
+      {
+        "question": "Put an arrow on each plate and turn it to show how the plates move at a <b>convergent boundary</b>: the plates move <b>toward</b> each other. Then draw what you might see at the surface.",
+        "bg": "plates",
+        "tags": [
+          "Plate boundaries",
+          "Plate motion",
+          "MS-ESS2-2"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 60,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Plate A arrow",
+              "art": "arrow",
+              "x": 484,
+              "y": 64,
+              "kx": 290,
+              "ky": 337,
+              "idea": "Convergent",
+              "turn": true,
+              "a": 143,
+              "ka": 0
+            },
+            {
+              "id": 2,
+              "label": "Plate B arrow",
+              "art": "arrow",
+              "x": 64,
+              "y": 64,
+              "kx": 710,
+              "ky": 337,
+              "idea": "Convergent",
+              "turn": true,
+              "a": 16,
+              "ka": 180
+            }
+          ]
+        }
+      },
+      {
+        "question": "Put an arrow on each plate and turn it to show how the plates move at a <b>divergent boundary</b>: the plates move <b>away from</b> each other. Then draw what you might see at the surface.",
+        "bg": "plates",
+        "tags": [
+          "Plate boundaries",
+          "Plate motion",
+          "MS-ESS2-2"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 60,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Plate A arrow",
+              "art": "arrow",
+              "x": 484,
+              "y": 64,
+              "kx": 290,
+              "ky": 337,
+              "idea": "Divergent",
+              "turn": true,
+              "a": 323,
+              "ka": 180
+            },
+            {
+              "id": 2,
+              "label": "Plate B arrow",
+              "art": "arrow",
+              "x": 64,
+              "y": 64,
+              "kx": 710,
+              "ky": 337,
+              "idea": "Divergent",
+              "turn": true,
+              "a": 196,
+              "ka": 0
+            }
+          ]
+        }
+      },
+      {
+        "question": "Put an arrow on each plate and turn it to show how the plates move at a <b>transform boundary</b>: the plates <b>slide past</b> each other. Then draw what you might see at the surface.",
+        "bg": "plates",
+        "tags": [
+          "Plate boundaries",
+          "Plate motion",
+          "MS-ESS2-2"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 60,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Plate A arrow",
+              "art": "arrow",
+              "x": 484,
+              "y": 64,
+              "kx": 290,
+              "ky": 337,
+              "idea": "Transform",
+              "turn": true,
+              "a": 53,
+              "ka": 270
+            },
+            {
+              "id": 2,
+              "label": "Plate B arrow",
+              "art": "arrow",
+              "x": 64,
+              "y": 64,
+              "kx": 710,
+              "ky": 337,
+              "idea": "Transform",
+              "turn": true,
+              "a": 286,
+              "ka": 90
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
     "id": "ls-cells",
     "name": "Cell Parts",
     "subject": "Life Science",

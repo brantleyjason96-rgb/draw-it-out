@@ -441,7 +441,7 @@ const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
   const text = clean(String(q.question || '')).slice(0, 2000), tags = canonTags(q.tags), tg = o => (tags.length ? { ...o, tags } : o);
   if (q.kind === 'sort') { const sort = SK.clean(q.sort); return sort && plain(text).trim() ? tg({ question: text, bg: 'blank', img: null, kind: 'sort', sort }) : null; }
   const img = typeof q.img === 'string' && q.img.startsWith(JPG) ? q.img : null;
-  let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'blank'; if (bg === 'photo' && !img) bg = 'blank';
+  let bg = SK.BGS.includes(q.bg) ? q.bg : 'blank'; if (bg === 'photo' && !img) bg = 'blank';
   const model = q.model ? SK.cleanModel(q.model) : null; // movable pieces (the same rules the server applies)
   return plain(text).trim() || img ? tg({ question: text, bg, img: bg === 'photo' ? img : null, ...(model ? { model } : {}) }) : null;
 }).filter(Boolean);
@@ -493,8 +493,10 @@ async function showStarters(onAdd) {
 // ---- share link: the set is packed into the link itself (text only), so nothing is stored on any server ----
 const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+// a share link is text only, so a piece with the teacher's own picture arrives as a text card
+const noPics = m => ({ ...m, pieces: m.pieces.map(p => { if (p.art !== 'img') return p; const { img, ...r } = p; return { ...r, art: 'card' }; }) });
 async function packSet(st) {
-  const json = JSON.stringify({ n: st.name, t: st.tags || undefined, q: st.questions.map(q => { const a = q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg, ...(q.model ? [q.model] : [])]; if (q.tags && q.tags.length) { if (a.length < 3) a.push(null); a.push(q.tags); } return a; }) });
+  const json = JSON.stringify({ n: st.name, t: st.tags || undefined, q: st.questions.map(q => { const a = q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg, ...(q.model ? [noPics(q.model)] : [])]; if (q.tags && q.tags.length) { if (a.length < 3) a.push(null); a.push(q.tags); } return a; }) });
   if (window.CompressionStream) return 'z.' + b64u(new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
   return 'r.' + b64u(new TextEncoder().encode(json));
 }
@@ -508,7 +510,8 @@ async function copyShareLink(st) {
   const photos = st.questions.filter(q => q.bg === 'photo' || q.img).length;
   const url = location.origin + '/teacher#set=' + await packSet(st);
   if (url.length > 7500) return tell('Use Export instead and send the file.', { title: 'This set is too long for a link' });
-  const note = photos ? '\n\n' + photos + ' question(s) use a photo. Photos are not included in links, so those arrive with a blank background.' : '';
+  const own = st.questions.reduce((n, q) => n + (q.model ? q.model.pieces.filter(p => p.art === 'img').length : 0), 0);
+  const note = (photos ? '\n\n' + photos + ' question(s) use a photo. Photos are not included in links, so those arrive with a blank background.' : '') + (own ? '\n\n' + own + ' piece(s) use your own picture. Pictures are not included in links, so those arrive as text cards. Export the set to send the pictures.' : '');
   navigator.clipboard.writeText(url).then(() => tell('Send it to a colleague: opening it offers to add "' + st.name + '".' + note, { title: 'Link copied' }), () => showCopy('Copy this link', url));
 }
 async function checkShared(after) { // call after loadSets(); a colleague's link opens /teacher#set=...

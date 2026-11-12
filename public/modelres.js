@@ -21,7 +21,9 @@ const MR = (() => {
   };
   const orderPieces = D => { const a = D.stat.slice(); if (ST.piece === 'hard') a.sort((x, y) => (x.pct == null) - (y.pct == null) || x.pct - y.pct || x.id - y.id); return a; };
   // a wrong cell shows the first letter of the piece whose spot it sits on; ? when it is not near any spot
-  const mixLetter = (D, s, k) => { const o = s.mix[k.id]; return o == null ? '?' : (nameOf(D, o)[0] || '?').toUpperCase(); };
+  const mixLetter = (D, s, k) => { const o = s.mix[k.id]; return o === SK.TURN ? '↻' : o == null ? '?' : (nameOf(D, o)[0] || '?').toUpperCase(); };
+  // what a wrong piece did, in words
+  const mixWords = (D, s, k) => { const o = s.mix[k.id]; return o === SK.TURN ? 'in the right place, turned the wrong way' : o != null ? 'on the spot for “' + nameOf(D, o) + '”' : 'not near any spot'; };
 
   function render() {
     if (!box || !get) return;
@@ -88,7 +90,7 @@ const MR = (() => {
       pcs.forEach(k => {
         const a = s.pl[k.id], ok = !!a && s.g.ok[k.id], on = ST.sel && ST.sel.k === 'p' && ST.sel.id === k.id;
         const d = T('div', 'cell ' + (!a ? 'none' : ok ? 'ok' : 'no') + (ST.idea && ST.idea !== k.idea ? ' dim' : ''), !a || ok ? '' : mixLetter(D, s, k), ...(ok ? [icoEl('check', 'sm')] : []));
-        d.title = s.name + (!a ? ' has not moved “' + k.label + '”' : ok ? ' put “' + k.label + '” in the right place' : s.mix[k.id] != null ? ' put “' + k.label + '” on the spot for “' + nameOf(D, s.mix[k.id]) + '”' : ' put “' + k.label + '” in the wrong place');
+        d.title = s.name + (!a ? ' has not moved “' + k.label + '”' : ok ? ' put “' + k.label + '” in the right place' : ' put “' + k.label + '” ' + mixWords(D, s, k));
         tr.append(el('td', { className: on ? 'colsel' : '' }, d));
       });
       tb.append(tr);
@@ -96,7 +98,7 @@ const MR = (() => {
     tbl.append(tb);
     const legend = el('div', { className: 'legend' },
       el('span', {}, el('i', { className: 'swc ok' }, icoEl('check', 'sm')), document.createTextNode('In the right place')),
-      el('span', {}, el('i', { className: 'swc no', textContent: 'A' }), document.createTextNode('Wrong. The letter is the first letter of the piece whose spot it sits on; ? means it is not near any spot')),
+      el('span', {}, el('i', { className: 'swc no', textContent: 'A' }), document.createTextNode('Wrong. The letter is the first letter of the piece whose spot it sits on; ? means it is not near any spot; ↻ means the right place but turned the wrong way')),
       el('span', {}, T('i', 'swc none', ''), document.createTextNode('Not moved yet')));
     box.append(el('div', { className: 'card spad' }, el('div', { className: 'shead' }, T('h2', '', 'Who got which piece'), T('span', 'mut', (ST.stu === 'need' ? 'Students who need help are at the top. ' : '') + (ST.piece === 'hard' ? 'Hardest pieces are on the left. ' : '') + 'The stripe is the student’s team.')), legend, el('div', { className: 'sscroll' }, tbl)));
     box.append(el('div', { className: 'spair' }, ideaBox, teamBox));
@@ -114,7 +116,7 @@ const MR = (() => {
       x.beginPath(); x.arc(p.kx, p.ky, me ? m.tol : A / 2, 0, 7); x.fill(); x.stroke(); x.setLineDash([]);
       x.font = (me ? '800 ' : '700 ') + '26px ' + FONT; x.fillStyle = me ? '#0A5A36' : '#64748B'; x.fillText(p.label, p.kx, p.ky + (me ? m.tol : A / 2) + 18);
     });
-    D.started.forEach(s => { const q = s.pl[k.id]; if (!q) return; const ok = s.g.ok[k.id]; x.beginPath(); x.arc(q.x, q.y, 13, 0, 7); x.fillStyle = ok ? 'rgba(14,124,74,.9)' : 'rgba(179,38,30,.9)'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke(); });
+    D.started.forEach(s => { const q = s.pl[k.id]; if (!q) return; const ok = s.g.ok[k.id]; x.beginPath(); x.arc(q.x, q.y, 13, 0, 7); x.fillStyle = ok ? 'rgba(14,124,74,.9)' : s.mix[k.id] === SK.TURN ? 'rgba(217,119,6,.95)' : 'rgba(179,38,30,.9)'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke(); });
   }
 
   function detail(c, D, pcs) {
@@ -127,7 +129,8 @@ const MR = (() => {
       const left = el('div', {}, T('span', 'pill', 'Piece' + (k.idea ? ' · ' + k.idea : '')), T('div', 'cq', '“' + k.label + '”'), T('span', 'pill', k.n ? k.right + ' of ' + k.n + ' got it (' + k.pct + '%)' : 'No answers yet'));
       const mapBox = el('div', {}, T('h3', '', 'Where students put it'));
       const cv = el('canvas', { style: 'width:100%;max-width:560px;border-radius:var(--r-md);display:block' }); cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Board showing where each student put ' + k.label + '. Green dots are in the right place, red dots are not.');
-      mapBox.append(cv, T('div', 'mut', 'Green ring: the answer spot and how close counts. Green dots are right, red dots are not.'));
+      mapBox.append(cv, T('div', 'mut', 'Green ring: the answer spot and how close counts. Green dots are right, red dots are not' + (k.turned ? ', orange dots are in the right place but turned the wrong way.' : '.')));
+      if (k.turned) mapBox.append(T('div', 'mut', 'Right place, turned the wrong way: ' + k.turned));
       const swaps = Object.entries(k.swaps).sort((a, b) => b[1] - a[1]);
       if (swaps.length) mapBox.append(T('div', 'mut', 'Put on another piece’s spot: ' + swaps.map(([id, n]) => nameOf(D, +id) + ' (' + n + ')').join(', ')));
       const who = el('div', {}, T('h3', '', 'Missed it (' + missed.length + ')'));
@@ -149,7 +152,7 @@ const MR = (() => {
       if (s.team) { const t = T('span', 'pill', (s.team.emoji ? s.team.emoji + ' ' : '') + s.team.name); t.style.background = s.team.color; t.style.color = '#fff'; head.append(t); }
       head.append(T('div', 'cq', s.name), T('span', 'pill ' + (s.g.put && !wrong.length && s.g.put === D.pieces.length ? 'good' : ''), s.g.put ? s.g.right + ' of ' + D.pieces.length + ' right' : 'Has not started'));
       if (weak.length) head.append(T('span', 'pill bad', 'Trouble with: ' + weak.join(', ')));
-      wrong.forEach(k => head.append(T('div', 'mut', k.label + ' → ' + (s.mix[k.id] != null ? 'on the spot for ' + nameOf(D, s.mix[k.id]) : 'not near any spot'))));
+      wrong.forEach(k => head.append(T('div', 'mut', k.label + ' → ' + mixWords(D, s, k))));
       const acts = el('div', { className: 'row', style: 'margin-top:8px' });
       acts.append(el('button', { className: 'b', textContent: c.spotId === s.id ? 'Stop showing' : 'Show on projector', onclick: () => c.spot(s) }));
       if (c.award && s.team) acts.append(el('button', { className: 'b' + (s.aw ? ' good' : ''), onclick: () => c.award(s) }, icoEl('check', 'sm'), s.aw ? ' Point given (undo)' : ' +1 for ' + s.team.name));
@@ -164,7 +167,7 @@ const MR = (() => {
 
   function exportCSV(c, D) {
     const head = ['Student', 'Team', 'Right', 'Out of'].concat(D.pieces.map(k => k.label));
-    const rows = [head].concat(orderStudents(D).map(s => [s.name, s.team ? s.team.name : '', s.g.right, D.pieces.length].concat(D.pieces.map(k => !s.pl[k.id] ? '' : s.g.ok[k.id] ? '✓' : s.mix[k.id] != null ? 'on ' + nameOf(D, s.mix[k.id]) : 'wrong'))));
+    const rows = [head].concat(orderStudents(D).map(s => [s.name, s.team ? s.team.name : '', s.g.right, D.pieces.length].concat(D.pieces.map(k => !s.pl[k.id] ? '' : s.g.ok[k.id] ? '✓' : s.mix[k.id] === SK.TURN ? 'turned' : s.mix[k.id] != null ? 'on ' + nameOf(D, s.mix[k.id]) : 'wrong'))));
     const a = el('a', { href: URL.createObjectURL(new Blob([SK.csv(rows)], { type: 'text/csv' })), download: 'pieces-results.csv' }); a.click();
     c.toast('Saved. Student names are in this file, so keep it private.');
   }
@@ -188,7 +191,7 @@ const MR = (() => {
       const d = el('details', { className: 'ph-row', style: 'display:block;padding:10px 12px' });
       d.open = ST.open.has(k.id); d.ontoggle = () => { d.open ? ST.open.add(k.id) : ST.open.delete(k.id); };
       d.append(el('summary', { style: 'display:flex;gap:10px;align-items:center;cursor:pointer' }, T('span', 'band b-' + t, k.pct == null ? '–' : k.pct + '%'), T('span', '', k.label), T('span', 'mut', k.n ? '· ' + missed.length + ' missed' : '')));
-      d.append(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px' }, ...missed.map(s => T('span', 'pill bad', s.name + (s.mix[k.id] != null ? ' → ' + nameOf(D, s.mix[k.id]) + '’s spot' : '')))));
+      d.append(el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px' }, ...missed.map(s => T('span', 'pill bad', s.name + (s.mix[k.id] === SK.TURN ? ' → turned' : s.mix[k.id] != null ? ' → ' + nameOf(D, s.mix[k.id]) + '’s spot' : '')))));
       pad.append(d);
     });
     const low = D.started.filter(s => s.g.right <= Math.floor(n / 2)).sort((a, b) => a.g.right - b.g.right);

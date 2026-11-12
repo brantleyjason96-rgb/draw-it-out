@@ -45,7 +45,8 @@ body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,var(--
 /* movable pieces: the Pieces tool, a counter with Reset, and a hidden list of buttons so a keyboard can reach every piece */
 .tool[hidden],.qt[hidden]{display:none!important}
 #mpbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-#mpbar[hidden]{display:none}
+#mpbar[hidden],#mpturn[hidden]{display:none}
+#mpturn{display:inline-flex;gap:8px}
 #mpbar b{font-size:var(--fs-md);white-space:nowrap}
 #mpbar .btn{min-height:44px;padding:0 14px;background:#fff;color:var(--ink);border:1px solid var(--c-control)}
 #mpbar .btn:disabled{opacity:.5}
@@ -397,7 +398,7 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
   </div>
   <div id="bbar">
   <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo" title="Undo"><svg data-i="undo"></svg><span class="lb"> Undo</span></button><button id="redo" aria-label="Redo" title="Redo"><svg data-i="redo"></svg><span class="lb"> Redo</span></button></div>
- <div id="mpbar" class="lockable" hidden><b id="mpn"></b><button type="button" class="btn" id="mpreset">Reset pieces</button><span id="mpnote"></span></div>
+ <div id="mpbar" class="lockable" hidden><b id="mpn"></b><button type="button" class="btn" id="mpreset">Reset pieces</button><span id="mpturn" hidden><button type="button" class="btn" id="mpl" aria-label="Turn left">↺ Turn left</button><button type="button" class="btn" id="mpr" aria-label="Turn right">Turn right ↻</button></span><span id="mpnote"></span></div>
    <div id="pulse" class="lockable" role="group" aria-label="How is your work?">
     <span class="plb">How is your work?</span>
    <div id="pbtns">
@@ -1002,6 +1003,7 @@ function resetDoc(list){
 }
 
 new ResizeObserver(()=>{const d=devicePixelRatio||1;if(!cv.clientWidth||!cv.clientHeight)return;cv.width=Math.max(1,cv.clientWidth*d);cv.height=Math.max(1,cv.clientHeight*d);PAD.t=innerHeight<=480&&innerWidth>700?12:76;PAD.b=innerHeight<=480&&innerWidth>700?12:64;clampView();all(true)}).observe(cv);
+addEventListener('pieceimg',()=>{if(MP.active()){bump();draw()}}); // a piece's own picture arrived
 MP.init({send:o=>ws.send(o),bump,draw,W:()=>W,H:()=>H,cantEdit,tool:()=>S.tool,setTool});
 renderOpts();
 </script>

@@ -280,7 +280,7 @@ function addStu(d) {
 function modelFull() {
   const m = S.q && S.q.model; if (!m) return null;
   const k = S.sk && S.sk.pos ? S.sk : null; if (!k) return m;
-  return { ...m, tol: k.tol, pieces: m.pieces.map(p => ({ ...p, kx: k.pos[p.id] ? k.pos[p.id].x : p.x, ky: k.pos[p.id] ? k.pos[p.id].y : p.y, idea: (k.idea || {})[p.id] || '' })) };
+  return { ...m, tol: k.tol, atol: k.atol || 30, pieces: m.pieces.map(p => ({ ...p, kx: k.pos[p.id] ? k.pos[p.id].x : p.x, ky: k.pos[p.id] ? k.pos[p.id].y : p.y, ...(p.turn ? { ka: (k.ang || {})[p.id] || 0 } : {}), idea: (k.idea || {})[p.id] || '' })) };
 }
 const hasKey = () => !!(S.q && S.q.model && S.sk && S.sk.pos);
 const mpOf = s => (S.q.model ? { model: S.q.model, pl: s.pl || {}, ok: hasKey() ? SK.modelCheck(modelFull(), s.pl || {}).ok : undefined } : undefined);
@@ -817,6 +817,7 @@ const modelCtx = () => ({ q: S.q, sk: S.sk, full: hasKey() ? modelFull() : null,
   award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => pick(s.id),
   ctlHost: () => $('#sctlhost'), setProjSum: on => ws.send({ t: 'sres', on }) });
 MR.mount($('#sres'), modelCtx);
+addEventListener('pieceimg', () => { S.stu.forEach(s => (s.dirty = true)); MR.update(); }); // a piece's own picture arrived
 $$('#mview button').forEach(b => (b.onclick = () => { S.mview = b.dataset.v; ui(); if (S.mview === 'res' && !ph.matches) MR.now(); }));
 $('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
 function savePng() { // a contact sheet of everyone's work (initials only, as the server knows them)
