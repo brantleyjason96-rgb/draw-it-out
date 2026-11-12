@@ -1533,7 +1533,7 @@ await test('starter set Place It!: seasons, layers, moon phases and three plate 
 await test('starter sets Continental Drift and Draw on a Diagram: every question valid, tagged and solvable', () => {
   const st = JSON.parse(fs.readFileSync('public/starters.json', 'utf8')), drift = st.find(s => s.id === 'es-drift'), dia = st.find(s => s.id === 'es-diagrams');
   assert.ok(drift && dia); assert.equal(drift.subject, 'Earth Science'); assert.equal(dia.subject, 'Earth Science');
-  assert.deepEqual(drift.questions.map(q => q.kind === 'sort' ? 'sort' : q.model ? 'place' : 'draw'), ['place', 'place', 'sort', 'sort', 'draw', 'sort', 'place', 'draw', 'draw', 'draw', 'draw'], 'all three kinds');
+  assert.deepEqual(drift.questions.map(q => q.kind === 'sort' ? 'sort' : q.model ? 'place' : 'draw'), ['place', 'place', 'place', 'sort', 'sort', 'draw', 'sort', 'place', 'draw', 'draw', 'draw', 'draw'], 'all three kinds');
   assert.ok(dia.questions.every(q => !q.model && !q.kind), 'the diagram set is all Draw questions');
   assert.deepEqual([...new Set(dia.questions.map(q => q.bg))], ['subduction', 'volcano', 'fault', 'watercycle']);
   for (const q of [...drift.questions, ...dia.questions]) {
@@ -1550,8 +1550,10 @@ await test('starter sets Continental Drift and Draw on a Diagram: every question
   const pangaea = drift.questions[0].model; assert.deepEqual(pangaea.pieces.map(p => p.label), ['North America', 'South America', 'Africa', 'Eurasia', 'Greenland', 'India', 'Australia', 'Antarctica'], 'the 8 pieces of the puzzle');
   assert.ok(pangaea.pieces.reduce((n, p) => n + p.img.length, 0) < 300000, 'the pictures stay small, because every student is sent them');
   assert.ok(pangaea.pieces.every(p => p.art === 'img' && SK.imgOk(p.img) && p.ar > 0), 'the continents are the teacher-supplied pictures');
-  assert.equal(drift.questions[2].sort.lanes.length, 4); assert.equal(drift.questions[5].sort.lanes.length, 2);
-  const ws = drift.questions[3].sort, laneOf = i => ws.lanes.find(l => l.id === ws.cards[i - 1].lane).name;
+  assert.equal(drift.questions[3].sort.lanes.length, 4); assert.equal(drift.questions[6].sort.lanes.length, 2);
+  const world = drift.questions[2]; assert.equal(world.bg, 'photo'); assert.match(world.img, /^data:image\/jpeg;base64,/); assert.equal(SK.checkQuestion(world).q.img, world.img, 'the map is kept');
+  assert.deepEqual(world.model.pieces.map(p => p.label), pangaea.pieces.map(p => p.label), 'the same 8 pieces, placed on today’s map');
+  const ws = drift.questions[4].sort, laneOf = i => ws.lanes.find(l => l.id === ws.cards[i - 1].lane).name;
   assert.deepEqual([1, 2, 5, 6, 8, 9].map(laneOf), Array(6).fill('Evidence'), 'the worksheet key: evidence');
   assert.deepEqual([3, 4, 7, 10].map(laneOf), Array(4).fill('Not evidence'), 'the worksheet key: not evidence');
 });

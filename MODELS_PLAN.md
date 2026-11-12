@@ -281,3 +281,13 @@ The teacher's slideshow (*Continental Drift Puzzle Activity*, from the USGS *Thi
 - The key marks statement 10 (earthworm fossils on several continents) as *not evidence*. That is how it is built. If it was meant to be evidence, move that card to *Evidence* in the editor.
 - The pictures are hand-coloured scans, so the colours are a little uneven.
 - The slideshow also has *The World Today* (a USGS world map). It is not used yet; it would suit a Place It background ("where is each continent today") but it labels every continent, and a photo background must be a JPEG of about 150 KB after shrinking.
+
+
+---
+
+## The World Today: the 8 pieces on a map
+The slideshow's *The World Today* (USGS) is now the background of a Place It question: *Move each continent to where it is today, then draw arrows for South America and Africa moving apart.* `npm test`: 126 tests (the starter test also checks the map and that the same 8 pieces are used).
+- **The map**: cropped to the map itself (the instructions and logo are gone), the continent names taken off (so the shapes and piece names do the work), resized to 1500 px wide and saved as a JPEG of about 150 KB, which is the only kind of photo a Draw question accepts. On the board it is 1000 wide and 510 high, centred.
+- **Answer spots** are the middle of each continent on the map, and the pieces are drawn at 0.72 board units per picture pixel so each is about the size of its continent on the map (the Pangaea question uses 0.77). The area is Loose (90), with its own area for the pieces that need one: Antarctica 110 (on the map it is a thin strip, the piece is round), Eurasia 75, India 45, Greenland 70, Australia 80. India and Eurasia are 77 units apart, which is why Eurasia and India are tighter than the rest.
+- **Known limits**: the pieces are cut from a different map than the world map, so a continent can be 10 to 15 percent off in size; Antarctica hangs a little below the map's edge. The photo is not carried by a share link (links are text only), so send this set as a file.
+- **A file to import**: `exports/draw-it-out-continental-drift.json` holds both starter sets (Continental Drift: the evidence, 12 questions; Draw on a Diagram, 7) in the format of Export. It goes in through *Import* on Today's Question sets, and was checked with the app's own importer: nothing skipped, no console errors.
