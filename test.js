@@ -1,6 +1,7 @@
 // Server tests: node test.js  (starts its own server on a spare port)
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import WebSocket from 'ws';
 
 const PORT = 4100 + Math.floor(Math.random() * 500);
@@ -853,6 +854,87 @@ await test('timer: at zero everyone gets done once; the freeze option freezes th
   const b = client(); await b.ready; b.send({ t: 'join', code: 'TIME7', name: 'Wes', bw: 800, bh: 500 }); await b.wait('joined');
   h2.send({ t: 'timer', secs: 5 }); await sleep(5600);
   assert.equal(b.got.filter(m => m.t === 'timer' && m.done).length, 1); assert.equal(b.last('freeze'), undefined, 'without the option, nothing freezes and drawing stays open');
+});
+
+
+// ---- Phase 4: the shared question validator (public/sortkit.js) is loaded here exactly as the browser loads it ----
+const SK = new Function(fs.readFileSync('public/sortkit.js', 'utf8') + '\nreturn SK;')(); // same realm, so deepEqual works
+const okQ = r => { const c = SK.checkQuestion(r); assert.deepEqual(c.problems, [], JSON.stringify(c.problems)); return c.q; };
+
+await test('validator: agrees with the server on formatting, lengths and sort rules', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'VALID', key: KEY }); await h.wait('state');
+  const texts = ['Plain <b>bold</b> and <I>italic</I> <u>under</u>', 'x<script>alert(1)</script>y <img src=x onerror=1> a < b > c', 'line<br>one<br/>two<BR />three', '<b>unclosed', 'a'.repeat(2500), '<<b>>nested<</b>>', 'Tom & Jerry &lt;tag&gt;'];
+  for (const text of texts) {
+    h.clear(); h.send({ t: 'q', question: text, bg: 'blank' }); await sleep(60);
+    assert.equal(SK.cleanHtml(text), h.last('q').q.question, 'html rules match the server for ' + JSON.stringify(text.slice(0, 40)));
+  }
+  const lanes = [{ id: 'A', name: 'Igneous rocks form from cooling magma and lava' }, { id: 'B', name: 'Sedimentary' }, { id: 'C', name: 'Metamorphic' }];
+  const cards = [{ id: 1, text: 'Granite '.repeat(10), lane: 'A', idea: 'Where it forms, and what it looks like' }, { id: 2, text: 'Limestone', lane: 'B' }, { id: 3, text: 'Marble', lane: 'C', idea: 'Clue' }];
+  h.clear(); h.send({ t: 'q', kind: 'sort', question: 'Sort', sort: { lanes, cards } }); await sleep(80);
+  const srv = h.last('q'), mine = okQ({ question: 'Sort', kind: 'sort', sort: { lanes, cards } });
+  assert.deepEqual(mine.sort.lanes, srv.q.sort.lanes, 'lane names are cut at the same length');
+  assert.deepEqual(mine.sort.cards.map(c => [c.id, c.text]), srv.q.sort.cards.map(c => [c.id, c.text]), 'card text is cut at the same length');
+  assert.deepEqual(Object.fromEntries(mine.sort.cards.map(c => [c.id, c.idea]).filter(x => x[1])), srv.sk.idea, 'ideas are cut at the same length');
+  assert.deepEqual(Object.fromEntries(mine.sort.cards.map(c => [c.id, c.lane])), srv.sk.lane);
+});
+
+await test('validator: tags are cleaned (5 max, 30 characters, text only, case-insensitive)', () => {
+  const g = SK.cleanTags(['Rock cycle', ' rock   CYCLE ', 'MS-ESS2-1', '<b>Bold</b> tag', 'x'.repeat(40), 'five', 'six', 'seven', 7, null, {}, '']);
+  assert.deepEqual(g.tags, ['Rock cycle', 'MS-ESS2-1', 'Bold tag', 'x'.repeat(30), 'five']);
+  assert.ok(g.notes.some(n => /shortened/.test(n)) && g.notes.some(n => /extra tags were left out/.test(n)), g.notes.join('|'));
+  assert.deepEqual(SK.cleanTags('Rock cycle, Plate tectonics ,, rock CYCLE').tags, ['Rock cycle', 'Plate tectonics'], 'a comma-separated string works');
+  assert.deepEqual(SK.cleanTags(undefined).tags, []);
+  assert.equal(SK.cleanTag('<script>alert(1)</script>x'), 'alert(1) x');
+  assert.equal(SK.tagKey('  Rock   Cycle '), 'rock cycle');
+  assert.deepEqual(SK.tagsOf({ tags: ['B', 'a'] }, { tags: ['A', 'c'] }), ['A', 'c', 'B'], 'a question counts its set\'s tags plus its own, once each');
+});
+
+await test('validator: draw questions', () => {
+  assert.deepEqual(okQ({ question: 'Draw it', bg: 'graph', tags: ['Rock cycle'] }), { question: 'Draw it', bg: 'graph', img: null, tags: ['Rock cycle'] });
+  const odd = SK.checkQuestion({ question: 'Hi <marquee>there</marquee>', bg: 'neon' });
+  assert.equal(odd.q.bg, 'blank'); assert.equal(odd.q.question, 'Hi there'); assert.ok(odd.notes.some(n => /formatting/.test(n)) && odd.notes.some(n => /neon/.test(n)));
+  assert.match(SK.checkQuestion({ question: '   ', bg: 'blank' }).problems[0], /no question text/);
+  assert.match(SK.checkQuestion({ question: '<b></b>' }).problems[0], /no question text/);
+  assert.match(SK.checkQuestion('nope').problems[0], /not a question/); assert.match(SK.checkQuestion(null).problems[0], /not a question/); assert.match(SK.checkQuestion([1]).problems[0], /not a question/);
+  assert.equal(SK.checkQuestion({ question: 'a'.repeat(2100) }).q.question.length, 2000); assert.ok(SK.checkQuestion({ question: 'a'.repeat(2100) }).notes.some(n => /2000/.test(n)));
+  const jpg = 'data:image/jpeg;base64,/9j/4AAQ';
+  assert.equal(okQ({ question: '', bg: 'photo', img: jpg }).img, jpg, 'a photo question with no text is fine');
+  assert.equal(SK.checkQuestion({ question: 'x', bg: 'photo', img: 'http://evil/x.png' }).q.bg, 'blank', 'only embedded JPEGs are kept');
+});
+
+await test('validator: sort questions report problems in plain words', () => {
+  const lanes = [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }];
+  const good = [{ id: 1, text: 'Granite', lane: 'A' }, { id: 2, text: 'Limestone', lane: 'B' }];
+  const p = (o) => SK.checkQuestion({ question: 'Sort', kind: 'sort', sort: { lanes, cards: good, ...o } }).problems;
+  assert.deepEqual(p({}), []);
+  assert.deepEqual(p({ cards: [...good, { id: 3, text: 'Basalt', lane: 'Z' }] }), ['the card "Basalt" points to a lane that does not exist ("Z")']);
+  assert.match(p({ cards: [...good, { id: 3, text: 'Basalt' }] })[0], /Basalt.*no lane/);
+  assert.match(p({ lanes: [lanes[0]] })[0], /at least 2 lanes/); assert.match(p({ cards: [good[0]] })[0], /at least 2 cards/);
+  assert.match(p({ lanes: [...lanes, ...'CDEFG'.split('').map(x => ({ id: x, name: x }))] }).join(), /has 7 lanes, and the most is 6/);
+  assert.match(p({ cards: Array.from({ length: 25 }, (_, i) => ({ id: i + 1, text: 'c' + i, lane: 'A' })) }).join(), /25 cards, and the most is 24/);
+  assert.match(p({ lanes: [{ id: 'A', name: '' }, lanes[1]] })[0], /lane 1 has no name/); assert.match(p({ lanes: [{ id: 'A b', name: 'x' }, lanes[1]] })[0], /id of 1 to 8 letters or numbers/);
+  assert.match(p({ lanes: [lanes[0], { id: 'A', name: 'Dup' }] })[0], /share the id "A"/); assert.match(p({ cards: [{ id: 1, text: '', lane: 'A' }, good[1]] })[0], /card 1 has no text/);
+  assert.deepEqual(SK.checkQuestion({ question: 'Sort', kind: 'sort' }).problems, ['is a sort question with no "sort" part']);
+  const auto = okQ({ question: 'Sort', kind: 'sort', sort: { lanes, cards: [{ id: 'c1', text: 'Granite', lane: 'A' }, { id: 'c2', text: 'Limestone', lane: 'B', idea: 'Clue' }] } });
+  assert.deepEqual(auto.sort.cards.map(c => c.id), [1, 2], 'text ids are replaced with numbers');
+  assert.equal(auto.sort.cards[1].idea, 'Clue');
+  const dupIds = okQ({ question: 'Sort', kind: 'sort', sort: { lanes, cards: [{ id: 1, text: 'a', lane: 'A' }, { id: 1, text: 'b', lane: 'B' }] } }); assert.deepEqual(dupIds.sort.cards.map(c => c.id), [1, 2]);
+});
+
+await test('validator: finds the JSON in a reply (code block, sentences around it, brackets in prose)', () => {
+  const set = [{ name: 'Rocks', questions: [{ question: 'Draw it', bg: 'blank', tags: ['Rock cycle'] }] }];
+  const js = JSON.stringify(set);
+  for (const reply of [js, '```json\n' + js + '\n```', 'Sure! Here is your set [as requested]:\n\n' + js + '\n\nHope this helps {really}.', '  \n' + js, 'Intro [1] and {x}\n```\n' + js + '\n```\nOutro']) {
+    const r = SK.parseSets(reply); assert.equal(r.error, '', reply.slice(0, 30)); assert.equal(r.sets[0].name, 'Rocks'); assert.equal(r.sets[0].questions[0].question, 'Draw it');
+  }
+  assert.match(SK.parseSets('no json here at all').error, /could not find any JSON/);
+  assert.match(SK.parseSets('[1, 2, 3] and {"a": 1}').error, /no questions/);
+  assert.match(SK.parseSets('{"name":"x","questions":[').error, /could not find/, 'a cut-off reply is not mistaken for a set');
+  assert.equal(SK.parseSets('{"questions":[{"question":"A"}]}').sets[0].questions.length, 1, 'a single set object');
+  assert.equal(SK.parseSets('[{"question":"A"},{"question":"B"}]').sets[0].questions.length, 2, 'a bare list of questions');
+  assert.equal(SK.parseSets('{"sets":[{"name":"S1","questions":[{"question":"A"}]},{"name":"S2","questions":[{"question":"B"}]}]}').sets.length, 2);
+  assert.equal(SK.parseSets('[{"name":"A \\"quoted\\" ] name","questions":[{"question":"A } tricky"}]}]').sets[0].name, 'A "quoted" ] name', 'brackets inside strings do not end the JSON');
+  assert.deepEqual(SK.parseSets('[{"name":"T","tags":["a","A","b"],"questions":[{"question":"A"}]}]').sets[0].tags, ['a', 'b']);
 });
 
 await test('the Figtree font file is served as woff2', async () => {

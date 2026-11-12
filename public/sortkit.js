@@ -23,6 +23,129 @@ const SK = {
     if (lanes.length < 2 || cards.length < 2) return null;
     return { lanes, cards, ideas: [...new Set(cards.map(c => c.idea).filter(Boolean))], shuffle: s.shuffle !== false, fb: s.fb === 'now' ? 'now' : 'reveal' };
   },
+  // ---- one validator for every way a question can arrive (editor, file import, "Build with AI" paste) ----
+  // These are client copies of the server's cleanHtml / cleanSort limits, plus the tag rules. Problems are written in plain words
+  // for a teacher; "notes" are small fixes that were made on the way in (a long name shortened, a sixth tag left out).
+  MAX_TEXT: 2000, MAX_TAGS: 5, TAG_LEN: 30, MAX_QS: 200,
+  // exact copy of the server's cleanHtml: only <b> <i> <u> <br> survive, any other tag is dropped, stray < > are escaped
+  cleanHtml(s) {
+    return String(s || '').slice(0, SK.MAX_TEXT).split(/(<[^>]*>)/).map(tok => {
+      const m = /^<(\/?)(b|i|u)>$/i.exec(tok);
+      if (m) return '<' + m[1] + m[2].toLowerCase() + '>';
+      if (/^<br\s*\/?>$/i.test(tok)) return '<br>';
+      if (/^<[^>]*>$/.test(tok)) return '';
+      return tok.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }).join('');
+  },
+  plain: h => String(h || '').replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'),
+  // Tags match without regard to capitals or extra spaces ("rock cycle" = "Rock Cycle"); text only, never markup.
+  tagKey: t => String(t == null ? '' : t).replace(/\s+/g, ' ').trim().toLowerCase(),
+  cleanTag: t => String(t == null ? '' : t).replace(/<[^>]*>/g, ' ').replace(/[<>]/g, ' ').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, SK.TAG_LEN).trim(),
+  // -> { tags, notes }: up to 5 distinct tags, 30 characters each. Accepts an array or one comma-separated string.
+  cleanTags(v) {
+    const raw = Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : [], tags = [], seen = new Set(), notes = [];
+    let longer = 0, extra = 0;
+    raw.forEach(x => {
+      if (typeof x !== 'string' && typeof x !== 'number') return;
+      const full = String(x).replace(/<[^>]*>/g, ' ').replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim(), t = SK.cleanTag(x), k = SK.tagKey(t);
+      if (!t || seen.has(k)) return;
+      if (full.length > SK.TAG_LEN) longer++;
+      if (tags.length >= SK.MAX_TAGS) { extra++; return; }
+      seen.add(k); tags.push(t);
+    });
+    if (longer) notes.push(longer === 1 ? 'a tag was shortened to ' + SK.TAG_LEN + ' characters' : longer + ' tags were shortened to ' + SK.TAG_LEN + ' characters');
+    if (extra) notes.push(extra === 1 ? 'a sixth tag was left out (the most is ' + SK.MAX_TAGS + ')' : extra + ' extra tags were left out (the most is ' + SK.MAX_TAGS + ')');
+    return { tags, notes };
+  },
+  // A question and the tags it counts for: its own plus its set's, each once.
+  tagsOf(q, set) { return SK.cleanTags([...(set && set.tags || []), ...(q && q.tags || [])]).tags; },
+  // Check one question that came from outside. -> { q, problems, notes }. q is null when there are problems.
+  // Draw: { question, bg:'blank'|'graph'|'lined', tags }.  Sort: { question, kind:'sort', tags, sort:{ lanes:[{id,name}], cards:[{id,text,lane,idea}] } }.
+  checkQuestion(raw) {
+    const problems = [], notes = [];
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { q: null, problems: ['this is not a question (it should be an object with a "question" field)'], notes };
+    const rawText = String(raw.question == null ? '' : raw.question);
+    if (rawText.length > SK.MAX_TEXT) notes.push('the question text was shortened to ' + SK.MAX_TEXT + ' characters');
+    const text = SK.cleanHtml(rawText);
+    if (/<(?!\/?(?:b|i|u|br)\s*\/?>)[^>]*>/i.test(rawText.slice(0, SK.MAX_TEXT))) notes.push('formatting other than bold, italic, underline and line breaks was removed');
+    const img = typeof raw.img === 'string' && raw.img.startsWith('data:image/jpeg;base64,') && raw.img.length < 4e6 ? raw.img : null;
+    if (!SK.plain(text).trim() && !img) problems.push('has no question text');
+    const tg = SK.cleanTags(raw.tags); notes.push(...tg.notes);
+    let q = null;
+    if (raw.kind === 'sort' || (raw.sort && typeof raw.sort === 'object')) {
+      const s = raw.sort;
+      if (!s || typeof s !== 'object') problems.push('is a sort question with no "sort" part');
+      else {
+        const lanesIn = Array.isArray(s.lanes) ? s.lanes : [], cardsIn = Array.isArray(s.cards) ? s.cards : [];
+        if (lanesIn.length < 2) problems.push('needs at least 2 lanes (it has ' + lanesIn.length + ')');
+        if (lanesIn.length > SK.LANES) problems.push('has ' + lanesIn.length + ' lanes, and the most is ' + SK.LANES);
+        if (cardsIn.length < 2) problems.push('needs at least 2 cards (it has ' + cardsIn.length + ')');
+        if (cardsIn.length > SK.CARDS) problems.push('has ' + cardsIn.length + ' cards, and the most is ' + SK.CARDS);
+        const ids = new Set(), lanes = [];
+        lanesIn.slice(0, SK.LANES).forEach((l, i) => {
+          const nm = l && SK.str(l.name, 100), id = l && l.id;
+          if (!l || typeof l !== 'object' || !nm) return problems.push('lane ' + (i + 1) + ' has no name');
+          if (typeof id !== 'string' || !/^[A-Za-z0-9]{1,8}$/.test(id)) return problems.push('the lane "' + nm.slice(0, 24) + '" needs an id of 1 to 8 letters or numbers');
+          if (ids.has(id)) return problems.push('two lanes share the id "' + id + '"');
+          if (nm.length > 24) notes.push('the lane name "' + nm.slice(0, 24) + '…" was shortened to 24 characters');
+          ids.add(id); lanes.push({ id, name: nm }); // SK.clean below does the cutting, exactly as the server does
+        });
+        const valid = c => c && Number.isInteger(c.id) && c.id >= 1 && c.id <= 1e6;
+        const useIds = cardsIn.every(valid) && new Set(cardsIn.map(c => c.id)).size === cardsIn.length; // otherwise cards are simply numbered 1, 2, 3…
+        const cards = [];
+        cardsIn.slice(0, SK.CARDS).forEach((c, i) => {
+          const t = c && SK.str(c.text, 200);
+          if (!c || typeof c !== 'object' || !t) return problems.push('card ' + (i + 1) + ' has no text');
+          if (t.length > 60) notes.push('the card "' + t.slice(0, 60) + '…" was shortened to 60 characters');
+          const shown = t.slice(0, 60);
+          if (!ids.has(c.lane)) return problems.push('the card "' + shown + '" points to a lane that does not exist' + (c.lane == null || c.lane === '' ? ' (it has no lane)' : ' ("' + SK.str(c.lane, 20) + '")'));
+          const idea = SK.str(c.idea, 100); if (idea.length > 30) notes.push('the idea "' + idea.slice(0, 30) + '…" was shortened to 30 characters');
+          cards.push({ id: useIds ? c.id : i + 1, text: t, lane: c.lane, idea });
+        });
+        if (!problems.length) {
+          const sort = SK.clean({ lanes, cards, shuffle: s.shuffle, fb: s.fb });
+          if (!sort) problems.push('is not a complete sort question'); else q = { question: text, bg: 'blank', img: null, kind: 'sort', sort };
+        }
+      }
+    } else {
+      let bg = ['graph', 'lined', 'blank', 'photo'].includes(raw.bg) ? raw.bg : null;
+      if (!bg) { bg = 'blank'; if (raw.bg != null && raw.bg !== '') notes.push('the background "' + SK.str(raw.bg, 20) + '" is not blank, graph or lined, so it was set to blank'); }
+      if (bg === 'photo' && !img) { bg = 'blank'; }
+      if (!problems.length) q = { question: text, bg, img: bg === 'photo' ? img : null };
+    }
+    if (q && tg.tags.length) q.tags = tg.tags;
+    return { q: problems.length ? null : q, problems, notes };
+  },
+  // Find the JSON in a reply that may be wrapped in a code block or have sentences around it: from a "[" or "{" to its matching close.
+  extractJson(text, want) { // `want(value)` can say which JSON is the one meant, so a "[1]" in a sentence is passed over
+    const t = String(text == null ? '' : text);
+    for (let i = 0; i < t.length; i++) {
+      const open = t[i]; if (open !== '[' && open !== '{') continue;
+      let depth = 0, inStr = false, esc = false, end = -1;
+      for (let j = i; j < t.length; j++) {
+        const c = t[j];
+        if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+        if (c === '"') inStr = true; else if (c === '[' || c === '{') depth++; else if (c === ']' || c === '}') { depth--; if (!depth) { end = j; break; } }
+      }
+      if (end < 0) continue;
+      try { const v = JSON.parse(t.slice(i, end + 1)); if (v && typeof v === 'object' && (!want || want(v))) return v; } catch {}
+    }
+    return null;
+  },
+  // Turn a pasted reply (or a set file) into a list of sets. -> { sets:[{ name, tags, questions:[raw] }], error }
+  parseSets(text) {
+    const looks = v => (Array.isArray(v) ? v.some(x => x && typeof x === 'object' && ('questions' in x || 'question' in x)) : !!v && ('questions' in v || 'sets' in v || 'question' in v));
+    const v = typeof text === 'string' ? SK.extractJson(text, looks) || SK.extractJson(text) : text;
+    if (v == null) return { sets: [], error: 'I could not find any JSON in that text. Ask the AI to reply with JSON only, and paste the whole reply.' };
+    const one = (o, name) => ({ name: SK.str(o && o.name, 60) || name, tags: SK.cleanTags(o && o.tags).tags, questions: Array.isArray(o && o.questions) ? o.questions : [] });
+    let sets = [];
+    if (Array.isArray(v)) sets = v.length && v.every(x => x && Array.isArray(x.questions)) ? v.map(x => one(x, 'AI set')) : v.length && v.every(x => x && typeof x === 'object') ? [{ name: 'AI set', tags: [], questions: v }] : [];
+    else if (Array.isArray(v.sets)) sets = v.sets.map(x => one(x, 'AI set'));
+    else if (Array.isArray(v.questions)) sets = [one(v, 'AI set')];
+    else if (v.question !== undefined) sets = [{ name: 'AI set', tags: [], questions: [v] }];
+    sets = sets.filter(s => s.questions.length);
+    return sets.length ? { sets, error: '' } : { sets: [], error: 'That JSON has no questions in it. It should look like [{"name": "...", "questions": [ ... ]}].' };
+  },
   // plain-language problems with a draft, shown in the editor; an empty list means it can be saved
   issues(s) {
     const out = [], un = s.cards.filter(c => !c.lane || !s.lanes.some(l => l.id === c.lane)).length;
