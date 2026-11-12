@@ -58,3 +58,18 @@ I exercised these in a real browser (Chromium, with touch emulation for the phon
 - Phone remote: teacher page in a phone viewport shows Review / Questions / Teams, Send works, the timer menu opens from the header.
 - Share links: a link made from a set with tags and a sort question opens a dialog in a fresh browser and imports with its tags and sort question intact.
 - Not covered: real touch devices (I only emulated touch), real Chromebooks, a real projector.
+
+## Phase 5: Home-screen data dashboard (done)
+Commits "Phase 5 / 27" through "Phase 5 / 32 and 33". Server tests 79 -> 87 (marks, start-time stamp, and six mastery tests that load `public/mastery.js` the way the browser does).
+- 27 Lesson history: IndexedDB version 2 adds a `lessons` store. One record per question, filed under the time the *server* says the question started (new `qat` on state and `at` on the teacher's `q`), so reloads, two teacher devices and Undo keep it one record. Per student: key, name, pulse, mark, sortRight/Total/Placed, missedIdeas. Saved on a new question, before Clear class, on pagehide/hidden, and every minute. 12-month trim. Delete history on the class card and in the class menu; removing a class deletes it. Backup includes it only with class lists. Restore merges by id after cleaning.
+- 28 Marks are held on the server by anonymous student id and only ever sent to teacher screens (state for hosts and a `mark` message via toHosts). This is what lets the phone remote and the laptop agree. Plan item says "never sent to students or the projector": true, tested. They are stored in server memory like everything else.
+- 29 `public/mastery.js`: pure functions for scores, weights, bands, tag rows, help list, confidence vs mastery, ranges and the class-card strip.
+- 30-32 Dashboard tab (`public/dashboard.js`), strip on class cards, nickname note with a link that opens the class-list sheet.
+- 33 Landing page and README privacy copy.
+- Decision: a student who placed no sort cards has no score (not 0%).
+- Decision: "This week" starts on Monday. "Who needs help" ignores the Untagged row (a skill cannot be Not yet on "no tag").
+- Decision: a paired phone (opened from the QR) is a *remote*: it does not keep lesson history, so student names are not copied onto the phone.
+- Decision: the strip on a class card looks at the last 30 days.
+- Known limit: a question sent from the set editor's "Send now" has no tags in history (it is not in a saved set).
+- Known limit: a sort question whose answer key is missing (a teacher page that connected after the question was sent without being a host) is not recorded.
+- Known limit: students who were removed during the lesson (Remove student) are not in that lesson's record.
