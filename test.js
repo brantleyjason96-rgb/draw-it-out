@@ -1079,6 +1079,79 @@ await test('marks: the teacher\'s marks on drawings reach hosts only, clear with
   const hs5 = client(); await hs5.ready; hs5.send({ t: 'host', code: 'MARKS', key: KEY }); assert.deepEqual((await hs5.wait('state')).marks, {}, 'removing a student removes their mark');
 });
 
+
+// ---- Phase 5: mastery (public/mastery.js, pure) ----
+const MK = new Function('SK', fs.readFileSync('public/mastery.js', 'utf8') + '\nreturn MK;')(SK);
+const DAY = 864e5, NOW = Date.UTC(2026, 10, 12, 15, 0, 0); // Thursday 12 Nov 2026
+const les = (daysAgo, o) => ({ id: 'L' + daysAgo + (o.q || ''), code: 'ABCD', at: NOW - daysAgo * DAY, q: 'Q', kind: 'draw', tags: [], nick: false, students: [], ...o });
+const sst = (key, o = {}) => ({ key, name: key.toUpperCase(), pulse: null, mark: null, sortRight: null, sortTotal: null, sortPlaced: null, missedIdeas: [], ...o });
+const sortSt = (key, right, total = 4, o = {}) => sst(key, { sortRight: right, sortTotal: total, sortPlaced: total, ...o });
+
+await test('mastery: scores, weights (latest three double), bands and "not enough data"', () => {
+  assert.equal(MK.score(sortSt('a', 3), 'sort'), 75); assert.equal(MK.score(sst('a', { sortRight: 0, sortTotal: 4, sortPlaced: 0 }), 'sort'), null, 'placing nothing is no score, not 0%');
+  assert.deepEqual(['got', 'almost', 'not', null].map(m => MK.score(sst('a', { mark: m }), 'draw')), [100, 50, 0, null]);
+  assert.equal(MK.mastery([{ at: 1, score: 100 }]).value, null); assert.deepEqual(MK.mastery([]), { n: 0, value: null, band: null });
+  assert.equal(MK.mastery([{ at: 1, score: 100 }, { at: 2, score: 0 }]).value, 50);
+  // five points: the oldest two count once, the newest three twice: (100+100 + 2*(0+0+0)) / (1+1+6) = 25
+  const five = [100, 100, 0, 0, 0].map((s, i) => ({ at: i + 1, score: s })); assert.equal(MK.mastery(five).value, 25);
+  assert.equal(MK.mastery(five.slice().reverse()).value, 25, 'order of arrival does not matter, time does');
+  assert.deepEqual([49, 50, 79, 80, 100, 0].map(MK.band), ['not', 'getting', 'getting', 'secure', 'secure', 'not']);
+  assert.equal(MK.mastery([{ at: 1, score: 100 }, { at: 2, score: 100 }, { at: 3, score: 0 }]).band, 'getting', '(100+100+0)*... = 67');
+});
+
+await test('mastery: a question with two tags counts toward both; no tag goes in "Untagged"', () => {
+  const L = [les(3, { q: 'A', tags: ['Rock cycle', 'Reading a diagram'], students: [sst('ann', { mark: 'got' }), sst('bo', { mark: 'not' })] }),
+    les(2, { q: 'B', tags: ['rock CYCLE'], students: [sst('ann', { mark: 'got' }), sst('bo', { mark: 'almost' })] }),
+    les(1, { q: 'C', tags: [], students: [sst('ann', { mark: 'not' }), sst('bo', { mark: 'not' })] })];
+  const b = MK.build(L); const byKey = Object.fromEntries(b.rows.map(r => [r.key, r]));
+  assert.deepEqual(Object.keys(byKey).sort(), ['', 'reading a diagram', 'rock cycle'].sort());
+  assert.deepEqual(byKey['rock cycle'].people.map(p => [p.name, p.value, p.band]), [['BO', 25, 'not'], ['ANN', 100, 'secure']], 'two lessons carry the tag, the spellings are one tag');
+  assert.deepEqual(byKey['reading a diagram'].people.map(p => p.value), [null, null], 'one data point is not enough');
+  assert.equal(byKey['reading a diagram'].counts.nodata, 2);
+  assert.equal(b.rows[b.rows.length - 1].key, '', 'Untagged is last'); assert.equal(byKey[''].label, 'Untagged'); assert.equal(byKey[''].people[0].value, null);
+  assert.deepEqual(byKey['rock cycle'].counts, { not: 1, getting: 0, secure: 1, nodata: 0 });
+});
+
+await test('mastery: sort questions use percent of cards right; ideas most often missed come with the tag', () => {
+  const L = [1, 2].map(d => les(d, { q: 'S' + d, kind: 'sort', tags: ['Classifying'], students: [sortSt('ann', 4), sortSt('bo', 1, 4, { missedIdeas: ['Cooling rate', 'Clues'] }), sortSt('cy', 2, 4, { missedIdeas: ['Cooling rate'] }), sst('di')] }));
+  const b = MK.build(L), r = b.rows[0];
+  assert.deepEqual(r.people.map(p => [p.name, p.value, p.band]).sort(), [['ANN', 100, 'secure'], ['BO', 25, 'not'], ['CY', 50, 'getting']].sort());
+  assert.ok(!r.people.some(p => p.name === 'DI'), 'a student who placed nothing is not in the numbers');
+  assert.deepEqual(r.ideas.map(i => [i.idea, i.misses]), [['Cooling rate', 4], ['Clues', 2]]);
+  assert.deepEqual(r.qs.map(q => [q.q, q.n, q.avg]), [['S2', 3, 58], ['S1', 3, 58]]);
+});
+
+await test('mastery: who needs help (Not yet on a tag, or red twice or more), most urgent first', () => {
+  const mk = (d, tags, studs) => les(d, { q: 'q' + d, tags, students: studs });
+  const L = [mk(5, ['Cells'], [sst('ann', { mark: 'not', pulse: 'r' }), sst('bo', { mark: 'got', pulse: 'r' }), sst('cy', { mark: 'got' })]),
+    mk(3, ['Cells'], [sst('ann', { mark: 'not', pulse: 'r' }), sst('bo', { mark: 'got', pulse: 'g' }), sst('cy', { mark: 'got' })]),
+    mk(1, ['Atoms'], [sst('bo', { mark: 'got', pulse: 'r' }), sst('cy', { pulse: 'r' }), sst('ann', { mark: 'got' })]),
+    mk(0, [], [sst('dee', { mark: 'not' }), sst('dee2', { pulse: 'r' })]), mk(0.5, [], [sst('dee', { mark: 'not' })])];
+  const b = MK.build(L);
+  assert.deepEqual(b.help.map(h => [h.name, h.reasons.map(r => r.type + (r.label ? ':' + r.label : '') + (r.count ? ':' + r.count : '')).join('+')]),
+    [['ANN', 'tag:Cells+red:2'], ['BO', 'red:2']], 'ANN has two reasons; the Untagged row never makes someone "Not yet"; one red alone is not enough');
+  assert.equal(b.help[0].at, NOW - 3 * DAY, 'the last date is the last time that tag was assessed');
+});
+
+await test('mastery: confidence against mastery finds green-but-low and red-but-high', () => {
+  const L = [les(2, { q: 'Q1', tags: ['T'], kind: 'sort', students: [sortSt('ann', 1, 4, { pulse: 'g' }), sortSt('bo', 4, 4, { pulse: 'r' }), sortSt('cy', 4, 4, { pulse: 'g' }), sortSt('di', 1, 4, { pulse: 'r' })] }),
+    les(1, { q: 'Q2', tags: ['T'], students: [sst('ann', { pulse: 'g', mark: 'not' }), sst('bo', { pulse: 'r', mark: 'got' }), sst('cy', { pulse: 'g' })] })];
+  const b = MK.build(L);
+  assert.deepEqual(b.greenLow.map(x => [x.name, x.count, x.q]), [['ANN', 2, 'Q2']]); assert.deepEqual(b.redHigh.map(x => [x.name, x.count]), [['BO', 2]]);
+  assert.equal(b.withConf, 4, 'confidence with a score behind it');
+});
+
+await test('mastery: date ranges, class filter, and the honest counts of what was measured', () => {
+  const L = [les(40, { q: 'old', tags: ['T'], students: [sst('ann', { mark: 'got' })] }), les(10, { q: 'mid', tags: ['T'], students: [sst('ann', { mark: 'got' })] }), les(0.2, { q: 'now', tags: ['T'], students: [sst('ann', { mark: 'not' })] }), { ...les(1, { q: 'other', tags: ['T'], students: [sst('ann', { mark: 'got' })] }), code: 'WXYZ' }, les(2, { q: 'plain', kind: 'draw', tags: [], students: [sst('ann', { pulse: 'g' })] })];
+  assert.deepEqual(MK.build(L, { code: 'ABCD', ...MK.range('all', NOW) }).lessons.map(l => l.q), ['old', 'mid', 'plain', 'now']);
+  assert.deepEqual(MK.build(L, { code: 'ABCD', ...MK.range('month', NOW) }).lessons.map(l => l.q), ['mid', 'plain', 'now']);
+  assert.deepEqual(MK.build(L, { code: 'ABCD', ...MK.range('week', NOW) }).lessons.map(l => l.q), ['plain', 'now'], 'this week starts on Monday (10 Nov 2026)');
+  const w = MK.range('week', Date.UTC(2026, 10, 15, 12)); assert.equal(new Date(w.from).getDay(), 1, 'a Sunday still belongs to the week that began on Monday');
+  const b = MK.build(L, { code: 'ABCD', ...MK.range('all', NOW) }); assert.deepEqual(b.signals, { sort: 0, marked: 3, draw: 4, drawUnmarked: 1 }, 'one drawing question has confidence only, no marks');
+  const s = MK.strip(L, 'ABCD', NOW); assert.equal(s.help, 0, 'one Not yet is below two data points in the month'); assert.equal(MK.strip(L, 'NONE', NOW), null);
+  assert.equal(MK.build([], {}).rows.length, 0);
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
