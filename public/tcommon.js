@@ -64,6 +64,80 @@ function dedupeInitials(roster) {
 }
 const iniOf = nm => { const p = nm.trim().split(/\s+/).filter(Boolean); return ((p.length ? Array.from(p[0])[0] : '') + (p.length > 1 ? Array.from(p[p.length - 1])[0] : '')).toUpperCase(); };
 
+// ---- class list (roster) import: shared by Today and the class screen ----
+// The file is read in this browser only. Full names are stored in this browser; the server only ever gets initials.
+function parseCSV(text) {
+  const rows = []; let row = [], cur2 = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur2 += '"'; i++; } else q = false; } else cur2 += c; }
+    else if (c === '"') q = true;
+    else if (c === ',' || c === '\t') { row.push(cur2); cur2 = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur2); rows.push(row); row = []; cur2 = ''; }
+    else cur2 += c;
+  }
+  row.push(cur2); rows.push(row);
+  return rows.map(r => r.map(x => x.trim())).filter(r => r.some(x => x));
+}
+const ROSTER_MAX = 100; // per class; the server and cleanTM both stop here
+const ROSTER_HEADS = {
+  first: /^(first|first name|given|given name|preferred|preferred name)$/, last: /^(last|last name|surname|family|family name)$/,
+  name: /^(name|student|students|student name|full name)$/, team: /^(team|group|table)$/,
+  cls: /^(class|class name|period|class period|hour|section|course|homeroom)$/
+};
+// Turn a file or pasted text into { students: [{first,last,team,cls}], hasClass, noName }.
+// A header row is recognised by its words (First/Last/Name/Student, Team, and Class/Period/Section/Hour), in any order.
+// Without one: a single column is a full name, otherwise First, Last, Team. "Last, First" in one quoted Name cell is understood.
+function parseRoster(text) {
+  const rows = parseCSV(String(text || '').replace(/^﻿/, '')), out = { students: [], hasClass: false, noName: 0 };
+  if (!rows.length) return out;
+  const col = {};
+  rows[0].forEach((h, i) => { h = h.toLowerCase().replace(/[_\s]+/g, ' ').trim(); for (const k in ROSTER_HEADS) if (col[k] == null && ROSTER_HEADS[k].test(h)) col[k] = i; });
+  let body = rows;
+  if (col.first != null || col.last != null || col.name != null) body = rows.slice(1);
+  else { for (const k in col) delete col[k]; if (rows[0].length === 1) col.name = 0; else Object.assign(col, { first: 0, last: 1, team: 2 }); }
+  out.hasClass = col.cls != null;
+  const g = (r, k) => (col[k] != null && r[col[k]] ? r[col[k]] : '').replace(/\s+/g, ' ').trim();
+  body.forEach(r => {
+    let first, last;
+    if (col.first != null || col.last != null) { first = g(r, 'first'); last = g(r, 'last'); }
+    else { const n = g(r, 'name'), c = n.indexOf(','); if (c > 0) { last = n.slice(0, c).trim(); first = n.slice(c + 1).trim(); } else { const w = n.split(' '); first = w[0]; last = w.slice(1).join(' '); } }
+    if (!first && last) { first = last; last = ''; }
+    if (!first) return void out.noName++;
+    out.students.push({ first: first.slice(0, 40), last: last.slice(0, 40), team: g(r, 'team').slice(0, 20), cls: g(r, 'cls').slice(0, 40) });
+  });
+  return out;
+}
+// Put students on a class's list (tm is a loadTM() object; the caller saves it). Names already on the list are skipped when adding,
+// so uploading the same file twice does nothing. Teams are matched by name and created when new. Points are never touched.
+function applyRoster(tm, students, mode) {
+  const res = { added: 0, already: 0, over: 0, replaced: 0, teamsMade: 0, shared: [] };
+  const fullOf = s => (s.first + ' ' + s.last).trim();
+  if (mode === 'replace') { res.replaced = tm.roster.length; tm.roster = []; }
+  const have = new Set(tm.roster.map(fullOf).map(x => x.toLowerCase()));
+  students.forEach(s => {
+    if (have.has(fullOf(s).toLowerCase())) return void res.already++;
+    if (tm.roster.length >= ROSTER_MAX) return void res.over++;
+    let team = null;
+    if (s.team) {
+      let t = tm.teams.find(x => x.name.toLowerCase() === s.team.toLowerCase());
+      if (!t && tm.teams.length < 12) { t = newTeam(tm.teams, s.team); tm.teams.push(t); tm.scores[t.id] = 0; res.teamsMade++; }
+      team = t ? t.id : null;
+    }
+    tm.roster.push({ rid: rid8(), first: s.first, last: s.last, ini: iniOf(fullOf(s)), team }); res.added++;
+  });
+  res.shared = dedupeInitials(tm.roster);
+  return res;
+}
+const rosterSays = (r, where) => {
+  const n = (k, one, many) => r[k] + ' ' + (r[k] === 1 ? one : many);
+  let m = r.added ? 'Added ' + n('added', 'student', 'students') + (where ? ' to ' + where : '') + '.' : 'No new students' + (where ? ' for ' + where : '') + '.';
+  if (r.already) m += ' ' + n('already', 'name was', 'names were') + ' already on the list.';
+  if (r.over) m += ' ' + r.over + ' left out: ' + ROSTER_MAX + ' is the most in one class.';
+  if (r.shared.length) m += ' ' + n('shared', 'student shares', 'students share') + ' initials with a teammate, so a number was added.';
+  return m;
+};
+
 // ---- editing teams (Today → Teams): saved in this browser, pushed to a class that is running ----
 // A class may be open on the classroom computer, so the Teams tab never writes the class list or the scores.
 const teamChannel = !DEMO && 'BroadcastChannel' in window ? new BroadcastChannel('draw-it-out-teams') : null;

@@ -855,30 +855,17 @@ $('#addteam').onclick = () => { if (TM.teams.length >= 12) return toast('12 team
 $('#cap').onclick = () => { TM.cap = !TM.cap; teamsChanged(); };
 $('#rsc').onclick = () => { if (confirm('Set every team back to 0 points?')) ws.send({ t: 'resetscores' }); };
 $('#rclr').onclick = () => { if (confirm('Remove the class list? Signed-in students will be sent back to the join screen. Teams and points are kept.')) { TM.roster = []; save(); sendSetup(); ui(); sheetUI(); } };
-function parseCSV(text) {
-  const rows = []; let row = [], cur2 = '', q = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur2 += '"'; i++; } else q = false; } else cur2 += c; }
-    else if (c === '"') q = true;
-    else if (c === ',' || c === '\t') { row.push(cur2); cur2 = ''; }
-    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur2); rows.push(row); row = []; cur2 = ''; }
-    else cur2 += c;
-  }
-  row.push(cur2); rows.push(row);
-  return rows.map(r => r.map(x => x.trim())).filter(r => r.some(x => x));
-}
 function readList(text) {
-  let rows = parseCSV(text); if (rows.length && /^(first|student|name)/i.test(rows[0][0])) rows = rows.slice(1); // skip a header row
-  let n = 0;
-  rows.slice(0, 100 - TM.roster.length).forEach(r => {
-    const nm = (r.length === 1 ? r[0] : r[0] + ' ' + (r[1] || '')).replace(/\s+/g, ' ').trim(); if (!nm) return;
-    let team = null;
-    if (r[2]) { team = TM.teams.find(t => t.name.toLowerCase() === r[2].toLowerCase()); if (!team && TM.teams.length < 12) { team = newTeam(TM.teams, r[2]); TM.teams.push(team); } team = team ? team.id : null; }
-    const p = nm.split(' ');
-    TM.roster.push({ rid: rid8(), first: p[0], last: p.slice(1).join(' '), ini: iniOf(nm), team }); n++;
-  });
-  save(); sendSetup(); ui(); sheetUI(); toast(n ? 'Read ' + n + ' students.' : 'No names found in that file.');
+  const f = parseRoster(text), here = per().name.toLowerCase();
+  let list = f.students;
+  if (f.hasClass) { // a file for several classes belongs on Today, where it can be split by class
+    const mine = list.filter(x => x.cls.toLowerCase() === here), names = new Set(list.map(x => x.cls.toLowerCase()));
+    if (names.size > 1 && !mine.length) return toast('That file lists several classes. Upload it from Today to split it by class.');
+    if (mine.length) list = mine;
+  }
+  if (!list.length) return toast('No names found in that file.');
+  const r = applyRoster(TM, list, 'add');
+  save(); sendSetup(); ui(); sheetUI(); toast(rosterSays(r));
 }
 $('#rup').onclick = () => $('#rfile').click();
 $('#rfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) readList(await f.text()); };
