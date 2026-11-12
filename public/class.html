@@ -242,6 +242,13 @@ const ws = connect(onmsg, () => ws.send({ t: 'host', code, key, setup: { teams: 
 });
 
 // ---- students ----
+// Each card's drawing is the shape of that student's own page (a phone is tall, a Chromebook is wide), and a class with only a few
+// students in it gets bigger cards. The canvas is drawn at the size it will be shown, so lines stay sharp.
+function fitThumb(s, few) {
+  if (!s.cv || !s.bw || !s.bh) return;
+  const w = few === 1 ? 900 : few === 2 ? 720 : 520, h = Math.max(200, Math.min(1000, Math.round(w * s.bh / s.bw)));
+  if (s.cv.width !== w || s.cv.height !== h) { s.cv.width = w; s.cv.height = h; s.dirty = true; }
+}
 function addStu(d) {
   let s = S.stu.get(d.id);
   if (!s) {
@@ -532,6 +539,7 @@ let subT = 0;
 function subSoon() { if (subT) return; subT = setTimeout(() => { subT = 0; paintSub(); }, 500); }
 function ui() {
   const n = S.stu.size, tot = TM.roster.length;
+  const few = n === 0 || n > 3 ? '' : String(n); $('#grid').dataset.few = few; S.stu.forEach(s => fitThumb(s, +few || 0));
   const nLive = [...S.stu.values()].filter(x => x.live !== false).length; // students who closed their tab still have a card, but do not count as here
   if (S.conn) $('#cnt').textContent = nLive + (tot ? ' of ' + tot : '') + ' ha' + (nLive === 1 && !tot ? 's' : 've') + ' joined';
   $('#qtag').hidden = !S.simple;
