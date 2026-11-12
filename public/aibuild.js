@@ -123,7 +123,7 @@ const AIB = (() => {
     sets.forEach((s, si) => {
       const nm = el('input', { type: 'text', className: 'aibin', value: s.name, maxLength: 60, id: 'aibsn' + si }); nm.oninput = () => { s.name = nm.value.trim() || 'AI set'; };
       out.push(el('div', { className: 'aibf' }, el('label', { htmlFor: 'aibsn' + si, textContent: sets.length > 1 ? 'Set ' + (si + 1) + ' name' : 'Set name' }), nm));
-      if (s.tags.length) out.push(el('div', { className: 'tgrow' }, el('span', { className: 'mut', textContent: 'Tags on the whole set: ' }), ...s.tags.map(t => el('span', { className: 'tg ro', textContent: t }))));
+      if (s.tags.length) out.push(el('div', { className: 'tgrow' }, el('span', { className: 'mut', textContent: 'Tags on the whole set: ' }), ...s.tags.map(t => el('span', { className: 'tg ro', textContent: tagLabel(t) }))));
       const ul = el('ul', { className: 'aiblist' });
       s.rows.forEach(r => {
         const id = 'aibq' + si + '-' + r.n, cb = el('input', { type: 'checkbox', id, checked: r.on, disabled: !r.q }); cb.onchange = () => { r.on = cb.checked; onChange(); };
@@ -133,7 +133,7 @@ const AIB = (() => {
           cb, el('div', { className: 'aibrowb' },
             el('label', { htmlFor: id, className: 'aibrowt' }, el('b', { textContent: 'Question ' + r.n }), ...(kind ? [el('span', { className: 'chip', textContent: kind })] : []), ...(txt ? [el('span', { className: 'aibq', textContent: ' ' + txt.slice(0, 160) + (txt.length > 160 ? '…' : '') })] : [])),
             ...(r.q && r.q.kind === 'sort' ? [el('small', { className: 'mut', textContent: r.q.sort.lanes.map(l => l.name).join(' · ') + ' — ' + r.q.sort.cards.length + ' cards' })] : []),
-            ...(r.q && r.q.tags ? [el('div', { className: 'tgrow' }, ...r.q.tags.map(t => el('span', { className: 'tg ro', textContent: t })))] : []),
+            ...(r.q && r.q.tags ? [el('div', { className: 'tgrow' }, ...r.q.tags.map(t => el('span', { className: 'tg ro', textContent: tagLabel(t) })))] : []),
             ...r.problems.map(m => el('div', { className: 'aibprob' }, icoEl('x', 'sm'), ' Question ' + r.n + ': ' + m + '.')),
             ...r.notes.map(m => el('div', { className: 'aibfix', textContent: 'Fixed: ' + m + '.' }))));
         ul.append(li);
