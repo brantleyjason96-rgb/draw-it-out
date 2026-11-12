@@ -87,21 +87,22 @@ Findings marked *(tested)* were reproduced against a local server on 2026-11-12.
     - A new question clears it.
     - Students cannot send `timer`.
 
-## Phase 4: AI prompt builder for question sets (new)
+## Phase 4: AI prompt builder and question tags (new)
 
 **What the teacher gets:** on the Question sets tab, **Build with AI**. The app writes a prompt; the teacher pastes it into any AI tool they already use; they paste the answer back; the app checks it and adds the set. The app itself never calls an AI service, so there is no key, no cost and no student data involved.
 
 22. **Step 1, Build the prompt** (a dialog on `/teacher`, Question sets tab).
     - Question type: Draw, Sort cards, or a mix.
     - Goal: free text for the learning goal or standard (for example "MS-ESS2-1: cycling of Earth's materials").
+    - Tags: pick from the teacher's existing tags or type new ones. The prompt tells the AI to put exactly these tags on every question, so an imported set lands on the dashboard already labelled.
     - Grade band and number of questions (3 to 10).
     - Language support: none, simpler wording, or simpler wording plus a sentence frame in each question. This is for multilingual learners.
     - For sort questions: number of lanes (2 to 4), cards per question (6 to 12), and "tag each card with the idea it tests".
     - Output: a read-only prompt box and a **Copy prompt** button.
 23. **The prompt text** must state the exact format and limits so the answer imports cleanly.
     - Reply with JSON only, in the set-file format: `[{"name": …, "questions": [ … ]}]`.
-    - Draw question: `{"question", "bg": "blank"|"graph"|"lined", "goal"}`.
-    - Sort question: `{"question", "kind": "sort", "goal", "sort": {"lanes": [{"id", "name"}], "cards": [{"id", "text", "lane", "idea"}]}}`.
+    - Draw question: `{"question", "bg": "blank"|"graph"|"lined", "tags": [ … ]}`.
+    - Sort question: `{"question", "kind": "sort", "tags": [ … ], "sort": {"lanes": [{"id", "name"}], "cards": [{"id", "text", "lane", "idea"}]}}`.
     - Limits, matching `cleanSort` in `server.js`: 2 to 6 lanes, 2 to 24 cards, lane name 24 characters, card text 60, idea 30, question 2000, only `<b> <i> <u> <br>` tags, and every card's `lane` must be a real lane id.
     - Ask for misconception-based wrong lanes and for draw prompts that can be answered with a sketch and labels in about two minutes.
     - Include one worked example of each question type.
@@ -111,16 +112,24 @@ Findings marked *(tested)* were reproduced against a local server on 2026-11-12.
     - Validate with one shared function. Move the limits into a client copy of the `cleanSort` and `cleanHtml` rules in `sortkit.js`, so the editor, file import and this import all agree.
     - Show a preview list of the questions.
     - Problems are in plain words, per question: "Question 3: the card 'Basalt' points to a lane that does not exist". The teacher can import the good ones and skip the bad ones.
-25. **Add the `goal` field to every question.**
-    - Editor: an optional "Goal" box on `/sets`.
-    - It is kept in export, backup and share links.
-    - It is never sent to students.
-    - The dashboard (Phase 5) groups by it.
+25. **Tags: what each question assesses.** This is what the dashboard groups by, so it must be quick to do and hard to get messy.
+    - **Data.** Each question gets `tags`: up to 5 short labels, 30 characters each (for example "Rock cycle", "MS-ESS2-1", "Reading a diagram"). Each set gets `tags` too; a question counts as carrying its set's tags plus its own.
+    - **Matching.** Tags match without regard to capitals or extra spaces, so "rock cycle" and "Rock Cycle" are one tag. The first spelling typed is the one shown.
+    - **Editor (`/sets`).** A "What does this assess?" row under the question box: type and press Enter or comma to add a chip, click the chip's ✕ to remove. As the teacher types, suggest tags they have used before, most used first. A matching row in **Manage set** for set-wide tags.
+    - **Tag several at once.** Tick boxes on the question list in `/sets`, then **Add tag to selected** and **Remove tag from selected**.
+    - **See them.** Show tags as small chips on each question in the `/sets` list, on the Question sets tab, and in the question list on `/class`. Questions with no tag show a quiet "No tag" chip that opens the tag row.
+    - **Filter.** On the Question sets tab, click a tag to show only sets and questions carrying it.
+    - **Manage tags.** A **Tags** dialog on the Question sets tab listing every tag with its question count: rename, merge two tags into one, delete. Renaming or merging also updates saved lesson history (item 27), so the dashboard does not split one skill into two rows.
+    - **Sort questions.** Question tags say what the whole question assesses; the existing per-card **idea** stays as the finer detail inside it. The dashboard shows ideas under their question's tag.
+    - **Starter sets.** Tag every question in `public/starters.json`.
+    - **Travel.** Tags are kept in export, import, backup, restore and share links. Files without tags import as untagged.
+    - **Privacy.** Tags are teacher-only. They are never sent to the server, students or the projector; strip them before a question is sent.
+    - **Limits.** Enforced by the shared validator from item 24: at most 5 per question, 30 characters, plain text only.
 26. **Harden the existing file import.** `importSetsFile` in `public/tcommon.js:313` adds questions without checking them. Run it through the same validator.
 
 ## Phase 5: Home-screen data dashboard (new)
 
-**What the teacher gets:** a **Dashboard** tab on `/teacher`, and a summary strip on each class card, answering two questions: *who needs help* and *where is the class on each goal*.
+**What the teacher gets:** a **Dashboard** tab on `/teacher`, and a summary strip on each class card, answering two questions: *who needs help* and *where is the class on each tag*.
 
 **The honest limit:** the app can only show what it measures. Three signals exist or are added here:
 - **Sort accuracy.** Right or wrong per card, already grouped by idea.
@@ -130,7 +139,7 @@ Findings marked *(tested)* were reproduced against a local server on 2026-11-12.
 27. **Save each lesson in the teacher's browser.**
     - Results currently vanish when the class is cleared or the server restarts.
     - When a question ends (next question, Clear class, or leaving the page), `/class` writes a record to IndexedDB, in a new `lessons` store beside sets.
-    - Record: class code, date, question text, `goal`, kind, and per student `{key, name, pulse, mark, sortRight, sortTotal, missedIdeas}`.
+    - Record: class code, date, question text, the question's tags at the time it was asked (its own plus its set's), kind, and per student `{key, name, pulse, mark, sortRight, sortTotal, missedIdeas}`.
     - Student key: the class-list id when there is a class list, otherwise the nickname in lower case.
     - Nothing new goes to the server; names stay on this computer, as now.
     - Include the store in **Back up everything** and Restore.
@@ -142,7 +151,7 @@ Findings marked *(tested)* were reproduced against a local server on 2026-11-12.
     - Marks are private to the teacher: never sent to students or the projector.
     - On the phone review screen, the same three buttons sit under the drawing.
     - Without marks, drawing questions show confidence only and the dashboard says so.
-29. **Mastery number.** Per student, per goal:
+29. **Mastery number.** Per student, per tag (a question with two tags counts toward both):
     - sort questions = percent of cards right;
     - marked drawings = Got it 100, Almost 50, Not yet 0;
     - averaged, with the most recent three lessons counted double.
@@ -150,8 +159,8 @@ Findings marked *(tested)* were reproduced against a local server on 2026-11-12.
     - Show "not enough data" below two data points instead of a number.
 30. **Dashboard tab layout.**
     - Class picker and date range (This week, Last 30 days, All).
-    - **Who needs help**: students in the Not yet band on any goal, or red twice or more, listed with the goal and the last date. This list comes first.
-    - **Mastery by goal**: one row per goal with a three-part bar (Not yet, Getting there, Secure) and the count of students in each. Click a row for the student list and the ideas most often missed.
+    - **Who needs help**: students in the Not yet band on any tag, or red twice or more, listed with the tag and the last date. This list comes first.
+    - **Mastery by tag**: one row per tag with a three-part bar (Not yet, Getting there, Secure) and the count of students in each. Click a row for the student list, the questions behind it, and the ideas most often missed. Questions with no tag are gathered in an "Untagged" row with a link to tag them.
     - **Confidence against mastery**: students who say green but score low, and students who say red but score high. These are the two groups worth a conversation.
     - **Save as CSV** and **Copy summary**.
     - Empty state: "Run a class and this fills in. Sort questions and marked drawings count toward mastery."
