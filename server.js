@@ -2,7 +2,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import zlib from 'node:zlib';
+import { randomUUID, createHash } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 
 const PORT = process.env.PORT || 3000;
@@ -12,9 +13,28 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 const ROUTES = { '/': 'index.html', '/teacher': 'teacher.html', '/class': 'class.html', '/sets': 'sets.html', '/projector': 'projector.html', '/start': 'landing.html', '/join': 'index.html', '/favicon.ico': 'favicon.svg' };
 
 // ---- static files ----
+// Text files are compressed once (gzip) and kept in memory with an ETag, so a repeat load on school wifi is a tiny 304 reply.
+// An entry is rebuilt when the file's modified time or size changes. The whole public folder is small, so memory is not a concern.
+const TEXTY = new Set(['.html', '.js', '.css', '.json', '.txt', '.svg']);
+const staticCache = new Map();
+function loadStatic(f, cb) {
+  fs.stat(f, (err, st) => {
+    if (err || !st.isFile()) return cb(null);
+    const c = staticCache.get(f);
+    if (c && c.mtimeMs === st.mtimeMs && c.size === st.size) return cb(c);
+    fs.readFile(f, (e, raw) => {
+      if (e) return cb(null);
+      const ext = path.extname(f), gz = TEXTY.has(ext) && raw.length > 512 ? zlib.gzipSync(raw, { level: 9 }) : null;
+      const entry = { mtimeMs: st.mtimeMs, size: st.size, ext, raw, gz: gz && gz.length < raw.length ? gz : null, etag: createHash('sha1').update(raw).digest('base64url').slice(0, 22) };
+      staticCache.set(f, entry); cb(entry);
+    });
+  });
+}
+const matchEtag = (hdr, tag) => !!hdr && (hdr.trim() === '*' || hdr.split(',').some(x => x.trim().replace(/^W\//, '') === tag));
+const CACHE = { '.woff2': 'public, max-age=604800', '.svg': 'public, max-age=86400' }; // everything else is revalidated each time (cheap with the ETag)
 const server = http.createServer((req, res) => {
   let p; try { p = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.statusCode = 400; return res.end('Bad request'); }
-  if (p === '/healthz') return res.end('ok');
+  if (p === '/healthz') { res.setHeader('Cache-Control', 'no-store'); return res.end(req.method === 'HEAD' ? undefined : 'ok'); } // for an uptime monitor
   // /Teacher, /teacher/ and /join all work: page names ignore capitals and a trailing slash
   const route = ROUTES[p] || ROUTES[(p.length > 1 ? p.replace(/\/+$/, '') : p).toLowerCase()];
   const f = path.join(PUB, route || p);
@@ -26,13 +46,22 @@ const server = http.createServer((req, res) => {
     fs.readFile(path.join(PUB, 'notfound.html'), (e, d) => { res.setHeader('Content-Type', TYPES['.html']); res.setHeader('Cache-Control', 'no-cache'); res.end(e ? 'Not found' : d); });
   };
   if (!f.startsWith(PUB + path.sep) || !TYPES[path.extname(f)]) return missing();
-  fs.readFile(f, (err, data) => {
-    if (err) return missing();
-    res.setHeader('Content-Type', TYPES[path.extname(f)]);
+  loadStatic(f, entry => {
+    if (!entry) return missing();
+    const gzip = !!entry.gz && /\bgzip\b/i.test(req.headers['accept-encoding'] || '');
+    const tag = '"' + entry.etag + (gzip ? '-gz' : '') + '"';
+    res.setHeader('Content-Type', TYPES[entry.ext]);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer'); // class codes and shared-set links are never leaked to other sites
-    res.setHeader('Cache-Control', 'no-cache');
-    res.end(data);
+    res.setHeader('Cache-Control', CACHE[entry.ext] || 'no-cache');
+    res.setHeader('ETag', tag);
+    if (entry.gz) res.setHeader('Vary', 'Accept-Encoding');
+    const inm = req.headers['if-none-match'];
+    if (matchEtag(inm, '"' + entry.etag + '"') || matchEtag(inm, '"' + entry.etag + '-gz"') || matchEtag(inm, tag)) { res.statusCode = 304; return res.end(); }
+    const body = gzip ? entry.gz : entry.raw;
+    if (gzip) res.setHeader('Content-Encoding', 'gzip');
+    res.setHeader('Content-Length', body.length);
+    res.end(req.method === 'HEAD' ? undefined : body);
   });
 });
 

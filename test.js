@@ -1152,6 +1152,30 @@ await test('mastery: date ranges, class filter, and the honest counts of what wa
   assert.equal(MK.build([], {}).rows.length, 0);
 });
 
+
+await test('static files: gzip when asked, an ETag, 304 on a repeat, fonts left alone', async () => {
+  const u = p => 'http://localhost:' + PORT + p;
+  const raw = fs.readFileSync('public/class.html');
+  const plain = await fetch(u('/class'), { headers: { 'accept-encoding': 'identity' } });
+  assert.equal(plain.headers.get('content-encoding'), null); assert.equal((await plain.arrayBuffer()).byteLength, raw.length);
+  const gz = await new Promise((ok, no) => { import('node:http').then(({ default: http }) => http.get(u('/class'), { headers: { 'accept-encoding': 'gzip' } }, r => { const c = []; r.on('data', d => c.push(d)); r.on('end', () => ok({ r, body: Buffer.concat(c) })); }).on('error', no)); });
+  assert.equal(gz.r.headers['content-encoding'], 'gzip'); assert.match(gz.r.headers['vary'], /Accept-Encoding/i); assert.equal(+gz.r.headers['content-length'], gz.body.length);
+  assert.ok(gz.body.length < raw.length / 2, 'smaller on the wire: ' + gz.body.length + ' vs ' + raw.length);
+  const { gunzipSync } = await import('node:zlib'); assert.equal(gunzipSync(gz.body).toString(), raw.toString(), 'the same file after unzipping');
+  const tagGz = gz.r.headers['etag'], tagPlain = plain.headers.get('etag'); assert.ok(tagGz && tagPlain && tagGz !== tagPlain, 'each form has its own ETag');
+  const again = await fetch(u('/class'), { headers: { 'accept-encoding': 'identity', 'if-none-match': tagPlain } }); assert.equal(again.status, 304); assert.equal((await again.text()), '');
+  assert.equal(again.headers.get('cache-control'), 'no-cache', 'pages are revalidated, which is now cheap');
+  const wrong = await fetch(u('/class'), { headers: { 'accept-encoding': 'identity', 'if-none-match': '"nope"' } }); assert.equal(wrong.status, 200);
+  const star = await fetch(u('/tcommon.js'), { headers: { 'if-none-match': '*' } }); assert.equal(star.status, 304);
+  const js = await fetch(u('/tcommon.js')); assert.match(js.headers.get('content-type'), /javascript/); assert.equal(js.headers.get('x-content-type-options'), 'nosniff');
+  const font = await fetch(u('/fonts/figtree-latin-wght-normal.woff2'), { headers: { 'accept-encoding': 'gzip' } });
+  assert.equal(font.headers.get('content-encoding'), null, 'fonts are already compressed'); assert.match(font.headers.get('cache-control'), /max-age=604800/);
+  const head = await fetch(u('/class'), { method: 'HEAD' }); assert.equal(head.status, 200); assert.equal(await head.text(), '');
+  const hz = await fetch(u('/healthz')); assert.equal(await hz.text(), 'ok'); assert.equal(hz.headers.get('cache-control'), 'no-store');
+  assert.equal((await fetch(u('/healthz'), { method: 'HEAD' })).status, 200);
+  const nf = await fetch(u('/nothing-here'), { headers: { 'accept-encoding': 'gzip' } }); assert.equal(nf.status, 404);
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
