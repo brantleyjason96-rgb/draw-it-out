@@ -601,6 +601,480 @@
     ]
   },
   {
+    "id": "es-drift",
+    "name": "Continental Drift: the evidence",
+    "subject": "Earth Science",
+    "grade": "6-8",
+    "questions": [
+      {
+        "question": "Move the continents back together to make <b>Pangaea</b>, the way they fit about 250 million years ago. Then draw a line along the <b>mountain ranges</b> that match across the Atlantic.",
+        "bg": "ocean",
+        "tags": [
+          "Continental drift",
+          "Pangaea",
+          "MS-ESS2-3"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 90,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "North America",
+              "art": "img",
+              "x": 850,
+              "y": 160,
+              "kx": 275,
+              "ky": 281,
+              "idea": "Fit of the continents",
+              "s": 2.6,
+              "img": "data:image/png;base64,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",
+              "ar": 1.09
+            },
+            {
+              "id": 2,
+              "label": "South America",
+              "art": "img",
+              "x": 560,
+              "y": 515,
+              "kx": 364,
+              "ky": 398,
+              "idea": "Fit of the continents",
+              "s": 1.95,
+              "img": "data:image/png;base64,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",
+              "ar": 0.95
+            },
+            {
+              "id": 3,
+              "label": "Africa",
+              "art": "img",
+              "x": 860,
+              "y": 470,
+              "kx": 526,
+              "ky": 353,
+              "idea": "Fit of the continents",
+              "s": 2.3,
+              "img": "data:image/png;base64,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",
+              "ar": 0.94
+            },
+            {
+              "id": 4,
+              "label": "Eurasia",
+              "art": "img",
+              "x": 235,
+              "y": 125,
+              "kx": 653,
+              "ky": 236,
+              "idea": "Fit of the continents",
+              "s": 3.95,
+              "img": "data:image/png;base64,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",
+              "ar": 1.8
+            },
+            {
+              "id": 5,
+              "label": "Greenland",
+              "art": "img",
+              "x": 80,
+              "y": 330,
+              "kx": 440,
+              "ky": 180,
+              "idea": "Fit of the continents",
+              "s": 1.25,
+              "img": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGIAAABWCAMAAAADkLOHAAAAeFBMVEUAAAD+++/t6+SXl5d3d3aIiIf6+vrY19FpaGm3trPKycWop6bk49xYWFlHR0jl5OU3NzjCwb3b29vr6+vg3tihoJ7Av7wqKSp+foBeX2CBgH5BP0GAf32enqCgn5wgHR4hHyGAf4GfoJ2foKGhn6G/wL4AAAAAAABdAvaGAAAAKHRSTlMA//////8F//////////8o//80F////////////////////////wAAjQ5omgAAA9hJREFUeNrtWWl3qzgMxZaE5TVAlm5vnXnv///FkSFJE5KSEODDnJPb5Zi2xxdZ25VbFE888cQT5apcdv/SxQRlu1o5hPX8DAGdUg6N1g6/ORVwbovKH161MHUd2oUDtVo12jjrPQC4qYzlt43qQ28BttYZ3THSWI7SECKC7p4aVDcBahxHkw9eYDGUxdqSugO4GmXD51tbRArqLojVRLALd4U2avUwQg3yUrdYmqgmguAGhzVqMscNx/BkBgXDFA1Mp7iR+zMwODPIEGag4EEjHE1n2NhBhhlsGE50PYMNQjGY15cF9Uqmu7M/uPi1HUrusOsToHFX3vI8ekZF7IURXRbWW+W38nbglPWUKSwE+ZKlJexT0GagwGp/5X3BqCjdQJGzilRSxrdWoCw1SYRDjwLNgBHmsjbFttmQit47QO+zWSDbk+NMxFLOegeFeqhL6MuAdaRNpvDikcDdyYHiADpmCpQPPqOA4Tq+Tpee1SCHt8l+yGurZL8g3+zO5KVRGziPKLrRKNL0CqtuUJBeuMIWxRbN0hTlyngRNz48yuDvVGyl6Ep8YH+RXqG8XyLnFDGSvqLXkOCo+QbPyI0SUoVKjGBN0CJamVNEQmZG+zUTjpXqK5YS2wKAkk3J5XXwXH3VT/xoncwdQYjR6KSZGPKjAUgV22uOcKO1+FtH8SresIBs2yfDNtmYKF4GtzGjrcDQbapD+nAxtjakN5D+wRIEGrjunZMeTWHSrrMDoYoVktdaAiACMPv251acf6JkafwIU/KvF4bWye4F9xZprEgsMns/iWrvkrRG/8iQtAbGKjHLhkEfout7TBV6ODzrkM8M/aZ8bAzLQ0bNknnMVB/3jKzPEGMzYcD70Z6COGJnMSX+LUMj0Osrwb8yqhxYqykMhd91o4LxyAR/fIYVePDWOWDKPpk2G0OOGE20n4HbCiKfXSXJslLyg80UhoKygpKZ+loyO5I4drZK08ZtMu05wVGD9rjcx8+JRrRDpc4UBz34djbfGx5Zvb+QhvnuAfb9ycFJlXVoZ7gEyTtr91diaK8uPo+sRjfLLUu/ueLR87Sd6Rrnvd+aD2YgzHVRROdCP7ulDbL3ONtVlA1tlT4oHnyVsiEOt3G+CzWXT95/P23WWvQsz3hlp7lNvfPp75HeM9AxXrrUs2c+n/VKsKw2ovnh1AzwM186klc5ueGgBEI08xIUpQxb0h28/2c/vMKqmBvNy+lwQvMTZGfoz/lbF0ugxPoYSOtiGdh92llY7D5etwUqoCsWQ5ZS4X27LhakSJSoKZZECb5Z9r8iTzzxxP8Z/wHy1SVlkxchiAAAAABJRU5ErkJggg==",
+              "ar": 1.14
+            }
+          ]
+        }
+      },
+      {
+        "question": "Fit <b>South America</b> and <b>Africa</b> together so the <b>matching fossil pictures</b> line up. Then draw a line linking each matching pair.",
+        "bg": "ocean",
+        "tags": [
+          "Continental drift",
+          "Fossil evidence",
+          "MS-ESS2-3"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 35,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "South America",
+              "art": "img",
+              "x": 854,
+              "y": 134,
+              "kx": 419,
+              "ky": 335,
+              "idea": "Fossils on two continents",
+              "s": 1.95,
+              "img": "data:image/png;base64,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",
+              "ar": 0.95
+            },
+            {
+              "id": 2,
+              "label": "Africa",
+              "art": "img",
+              "x": 134,
+              "y": 134,
+              "kx": 581,
+              "ky": 290,
+              "idea": "Fossils on two continents",
+              "s": 2.3,
+              "img": "data:image/png;base64,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",
+              "ar": 0.94
+            }
+          ]
+        }
+      },
+      {
+        "question": "Sort each clue by the <b>kind of evidence</b> for continental drift.",
+        "bg": "blank",
+        "kind": "sort",
+        "sort": {
+          "lanes": [
+            {
+              "id": "l1",
+              "name": "Fossils"
+            },
+            {
+              "id": "l2",
+              "name": "Rocks and mountains"
+            },
+            {
+              "id": "l3",
+              "name": "Ancient climate"
+            },
+            {
+              "id": "l4",
+              "name": "Shape of the coasts"
+            }
+          ],
+          "cards": [
+            {
+              "id": 1,
+              "text": "Mesosaurus fossils in Brazil and southern Africa",
+              "lane": "l1",
+              "idea": "Living things"
+            },
+            {
+              "id": 2,
+              "text": "Glossopteris plant fossils on five southern continents",
+              "lane": "l1",
+              "idea": "Living things"
+            },
+            {
+              "id": 3,
+              "text": "Lystrosaurus bones in Africa, India and Antarctica",
+              "lane": "l1",
+              "idea": "Living things"
+            },
+            {
+              "id": 4,
+              "text": "Appalachians match mountains in Scotland and Norway",
+              "lane": "l2",
+              "idea": "Land"
+            },
+            {
+              "id": 5,
+              "text": "Same rock layers on both sides of the Atlantic",
+              "lane": "l2",
+              "idea": "Land"
+            },
+            {
+              "id": 6,
+              "text": "Matching rock types in Brazil and West Africa",
+              "lane": "l2",
+              "idea": "Land"
+            },
+            {
+              "id": 7,
+              "text": "Glacier scratches on rocks in warm Africa and India",
+              "lane": "l3",
+              "idea": "Climate"
+            },
+            {
+              "id": 8,
+              "text": "Coal from swamp plants found in frozen Antarctica",
+              "lane": "l3",
+              "idea": "Climate"
+            },
+            {
+              "id": 9,
+              "text": "South America’s east coast fits Africa’s west coast",
+              "lane": "l4",
+              "idea": "Shape"
+            },
+            {
+              "id": 10,
+              "text": "Continental shelves fit even better than the coastlines",
+              "lane": "l4",
+              "idea": "Shape"
+            }
+          ],
+          "shuffle": true,
+          "fb": "reveal"
+        },
+        "tags": [
+          "Continental drift",
+          "Evidence",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Draw and label a picture that <b>explains</b> why the same fossil, <i>Mesosaurus</i>, is found in Brazil and in southern Africa but nowhere else.",
+        "bg": "blank",
+        "tags": [
+          "Continental drift",
+          "Fossil evidence",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Was each clue found by <b>Wegener</b> or <b>after Wegener</b>?",
+        "bg": "blank",
+        "kind": "sort",
+        "sort": {
+          "lanes": [
+            {
+              "id": "l1",
+              "name": "Wegener’s evidence"
+            },
+            {
+              "id": "l2",
+              "name": "Found after Wegener"
+            }
+          ],
+          "cards": [
+            {
+              "id": 1,
+              "text": "Matching fossils on different continents",
+              "lane": "l1",
+              "idea": "Wegener’s clues"
+            },
+            {
+              "id": 2,
+              "text": "Coastlines that fit like puzzle pieces",
+              "lane": "l1",
+              "idea": "Wegener’s clues"
+            },
+            {
+              "id": 3,
+              "text": "Mountain ranges that line up across oceans",
+              "lane": "l1",
+              "idea": "Wegener’s clues"
+            },
+            {
+              "id": 4,
+              "text": "Glacier marks in places that are warm today",
+              "lane": "l1",
+              "idea": "Wegener’s clues"
+            },
+            {
+              "id": 5,
+              "text": "Rock is youngest at the mid-ocean ridge",
+              "lane": "l2",
+              "idea": "Later clues"
+            },
+            {
+              "id": 6,
+              "text": "Matching magnetic stripes on both sides of a ridge",
+              "lane": "l2",
+              "idea": "Later clues"
+            },
+            {
+              "id": 7,
+              "text": "GPS shows plates moving a few cm each year",
+              "lane": "l2",
+              "idea": "Later clues"
+            },
+            {
+              "id": 8,
+              "text": "Earthquakes trace the edges of the plates",
+              "lane": "l2",
+              "idea": "Later clues"
+            }
+          ],
+          "shuffle": true,
+          "fb": "reveal"
+        },
+        "tags": [
+          "Continental drift",
+          "Evidence",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Drag each label onto the right place on the <b>sea floor</b>. The oldest sea floor is on the <b>right</b>.",
+        "bg": "seafloor",
+        "tags": [
+          "Sea-floor spreading",
+          "Labeling a diagram",
+          "MS-ESS2-3"
+        ],
+        "model": {
+          "stage": "wide",
+          "spots": "hidden",
+          "fb": "reveal",
+          "tol": 45,
+          "atol": 30,
+          "pieces": [
+            {
+              "id": 1,
+              "label": "Mid-ocean ridge",
+              "art": "card",
+              "x": 56,
+              "y": 533,
+              "kx": 500,
+              "ky": 228,
+              "idea": "Where new rock forms",
+              "s": 0.8
+            },
+            {
+              "id": 2,
+              "label": "Youngest rock",
+              "art": "card",
+              "x": 173,
+              "y": 533,
+              "kx": 532,
+              "ky": 312,
+              "idea": "Age of the sea floor",
+              "s": 0.8
+            },
+            {
+              "id": 3,
+              "label": "Oldest sea floor",
+              "art": "card",
+              "x": 773,
+              "y": 53,
+              "kx": 840,
+              "ky": 345,
+              "idea": "Age of the sea floor",
+              "s": 0.8
+            },
+            {
+              "id": 4,
+              "label": "Ocean water",
+              "art": "card",
+              "x": 893,
+              "y": 53,
+              "kx": 280,
+              "ky": 190,
+              "idea": "Parts of the ocean",
+              "s": 0.8
+            },
+            {
+              "id": 5,
+              "label": "Magma rises",
+              "art": "card",
+              "x": 56,
+              "y": 413,
+              "kx": 500,
+              "ky": 450,
+              "idea": "Where new rock forms",
+              "s": 0.8
+            }
+          ]
+        }
+      },
+      {
+        "question": "Draw <b>arrows</b> to show which way the plates move at the ridge. Shade the oldest rock and label where new rock forms.",
+        "bg": "seafloor",
+        "tags": [
+          "Sea-floor spreading",
+          "Plate motion",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Draw how <b>Pangaea broke apart</b>. Show the continents before and after, and add an arrow for the way each one moved.",
+        "bg": "ocean",
+        "tags": [
+          "Continental drift",
+          "Pangaea",
+          "MS-ESS2-3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "es-diagrams",
+    "name": "Draw on a Diagram",
+    "subject": "Earth Science",
+    "grade": "6-8",
+    "questions": [
+      {
+        "question": "Show what happens when the <b>ocean plate</b> meets the <b>continent</b>. Add arrows for the way each plate moves, then label the <b>trench</b> and where <b>volcanoes</b> form.",
+        "bg": "subduction",
+        "tags": [
+          "Plate boundaries",
+          "Subduction",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Add a <b>star</b> everywhere earthquakes happen along this boundary. Where are the deepest ones?",
+        "bg": "subduction",
+        "tags": [
+          "Plate boundaries",
+          "Earthquakes",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Label the <b>vent</b>, <b>magma chamber</b>, <b>crater</b> and <b>lava</b>. Then draw arrows to show how magma moves.",
+        "bg": "volcano",
+        "tags": [
+          "Volcanoes",
+          "Labeling a diagram",
+          "MS-ESS2-2"
+        ]
+      },
+      {
+        "question": "Draw the <b>focus</b> and the <b>epicenter</b> of an earthquake on this fault. Then add arrows showing which way each block of rock moved.",
+        "bg": "fault",
+        "tags": [
+          "Earthquakes",
+          "Labeling a diagram",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Draw the <b>waves</b> spreading out from the focus. Where would the shaking be the strongest?",
+        "bg": "fault",
+        "tags": [
+          "Earthquakes",
+          "Seismic waves",
+          "MS-ESS2-3"
+        ]
+      },
+      {
+        "question": "Draw arrows for <b>evaporation, condensation, precipitation</b> and <b>runoff</b>. Label each one.",
+        "bg": "watercycle",
+        "tags": [
+          "Water cycle",
+          "Labeling a diagram",
+          "MS-ESS2-4"
+        ]
+      },
+      {
+        "question": "Show where the <b>energy</b> for the water cycle comes from and where water is <b>stored</b>.",
+        "bg": "watercycle",
+        "tags": [
+          "Water cycle",
+          "Energy from the sun",
+          "MS-ESS2-4"
+        ]
+      }
+    ]
+  },
+  {
     "id": "ls-cells",
     "name": "Cell Parts",
     "subject": "Life Science",

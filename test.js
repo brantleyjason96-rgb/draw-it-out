@@ -1505,10 +1505,13 @@ await test('pictures of your own: only small PNG, JPEG or WebP data pictures are
 });
 
 await test('backgrounds: the drawn diagrams are accepted by the browser rules and the server, anything else is not', async () => {
-  for (const bg of ['orbit', 'rings', 'phases', 'plates']) assert.equal(okQ({ question: 'Q', bg }).bg, bg);
-  const c = SK.checkQuestion({ question: 'Q', bg: 'spiral' }); assert.equal(c.q.bg, 'blank'); assert.match(c.notes[0], /orbit, rings, phases, plates/);
+  const DRAWN = ['orbit', 'rings', 'phases', 'plates', 'ocean', 'seafloor', 'subduction', 'volcano', 'fault', 'watercycle'];
+  for (const bg of DRAWN) assert.equal(okQ({ question: 'Q', bg }).bg, bg);
+  const c = SK.checkQuestion({ question: 'Q', bg: 'spiral' }); assert.equal(c.q.bg, 'blank'); assert.match(c.notes[0], /orbit, rings, phases, plates, ocean, seafloor, subduction, volcano, fault, watercycle/);
+  const code0 = fs.readFileSync('public/common.js', 'utf8'), sets0 = fs.readFileSync('public/sets.html', 'utf8');
+  for (const bg of DRAWN) { assert.ok(new RegExp('\\n  ' + bg + '\\(x\\) \\{').test(code0), bg + ' has a painter in common.js'); assert.ok(sets0.includes("['" + bg + "', "), bg + ' is in the editor list'); }
   const code = 'BGSA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
-  for (const bg of ['orbit', 'rings', 'phases', 'plates']) { h.clear(); h.send({ t: 'q', question: 'Q', bg }); await sleep(60); assert.equal(h.last('q').q.bg, bg); }
+  for (const bg of DRAWN) { h.clear(); h.send({ t: 'q', question: 'Q', bg }); await sleep(60); assert.equal(h.last('q').q.bg, bg); }
   h.clear(); h.send({ t: 'q', question: 'Q', bg: 'spiral' }); await sleep(60); assert.equal(h.last('q').q.bg, 'graph', 'an unknown background is the server default, as before'); h.ws.close();
 });
 
@@ -1525,6 +1528,28 @@ await test('starter set Place It!: seasons, layers, moon phases and three plate 
     m.pieces.forEach(p => assert.ok(!SK.modelCheck(m, { [p.id]: { x: p.x, y: p.y, ...(p.turn ? { a: p.a } : {}) } }).ok[p.id], 'a piece does not start already right: ' + p.label));
   }
   const arrows = set.questions.slice(3).map(q => q.model.pieces.map(p => p.ka)); assert.deepEqual(arrows, [[0, 180], [180, 0], [270, 90]], 'convergent, divergent, transform');
+});
+
+await test('starter sets Continental Drift and Draw on a Diagram: every question valid, tagged and solvable', () => {
+  const st = JSON.parse(fs.readFileSync('public/starters.json', 'utf8')), drift = st.find(s => s.id === 'es-drift'), dia = st.find(s => s.id === 'es-diagrams');
+  assert.ok(drift && dia); assert.equal(drift.subject, 'Earth Science'); assert.equal(dia.subject, 'Earth Science');
+  assert.deepEqual(drift.questions.map(q => q.kind === 'sort' ? 'sort' : q.model ? 'place' : 'draw'), ['place', 'place', 'sort', 'draw', 'sort', 'place', 'draw', 'draw'], 'all three kinds');
+  assert.ok(dia.questions.every(q => !q.model && !q.kind), 'the diagram set is all Draw questions');
+  assert.deepEqual([...new Set(dia.questions.map(q => q.bg))], ['subduction', 'volcano', 'fault', 'watercycle']);
+  for (const q of [...drift.questions, ...dia.questions]) {
+    const c = SK.checkQuestion(q); assert.deepEqual([c.problems, c.notes], [[], []], q.question.slice(0, 40));
+    assert.ok(q.tags && q.tags.length >= 2, 'tagged: ' + q.question.slice(0, 40));
+    if (q.model) {
+      const m = c.q.model, right = Object.fromEntries(m.pieces.map(p => [p.id, { x: p.kx, y: p.ky }]));
+      assert.equal(SK.modelCheck(m, right).right, m.pieces.length, 'every piece is right at its answer spot: ' + q.question.slice(0, 40));
+      assert.equal(SK.modelCheck(m, {}).right, 0); assert.deepEqual(SK.modelIssues(m), []); assert.deepEqual(SK.modelWarnings(m), []);
+      m.pieces.forEach(p => assert.ok(!SK.modelCheck(m, { [p.id]: { x: p.x, y: p.y } }).ok[p.id], 'a piece does not start already right: ' + p.label));
+    }
+    if (q.kind === 'sort') { const s = c.q.sort; assert.equal(s.cards.length, q.sort.cards.length, 'no card was dropped'); assert.ok(s.cards.every(k => s.lanes.some(l => l.id === k.lane))); }
+  }
+  const pangaea = drift.questions[0].model; assert.deepEqual(pangaea.pieces.map(p => p.label), ['North America', 'South America', 'Africa', 'Eurasia', 'Greenland']);
+  assert.ok(pangaea.pieces.every(p => p.art === 'img' && SK.imgOk(p.img) && p.ar > 0), 'the continents are the teacher-supplied pictures');
+  assert.equal(drift.questions[2].sort.lanes.length, 4); assert.equal(drift.questions[4].sort.lanes.length, 2);
 });
 
 await test('diagrams: Scatter keeps pieces off the middle of a diagram (the Sun, the Earth, the layers)', () => {

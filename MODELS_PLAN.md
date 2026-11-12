@@ -241,3 +241,26 @@ Two requests from a teacher using the continents question and the Got it / Almos
 - While the teams sheet is open the screen holds the scores it shows (existing behaviour), so a change made in that sheet shows when it closes; the card chip updates at once.
 - Marks are points to the *team*; there is no per-student total.
 - On Reveal, a large area label can sit partly off the board for a spot near an edge.
+
+
+---
+
+## After the answer areas: continents from your pictures, more drawn diagrams, two starter sets
+Five continent pictures (North America, South America, Africa, Eurasia, Greenland) came with the request to build Whiteboard, Sort and Place It questions from them, and a second request for more diagrams to draw on. `npm test`: 126 tests (125 before; 1 new, 1 widened). Run in Chromium end to end: both sets added from the starter list, opened in the editor (rings and chips right, no console errors), every drawn diagram painted, every Place It question painted at its start and at its answer.
+
+**Pictures**
+- The pictures were outlines only (the inside of each continent was see-through), so on the *Ocean* background the water showed through and pieces would show through each other. Each continent is filled with a pale land colour and saved as a small palette PNG (1 to 4 KB each), so a set carries about 14 KB of pictures per question.
+- Sizes keep the continents' relative sizes (1.35 board units per picture pixel; Eurasia is the largest at 3.95 of the maximum 4).
+- **The fit was worked out, not guessed:** each picture's outline was matched against the others (least overlap, most contact) to find the Pangaea positions. With them, the fossil bands on South America and Africa line up, and the mountain belts run from North America through Greenland into Eurasia. The answer area is *Loose* (90) for the five-piece jigsaw and *Tight* (35) for South America and Africa alone.
+- Pieces start spread round the edges (Scatter could not keep the five big pieces apart).
+
+**New drawn diagrams** (`DIAG` in `common.js`, `BGS` in `sortkit.js` and `server.js`, the list in `sets.html`): `ocean`, `seafloor`, `subduction`, `volcano`, `fault`, `watercycle`. The parts are not labelled, so labelling is the student's job. A test checks that each one has a painter and a place in the editor list.
+
+**Starter sets** (in `starters.json`, Earth Science): *Continental Drift: the evidence* (8 questions: 3 Place It, 2 Sort, 3 Draw) and *Draw on a Diagram* (7 Draw questions). A test checks that every question is valid and tagged, that every piece is right at its answer spot and wrong at its start, and that no sort card is dropped.
+
+**Known limits**
+- The pictures are small (146 to 316 px wide), so on the projector they look soft at full size. Larger originals would look better.
+- Questions do not name the animals on the pictures, because the small drawings are not clear enough to name one with certainty.
+- **India, Australia and Antarctica are not in yet.** Those three pictures arrived as images in the chat, not as files, so they could not be put into the set.
+- Eurasia includes India as drawn, so on the Pangaea board India sits with Eurasia rather than against Africa and Antarctica.
+- Only piece pictures can be your own: a *Draw* question's photo background has to be a JPEG, so the continents are pieces, not a background.

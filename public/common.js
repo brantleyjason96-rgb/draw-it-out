@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s);
 function paintBg(x, bg, im, pw, ph) {
   const w = pw || W, h = ph || H; // default: the student page's own size
   x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
-  if (typeof DIAG === 'object' && DIAG[bg]) return diagram(x, bg, w, h); // a drawn diagram (orbit, rings, phases, plates)
+  if (typeof DIAG === 'object' && DIAG[bg]) return diagram(x, bg, w, h); // a drawn diagram (orbit, rings, phases, plates, ocean, seafloor, subduction, volcano, fault, watercycle)
   if (bg === 'photo') {
     if (im && im.complete && im.naturalWidth) {
       const s = Math.min(w / im.naturalWidth, h / im.naturalHeight), iw = im.naturalWidth * s, ih = im.naturalHeight * s;
@@ -202,6 +202,55 @@ const DIAG = {
     x.fillStyle = '#92400E'; x.font = '700 20px ' + FONT; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('Sunlight', -480, -142);
     x.beginPath(); x.arc(0, 0, 40, 0, 7); x.fillStyle = '#3B82F6'; x.fill(); x.fillStyle = '#4ADE80'; x.beginPath(); x.arc(-8, -6, 14, 0, 7); x.arc(14, 12, 9, 0, 7); x.fill();
     x.fillStyle = '#475569'; x.textAlign = 'center'; x.fillText('Looking down on Earth’s north pole', 0, -290);
+  },
+  // ---- more drawn diagrams (no labels on the parts, so students label and draw them) ----
+  ocean(x) { // open water for placing continents; faint lines like a map grid
+    x.fillStyle = '#DBEAFE'; x.fillRect(-2000, -2000, 4000, 4000);
+    x.strokeStyle = '#fff'; x.lineWidth = 2; x.setLineDash([10, 10]); x.beginPath();
+    for (let i = -500; i <= 500; i += 125) { x.moveTo(i, -2000); x.lineTo(i, 2000); }
+    for (let j = -312; j <= 312; j += 104) { x.moveTo(-2000, j); x.lineTo(2000, j); }
+    x.stroke(); x.setLineDash([]);
+  },
+  seafloor(x) { // a mid-ocean ridge between two continents, with stripes of sea floor that match on both sides
+    x.fillStyle = '#FDBA74'; x.fillRect(-500, 90, 1000, 222); // mantle
+    x.fillStyle = '#BFDBFE'; x.fillRect(-500, -170, 1000, 260); // water
+    const cuts = [0, 45, 120, 200, 290, 390], cols = ['#44403C', '#A8A29E'];
+    for (let s = -1; s <= 1; s += 2) cuts.slice(0, -1).forEach((c, i) => { x.fillStyle = cols[i % 2]; x.fillRect(s > 0 ? c : -cuts[i + 1], -50, cuts[i + 1] - c, 140); });
+    x.fillStyle = '#A16207'; x.fillRect(-500, -170, 110, 260); x.fillRect(390, -170, 110, 260); // the two continents
+    x.fillStyle = '#44403C'; x.beginPath(); x.moveTo(-45, -50); x.lineTo(-18, -92); x.lineTo(18, -92); x.lineTo(45, -50); x.closePath(); x.fill(); // the ridge
+    x.fillStyle = '#EF4444'; x.beginPath(); x.moveTo(-30, 90); x.quadraticCurveTo(-14, 20, -8, -52); x.lineTo(8, -52); x.quadraticCurveTo(14, 20, 30, 90); x.closePath(); x.fill(); // magma rising
+    x.fillStyle = '#475569'; x.font = '700 20px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('A slice through the Atlantic Ocean floor', 0, -250);
+  },
+  subduction(x) { // an ocean plate sliding under a continent
+    x.fillStyle = '#FDBA74'; x.fillRect(-500, -20, 1000, 332); // mantle
+    x.fillStyle = '#BFDBFE'; x.fillRect(-500, -100, 410, 80); // ocean
+    x.fillStyle = '#9CA3AF'; x.beginPath(); x.moveTo(-500, -20); x.lineTo(-100, -20); x.lineTo(-86, -12); x.lineTo(260, 190); x.lineTo(222, 232); x.lineTo(-112, 34); x.lineTo(-500, 34); x.closePath(); x.fill(); // ocean plate
+    x.fillStyle = '#A8A29E'; x.beginPath(); x.moveTo(-100, -20); x.lineTo(-40, -100); x.lineTo(500, -100); x.lineTo(500, 60); x.lineTo(130, 60); x.lineTo(-86, -12); x.closePath(); x.fill(); // continent
+    x.fillStyle = '#475569'; x.font = '700 20px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('An ocean plate meets a continent', 0, -210);
+  },
+  volcano(x) { // a cone with a vent and a magma chamber
+    x.fillStyle = '#D6B98C'; x.fillRect(-500, 70, 1000, 242); x.strokeStyle = '#A16207'; x.lineWidth = 3; x.beginPath(); x.moveTo(-500, 150); x.lineTo(500, 150); x.moveTo(-500, 230); x.lineTo(500, 230); x.stroke();
+    x.fillStyle = '#92400E'; x.beginPath(); x.moveTo(-290, 70); x.lineTo(-50, -150); x.lineTo(-24, -128); x.lineTo(24, -128); x.lineTo(50, -150); x.lineTo(290, 70); x.closePath(); x.fill();
+    x.fillStyle = '#EF4444'; x.fillRect(-12, -128, 24, 290); x.beginPath(); x.ellipse(0, 190, 150, 60, 0, 0, 7); x.fill(); // vent and magma chamber
+    x.fillStyle = '#9CA3AF'; [[-20, -190, 38], [24, -228, 46], [-8, -270, 40], [50, -178, 30]].forEach(([a, b, r]) => { x.beginPath(); x.arc(a, b, r, 0, 7); x.fill(); }); // ash cloud
+    x.strokeStyle = '#F97316'; x.lineWidth = 9; x.lineCap = 'round'; x.beginPath(); x.moveTo(40, -120); x.quadraticCurveTo(90, -40, 130, 20); x.stroke();
+    x.fillStyle = '#475569'; x.font = '700 20px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText('A volcano cut in half', -480, -290);
+  },
+  fault(x) { // layers of rock broken by a fault, one side dropped
+    const strata = (dy) => { [['#D6B98C', 0], ['#FCA5A5', 60], ['#FDE68A', 120], ['#A8A29E', 190]].forEach(([c, y], i, a) => { x.fillStyle = c; x.fillRect(-500, -40 + dy + y, 1000, (a[i + 1] ? a[i + 1][1] : 400) - y); }); };
+    x.save(); x.beginPath(); x.moveTo(-500, -312); x.lineTo(50, -312); x.lineTo(-120, 312); x.lineTo(-500, 312); x.closePath(); x.clip(); strata(0); x.restore();
+    x.save(); x.beginPath(); x.moveTo(500, -312); x.lineTo(50, -312); x.lineTo(-120, 312); x.lineTo(500, 312); x.closePath(); x.clip(); strata(45); x.restore();
+    x.strokeStyle = '#17212B'; x.lineWidth = 4; x.setLineDash([12, 8]); x.beginPath(); x.moveTo(35, -80); x.lineTo(-120, 312); x.stroke(); x.setLineDash([]);
+    x.fillStyle = '#475569'; x.font = '700 20px ' + FONT; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('Rock layers and a fault, from the side', -480, -280);
+  },
+  watercycle(x) { // sun, sea, mountain and cloud; students draw the cycle
+    x.fillStyle = '#BFDBFE'; x.fillRect(-500, 130, 380, 182); x.strokeStyle = '#fff'; x.lineWidth = 3; x.beginPath(); [[-440, 180], [-340, 230], [-260, 170], [-200, 260]].forEach(([a, b]) => { x.moveTo(a, b); x.quadraticCurveTo(a + 20, b - 12, a + 40, b); x.quadraticCurveTo(a + 60, b + 12, a + 80, b); }); x.stroke();
+    x.fillStyle = '#86EFAC'; x.beginPath(); x.moveTo(-120, 312); x.lineTo(-120, 140); x.lineTo(60, 140); x.lineTo(230, -60); x.lineTo(310, 40); x.lineTo(350, 10); x.lineTo(500, 160); x.lineTo(500, 312); x.closePath(); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.moveTo(230, -60); x.lineTo(196, -18); x.lineTo(226, -26); x.lineTo(250, -14); x.lineTo(268, -26); x.lineTo(262, -30); x.closePath(); x.fill(); // snow
+    x.strokeStyle = '#3B82F6'; x.lineWidth = 7; x.lineCap = 'round'; x.beginPath(); x.moveTo(200, -10); x.quadraticCurveTo(110, 120, 30, 160); x.quadraticCurveTo(-60, 190, -140, 200); x.stroke(); // river
+    x.strokeStyle = '#F59E0B'; x.lineWidth = 6; x.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; x.moveTo(-400 + Math.cos(a) * 52, -230 + Math.sin(a) * 52); x.lineTo(-400 + Math.cos(a) * 68, -230 + Math.sin(a) * 68); } x.stroke();
+    x.fillStyle = '#FBBF24'; x.beginPath(); x.arc(-400, -230, 40, 0, 7); x.fill();
+    x.fillStyle = '#E2E8F0'; [[120, -190, 50], [170, -210, 62], [230, -190, 48], [175, -165, 44], [110, -160, 36]].forEach(([a, b, r]) => { x.beginPath(); x.arc(a, b, r, 0, 7); x.fill(); });
   },
   plates(x) {
     x.fillStyle = '#DBEAFE'; x.fillRect(-500, -312, 1000, 300); x.fillStyle = '#FDBA74'; x.fillRect(-500, 98, 1000, 214);

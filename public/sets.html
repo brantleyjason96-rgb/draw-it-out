@@ -222,7 +222,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <script>
 const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
 let set = null, sel = -1, draft = null, dirty = false, pim = null;
-const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo'], ['orbit', 'Orbit diagram'], ['rings', 'Earth’s layers'], ['phases', 'Moon orbit'], ['plates', 'Plate boundary']]; // the last four are drawn diagrams (common.js), made for pieces
+const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo'], ['orbit', 'Orbit diagram'], ['rings', 'Earth’s layers'], ['phases', 'Moon orbit'], ['plates', 'Plate boundary'], ['ocean', 'Ocean (for continents)'], ['seafloor', 'Sea-floor spreading'], ['subduction', 'Ocean–continent boundary'], ['volcano', 'Volcano cross-section'], ['fault', 'Fault and earthquake'], ['watercycle', 'Water cycle scene']]; // everything after Photo is a drawn diagram (common.js)
 const backUrl = classCode ? '/class?code=' + classCode : '/teacher';
 $('#back').href = backUrl; $('#backt').textContent = classCode ? ((periodOf(classCode) || {}).name || 'Class') : 'Today';
 $('#sendnow').hidden = !classCode;

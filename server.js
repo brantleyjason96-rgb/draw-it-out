@@ -132,7 +132,7 @@ function cleanHtml(s) {
     return tok.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }).join('');
 }
-const BGS = ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates']; // the last four are drawn diagrams (public/common.js)
+const BGS = ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates', 'ocean', 'seafloor', 'subduction', 'volcano', 'fault', 'watercycle']; // everything after 'photo' is a drawn diagram (public/common.js)
 function cleanQ(q = {}) {
   const img = typeof q.img === 'string' && q.img.startsWith('data:image/jpeg;base64,') && q.img.length < 4e6 ? q.img : null;
   let bg = BGS.includes(q.bg) ? q.bg : 'graph';

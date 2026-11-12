@@ -32,7 +32,7 @@ const SK = {
   // lit on the right (or on the left with -l). Angles are degrees, clockwise, 0 = the picture as drawn (an arrow points right).
   MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'],
     A: 108, SIZE: [0.5, 4], AR: [0.2, 5], TOL: [20, 150], ZONE: [20, 400], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
-  BGS: ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates'], // page backgrounds; the last four are drawn diagrams (common.js)
+  BGS: ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates', 'ocean', 'seafloor', 'subduction', 'volcano', 'fault', 'watercycle'], // page backgrounds; everything after 'photo' is a drawn diagram (common.js)
   ang: v => ((Math.round(v) % 360) + 360) % 360,
   angDiff: (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); },
   imgOk: s => typeof s === 'string' && s.length <= SK.MODEL.IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s),
