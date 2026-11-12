@@ -25,11 +25,28 @@ function loadStatic(f, cb) {
     fs.readFile(f, (e, raw) => {
       if (e) return cb(null);
       const ext = path.extname(f), gz = TEXTY.has(ext) && raw.length > 512 ? zlib.gzipSync(raw, { level: 9 }) : null;
-      const entry = { mtimeMs: st.mtimeMs, size: st.size, ext, raw, gz: gz && gz.length < raw.length ? gz : null, etag: createHash('sha1').update(raw).digest('base64url').slice(0, 22) };
+      const hashes = ext === '.html' ? inlineScriptHashes(raw.toString('utf8')) : null;
+      const entry = { mtimeMs: st.mtimeMs, size: st.size, ext, raw, hashes, gz: gz && gz.length < raw.length ? gz : null, etag: createHash('sha1').update(raw).digest('base64url').slice(0, 22) };
       staticCache.set(f, entry); cb(entry);
     });
   });
 }
+// ---- security headers ----
+// Content-Security-Policy: scripts only from this site plus the pages' own inline scripts, each allowed by its SHA-256 hash (so no
+// 'unsafe-inline' for scripts: an injected script would not match any hash). Styles need 'unsafe-inline' (the pages use style
+// attributes). Images may be this site, data: (photos, the QR code) or blob: (a photo being resized). The only network connection
+// the page may open is back to this site, including the WebSocket. Nothing may frame these pages.
+const inlineScriptHashes = html => [...html.matchAll(/<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => "'sha256-" + createHash('sha256').update(m[1]).digest('base64') + "'");
+const cspFor = (hashes, host) => {
+  const h = typeof host === 'string' && /^[A-Za-z0-9.\-:\[\]]{1,100}$/.test(host) ? host : ''; // the Host header is only used when it looks like a host name
+  return ["default-src 'self'", "script-src 'self' " + (hashes || []).join(' '), "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self'",
+    "connect-src 'self'" + (h ? ' ws://' + h + ' wss://' + h : ''), "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'"].join('; ');
+};
+const secure = (req, res) => {
+  res.setHeader('X-Frame-Options', 'DENY'); // (frame-ancestors in the CSP says the same for newer browsers)
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  if (process.env.TRUST_PROXY && /https/i.test(String(req.headers['x-forwarded-proto'] || ''))) res.setHeader('Strict-Transport-Security', 'max-age=15552000'); // 6 months, only behind HTTPS
+};
 const matchEtag = (hdr, tag) => !!hdr && (hdr.trim() === '*' || hdr.split(',').some(x => x.trim().replace(/^W\//, '') === tag));
 const CACHE = { '.woff2': 'public, max-age=604800', '.svg': 'public, max-age=86400' }; // everything else is revalidated each time (cheap with the ETag)
 const server = http.createServer((req, res) => {
@@ -41,9 +58,9 @@ const server = http.createServer((req, res) => {
   // a page address (no file extension, or .html) that does not exist gets a friendly page; anything else is a plain 404
   const wantsPage = !path.extname(p) || path.extname(p) === '.html';
   const missing = () => {
-    res.statusCode = 404; res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.statusCode = 404; res.setHeader('X-Content-Type-Options', 'nosniff'); secure(req, res);
     if (!wantsPage) return res.end('Not found');
-    fs.readFile(path.join(PUB, 'notfound.html'), (e, d) => { res.setHeader('Content-Type', TYPES['.html']); res.setHeader('Cache-Control', 'no-cache'); res.end(e ? 'Not found' : d); });
+    fs.readFile(path.join(PUB, 'notfound.html'), (e, d) => { res.setHeader('Content-Type', TYPES['.html']); res.setHeader('Cache-Control', 'no-cache'); if (!e) res.setHeader('Content-Security-Policy', cspFor(inlineScriptHashes(d.toString('utf8')), req.headers.host)); res.end(e ? 'Not found' : d); });
   };
   if (!f.startsWith(PUB + path.sep) || !TYPES[path.extname(f)]) return missing();
   loadStatic(f, entry => {
@@ -53,6 +70,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', TYPES[entry.ext]);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer'); // class codes and shared-set links are never leaked to other sites
+    secure(req, res); if (entry.hashes) res.setHeader('Content-Security-Policy', cspFor(entry.hashes, req.headers.host));
     res.setHeader('Cache-Control', CACHE[entry.ext] || 'no-cache');
     res.setHeader('ETag', tag);
     if (entry.gz) res.setHeader('Vary', 'Accept-Encoding');

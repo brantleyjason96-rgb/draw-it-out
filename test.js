@@ -1176,6 +1176,37 @@ await test('static files: gzip when asked, an ETag, 304 on a repeat, fonts left 
   const nf = await fetch(u('/nothing-here'), { headers: { 'accept-encoding': 'gzip' } }); assert.equal(nf.status, 404);
 });
 
+
+await test('security headers: a strict CSP whose hashes match each page\'s own scripts, and no framing', async () => {
+  const { createHash } = await import('node:crypto');
+  for (const [route, file] of [['/', 'index'], ['/teacher', 'teacher'], ['/class', 'class'], ['/sets', 'sets'], ['/projector', 'projector'], ['/start', 'landing']]) {
+    const r = await fetch('http://localhost:' + PORT + route); const csp = r.headers.get('content-security-policy');
+    assert.ok(csp, route + ' has a CSP'); assert.equal(r.headers.get('x-frame-options'), 'DENY'); assert.match(r.headers.get('permissions-policy'), /camera=\(\)/);
+    assert.match(csp, /default-src 'self'/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /object-src 'none'/); assert.match(csp, /base-uri 'none'/);
+    assert.match(csp, /connect-src 'self' ws:\/\/localhost:\d+ wss:\/\/localhost:\d+/, 'the WebSocket is allowed back to this site only');
+    const script = csp.split(';').map(x => x.trim()).find(x => x.startsWith('script-src'));
+    assert.ok(!/unsafe-inline|unsafe-eval|\*/.test(script), route + ' scripts: ' + script);
+    const html = fs.readFileSync('public/' + file + '.html', 'utf8');
+    const inline = [...html.matchAll(/<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => "'sha256-" + createHash('sha256').update(m[1]).digest('base64') + "'");
+    assert.ok(inline.length >= 1); for (const h of inline) assert.ok(script.includes(h), route + ' allows its own inline script ' + h.slice(0, 20));
+    assert.ok(!/ on(click|change|input|submit|load|error|keydown)=/i.test(html), file + ' has no inline event handlers (the CSP would block them)');
+  }
+  const js = await fetch('http://localhost:' + PORT + '/tcommon.js'); assert.equal(js.headers.get('content-security-policy'), null, 'only pages carry the policy'); assert.equal(js.headers.get('x-frame-options'), 'DENY');
+  const nf = await fetch('http://localhost:' + PORT + '/nowhere'); assert.equal(nf.status, 404); assert.match(nf.headers.get('content-security-policy'), /default-src 'self'/); assert.equal(nf.headers.get('x-frame-options'), 'DENY');
+  assert.equal((await fetch('http://localhost:' + PORT + '/class')).headers.get('strict-transport-security'), null, 'no HSTS unless behind an HTTPS proxy');
+  const evil = await fetch('http://localhost:' + PORT + '/class', { headers: { host: 'localhost:1; script-src *' } }).catch(() => null); // (fetch refuses to change Host; a bad value would be ignored by the server anyway)
+  assert.ok(evil === null || !/script-src \*/.test(evil.headers.get('content-security-policy') || ''), 'a strange Host header cannot add to the policy');
+});
+
+await test('security headers: HSTS only when behind an HTTPS proxy', async () => {
+  const P2 = PORT + 800, s2 = spawn('node', ['server.js'], { env: { ...process.env, PORT: P2, TRUST_PROXY: '1' }, stdio: 'ignore' });
+  try {
+    await sleep(600);
+    const a = await fetch('http://localhost:' + P2 + '/class', { headers: { 'x-forwarded-proto': 'https' } }); assert.match(a.headers.get('strict-transport-security'), /max-age=15552000/);
+    const b = await fetch('http://localhost:' + P2 + '/class', { headers: { 'x-forwarded-proto': 'http' } }); assert.equal(b.headers.get('strict-transport-security'), null);
+  } finally { s2.kill(); }
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
