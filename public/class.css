@@ -234,3 +234,18 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 .stu.off{opacity:.6;filter:grayscale(1)}
 .stu .offl{font-size:var(--fs-xs);font-weight:700;color:var(--c-muted);border:1px solid var(--c-line-2);border-radius:var(--r-pill);padding:1px 8px;margin-left:auto}
 .stu.off .offl+.smore{margin-left:4px}
+
+/* teacher marks on drawings (private): icon AND word on every button; the pressed one is filled */
+.stu .mk{display:flex;gap:4px}
+.mkb{flex:1;min-width:0;min-height:36px;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:0 4px;border:2px solid var(--c-line-2);border-radius:var(--r-md);background:#fff;color:var(--c-ink);font:inherit;font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
+.mkb svg{flex:none;width:14px;height:14px}
+.mkb:hover{background:var(--c-fill)}
+.mkb:focus-visible{outline:3px solid var(--c-focus);outline-offset:1px}
+.mkb[aria-pressed=true]{background:var(--c-ink);border-color:var(--c-ink);color:#fff}
+.mkb[data-m=got][aria-pressed=true]{background:var(--c-good-strong);border-color:var(--c-good-strong)}
+.mkb[data-m=almost][aria-pressed=true]{background:var(--c-warn-strong);border-color:var(--c-warn-strong)}
+.mkb[data-m=not][aria-pressed=true]{background:var(--c-bad-strong);border-color:var(--c-bad-strong)}
+.mkb.big{min-height:52px;font-size:var(--fs-md);gap:6px}
+.mkb.big svg{width:20px;height:20px}
+.ph-rev .mk{display:flex;gap:8px}
+.stu:focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}

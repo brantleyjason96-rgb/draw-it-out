@@ -242,9 +242,16 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="mk" role="group" aria-label="Your mark for this drawing (private)"></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
     c.querySelector('.badge').append(icoEl('screen', 'sm'), 'On projector');
     c.querySelector('.tchip').append(icoEl('chev', 'sm'));
+    c.querySelector('.mk').append(...markBtns(s));
+    c.tabIndex = 0; c.setAttribute('role', 'group');
+    c.addEventListener('keydown', e => { // 1, 2, 3 mark the focused card; Enter shows it on the projector
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const m = { '1': 'got', '2': 'almost', '3': 'not' }[e.key]; if (m && S.q.kind !== 'sort') { e.preventDefault(); setMark(s, m); }
+      else if (e.key === 'Enter' && e.target === c) { e.preventDefault(); pick(s.id); }
+    });
     c.querySelector('.smore').append(icoEl('dots', 'sm'));
     c.querySelector('.smore').onclick = e => { e.stopPropagation(); studentMenu(e.currentTarget, s); };
     c.onclick = () => pick(s.id); // up to 3 drawings side by side on the projector
@@ -270,7 +277,7 @@ function onmsg(m) {
       }
       break;
     case 'state': {
-      TK.set(m.timer); startLesson(m.qat, m.q); $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
+      TK.set(m.timer); S.marks = m.marks || {}; startLesson(m.qat, m.q); $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
@@ -297,7 +304,7 @@ function onmsg(m) {
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; subSoon(); } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; subSoon(); } break;
-    case 'q': saveLesson(); startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
+    case 'q': saveLesson(); S.marks = {}; startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
       S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.pulse = null; x.dirty = true; });
       // the server has already taken everyone off the projector; do the same here so no card stays outlined
       S.picks = []; S.spot = null; S.frozen = false;
@@ -309,6 +316,7 @@ function onmsg(m) {
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
     case 'timer': TK.handle(m); break;
+    case 'mark': if (m.m) S.marks[m.id] = m.m; else delete S.marks[m.id]; paintMarks(); break;
     case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
@@ -324,6 +332,27 @@ function award(s) {
   ws.send({ t: 'award', id: s.id, on: !s.aw });
 }
 // Remove or rename one student. A class-list student's name comes from the list, so only Remove applies to them.
+// ---- the teacher's marks on drawings: Got it / Almost / Not yet. Private: kept on the server for teacher screens only (never students or the projector).
+S.marks = {};
+const MARKS = [['got', 'Got it', 'check'], ['almost', 'Almost', 'almost'], ['not', 'Not yet', 'x']];
+function markBtns(s, big) {
+  return MARKS.map(([v, label, ic]) => {
+    const b = el('button', { type: 'button', className: 'mkb' + (big ? ' big' : '') }, icoEl(ic, 'sm'), el('span', { textContent: label })); b.dataset.m = v;
+    b.title = label + ' (key ' + (MARKS.findIndex(x => x[0] === v) + 1) + ')'; b.setAttribute('aria-pressed', 'false');
+    b.onclick = e => { e.stopPropagation(); setMark(s, v); };
+    return b;
+  });
+}
+function setMark(s, v) { // pressing the mark that is already on takes it off
+  const cur = S.marks[s.id] || null, next = cur === v ? null : v;
+  if (next) S.marks[s.id] = next; else delete S.marks[s.id];
+  ws.send({ t: 'mark', id: s.id, m: next }); paintMarks();
+}
+function paintMarks() {
+  const sort = S.q.kind === 'sort';
+  S.stu.forEach(s => { const bar = s.el && s.el.querySelector('.mk'); if (!bar) return; bar.hidden = sort; bar.querySelectorAll('.mkb').forEach(b => b.setAttribute('aria-pressed', S.marks[s.id] === b.dataset.m ? 'true' : 'false')); });
+  $$('.ph-rev .mkb').forEach(b => b.setAttribute('aria-pressed', S.marks[b.dataset.id] === b.dataset.m ? 'true' : 'false'));
+}
 function studentMenu(anchor, s) {
   const items = [];
   if (!s.rid) items.push({ t: 'Rename', f: async () => { const v = ((await askText('New name', s.name, { title: 'Rename ' + disp(s), required: 'Type a name', ok: 'Rename', max: 20 })) || '').trim(); if (v) ws.send({ t: 'rename', id: s.id, name: v }); } });
@@ -531,6 +560,7 @@ function ui() {
   const sp = S.stu.get(S.spot), ab = $('#awbig'); ab.hidden = isSort || !(sp && TM.teams.length);
   if (sp) { ab.replaceChildren(icoEl('check'), sp.aw ? ' Point given (undo)' : ' Give ' + (teamNm(sp.team) || 'a team') + ' a point'); ab.onclick = () => award(sp); }
   qActions(); renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
+  paintMarks();
   if (ph.matches) renderPhone(); else if (isSort) SR.update();
 }
 function qActions() {
@@ -1043,7 +1073,8 @@ function phoneReview(box) {
   const aw = el('button', { className: 'b big ' + (s.aw ? 'good' : 'good'), style: 'min-height:64px;font-size:var(--fs-xl);border-radius:var(--r-lg)' }, icoEl('check'), s.aw ? ' Point given (undo)' : ' Give ' + (tm ? tm.name : 'a team') + ' a point'); if (!s.aw) { aw.style.background = '#fff'; aw.style.color = 'var(--good-d)'; aw.style.borderWidth = '2px'; aw.style.borderColor = 'var(--good)'; } aw.onclick = () => award(s);
   if (!TM.teams.length) { aw.disabled = true; aw.textContent = 'Make teams to give points'; }
   const acts = el('div', { style: 'display:flex;gap:10px' }, el('button', { className: 'b', textContent: S.picks.includes(s.id) ? 'Stop showing' : 'Show on projector', style: 'flex:1;min-height:48px;border-width:2px;font-weight:700', onclick: () => pick(s.id) }), el('button', { className: 'b', textContent: 'Skip', style: 'width:110px;min-height:48px;border-width:2px;font-weight:700', onclick: () => { pi = (pi + 1) % list.length; renderPhone(); } }));
-  rev.append(head, cvw, dots, ...(TM.teams.length ? [row] : []), aw, acts); box.append(rev);
+  const mkrow = el('div', { className: 'mk' }, ...markBtns(s, true)); mkrow.setAttribute('role', 'group'); mkrow.setAttribute('aria-label', 'Your mark for this drawing (private)'); mkrow.querySelectorAll('.mkb').forEach(b => (b.dataset.id = s.id));
+  rev.append(head, cvw, dots, mkrow, ...(TM.teams.length ? [row] : []), aw, acts); box.append(rev); paintMarks();
   s.dirty = true;
 }
 function phoneQuestions(box) {

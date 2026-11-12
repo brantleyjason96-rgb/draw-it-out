@@ -44,6 +44,7 @@ const goodCode = c => /^[A-Z0-9]{4,10}$/.test(c);
 
 const PENS = ['pen', 'pencil', 'marker', 'hi'], KINDS = ['rect', 'ellipse', 'tri', 'diamond', 'star'], LINES = ['line', 'arrow'];
 const MAX_OBJS = 1500, MAX_PTS = 6000;
+const MARKS = ['got', 'almost', 'not'];
 const rng = (n, lo, hi) => typeof n === 'number' && n >= lo && n <= hi;
 // each student's page is the size of their screen (d = {w,h}); everything must stay on that page
 const dm = s => ({ w: s.bw, h: s.bh });
@@ -179,7 +180,7 @@ const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
 const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
-const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, qat: r.qat, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, qat: r.qat, marks: host ? r.marks : undefined, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -189,6 +190,7 @@ function fixAwards(r) {
   });
 }
 function release(r, s, why) {
+  delete r.marks[s.id];
   if (s.rid) { const e = entryOf(r, s.rid); if (e && e.sid === s.id) e.sid = null; }
   r.students.delete(s.id); r.picks = r.picks.filter(id => id !== s.id); r.spot = r.picks[0] || null;
   tx(s.ws, { t: 'kicked', why }); s.ws = null;
@@ -361,7 +363,7 @@ wss.on('connection', (ws, req) => {
         if (ws.hostCode && ws.hostCode !== code) return tx(ws, { t: 'err', m: 'This connection already runs another class.' }); // one hosted class per socket
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, qat: 0, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, qat: 0, marks: {}, students: new Map(), watchers: new Set(), last: Date.now() };
           if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
@@ -491,10 +493,11 @@ wss.on('connection', (ws, req) => {
         if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
         // keep the question that is ending, with every student's work, for 15 seconds so the teacher can undo a misclick
         clearTimeout(room.undoT);
-        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, qat: room.qat, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
+        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, qat: room.qat, marks: { ...room.marks }, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
         room.undoT = setTimeout(() => { room.undo = null; }, UNDO_MS);
         snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
+        room.marks = {}; // the teacher's marks belong to the question that just ended
         room.qn++; room.qat = Date.now(); // when this question started: the teacher page files its lesson record under this time
         // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
         room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; s.pulse = null; });
@@ -515,7 +518,7 @@ wss.on('connection', (ws, req) => {
       } else if (m.t === 'undoq') { // put back the question that was just replaced, with everyone's drawings
         const u = room.undo; if (!u) return tx(ws, { t: 'note', m: 'Too late to undo. Send the question again from the list.' });
         clearTimeout(room.undoT); room.undo = null;
-        room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.qat = u.qat; room.phist.length = Math.min(room.phist.length, u.phist);
+        room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.qat = u.qat; room.marks = { ...u.marks }; room.phist.length = Math.min(room.phist.length, u.phist);
         room.students.forEach((s, id) => { const o = u.stu.get(id); if (o) Object.assign(s, { objs: o.objs, sort: o.sort, done: o.done, aw: o.aw, pulse: o.pulse }); });
         broadcastState(room); // teacher screen and projector rebuild from the room
         room.students.forEach(s => tx(s.ws, { ...joinedMsg(room, s), undo: true })); // each student page re-seeds from the server's copy
@@ -526,13 +529,17 @@ wss.on('connection', (ws, req) => {
         toWatchers(room, { t: 'mode', simple: room.simple });
       } else if (m.t === 'spot') { // up to 3 drawings side by side; ids [] clears the projector
         setPicks(room, m.ids !== undefined ? m.ids : m.id, m.hide);
+      } else if (m.t === 'mark') { // the teacher's own mark on a drawing: Got it / Almost / Not yet. Private: hosts only, never students or the projector.
+        const s = room.students.get(m.id); if (!s || sortOf(room)) return;
+        if (m.m === null || m.m === undefined) delete room.marks[s.id]; else if (MARKS.includes(m.m)) room.marks[s.id] = m.m; else return;
+        toHosts(room, { t: 'mark', id: s.id, m: room.marks[s.id] || null });
       } else if (m.t === 'timer') { // the class countdown: start, add time, pause or resume, stop
         hostTimer(room, m);
       } else if (m.t === 'freeze') { // stop everything so the teacher has the whole class's attention
         setFreeze(room, m.on, m.secs);
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
-        room.undo = null; room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
+        room.undo = null; room.marks = {}; room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
         setFreeze(room, false); stopTimer(room);
         broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once

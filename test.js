@@ -1049,6 +1049,36 @@ await test('lesson history: the server stamps each question with its start time 
   assert.ok(r3.last('restore').at <= Date.now(), 'a start time in the future is not believed');
 });
 
+
+await test('marks: the teacher\'s marks on drawings reach hosts only, clear with a new question, and come back with undo', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'MARKS', key: KEY }); await h.wait('state');
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'MARKS', key: KEY }); await h2.wait('state'); // a second teacher device (the phone)
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'MARKS', name: 'Mia', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'MARKS' }); await p.wait('state');
+  h.send({ t: 'q', question: 'Draw', bg: 'blank' }); await sleep(60); h.clear(); h2.clear(); a.clear(); p.clear();
+  h.send({ t: 'mark', id: aj.id, m: 'got' }); await sleep(80);
+  assert.deepEqual([h.last('mark').id, h.last('mark').m], [aj.id, 'got']); assert.equal(h2.last('mark').m, 'got', 'the phone sees it too');
+  assert.equal(a.last('mark'), undefined, 'the student never sees it'); assert.equal(p.last('mark'), undefined, 'nor the projector');
+  const hs = client(); await hs.ready; hs.send({ t: 'host', code: 'MARKS', key: KEY }); assert.deepEqual((await hs.wait('state')).marks, { [aj.id]: 'got' }, 'a reloaded teacher page has the marks');
+  const late = client(); await late.ready; late.send({ t: 'watch', code: 'MARKS' }); const ls = await late.wait('state'); assert.equal(ls.marks, undefined);
+  for (const c of [a, p, late]) assert.ok(!/"marks"|"mark"|"got"|"almost"/.test(JSON.stringify(c.got)), 'no marks anywhere in what students or projectors receive');
+  h.send({ t: 'mark', id: aj.id, m: 'almost' }); h.send({ t: 'mark', id: aj.id, m: 'bogus' }); h.send({ t: 'mark', id: 'nobody', m: 'got' }); await sleep(80);
+  assert.equal(h.last('mark').m, 'almost'); assert.equal(h.got.filter(x => x.t === 'mark' && x.m === 'almost').length, 1, 'a bad value or student is ignored');
+  a.send({ t: 'mark', id: aj.id, m: 'not' }); p.send({ t: 'mark', id: aj.id, m: 'not' }); await sleep(80);
+  const hs2 = client(); await hs2.ready; hs2.send({ t: 'host', code: 'MARKS', key: KEY }); assert.equal((await hs2.wait('state')).marks[aj.id], 'almost', 'students and watchers cannot mark');
+  h.send({ t: 'mark', id: aj.id, m: null }); await sleep(60); assert.equal(h.last('mark').m, null);
+  h.send({ t: 'mark', id: aj.id, m: 'not' }); await sleep(60);
+  h.send({ t: 'q', question: 'Next', bg: 'blank' }); await sleep(100);
+  const hs3 = client(); await hs3.ready; hs3.send({ t: 'host', code: 'MARKS', key: KEY }); assert.deepEqual((await hs3.wait('state')).marks, {}, 'a new question clears marks');
+  h.send({ t: 'undoq' }); await sleep(100);
+  const hs4 = client(); await hs4.ready; hs4.send({ t: 'host', code: 'MARKS', key: KEY }); assert.equal((await hs4.wait('state')).marks[aj.id], 'not', 'undo brings the marks back');
+  h.send({ t: 'q', kind: 'sort', question: 'Sort', sort: { lanes: [{ id: 'A', name: 'a' }, { id: 'B', name: 'b' }], cards: [{ id: 1, text: 'x', lane: 'A' }, { id: 2, text: 'y', lane: 'B' }] } }); await sleep(80); h.clear();
+  h.send({ t: 'mark', id: aj.id, m: 'got' }); await sleep(60); assert.equal(h.last('mark'), undefined, 'marks are for drawings, not sort questions');
+  h.send({ t: 'q', question: 'D', bg: 'blank' }); await sleep(60); h.send({ t: 'mark', id: aj.id, m: 'got' }); await sleep(60);
+  h.send({ t: 'release', id: aj.id }); await sleep(80);
+  const hs5 = client(); await hs5.ready; hs5.send({ t: 'host', code: 'MARKS', key: KEY }); assert.deepEqual((await hs5.wait('state')).marks, {}, 'removing a student removes their mark');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
