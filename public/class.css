@@ -229,3 +229,6 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 @media(max-width:700px){#demobar .dsub{display:none}#demobar{gap:8px}}
 .stu .top .smore{margin-left:auto;min-width:32px;min-height:32px;padding:0}
 .stu .top .pchip+.smore,.stu .top .chip+.smore{margin-left:4px}
+.stu.off{opacity:.6;filter:grayscale(1)}
+.stu .offl{font-size:var(--fs-xs);font-weight:700;color:var(--c-muted);border:1px solid var(--c-line-2);border-radius:var(--r-pill);padding:1px 8px;margin-left:auto}
+.stu.off .offl+.smore{margin-left:4px}

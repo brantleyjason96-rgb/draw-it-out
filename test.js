@@ -722,6 +722,23 @@ await test('duplicate nicknames get a number; rejoining keeps your own name', as
   assert.ok(all.includes('Abcdefghijklmnopqr 2') && all.every(n => n.length <= 20), all.join('|'));
 });
 
+
+await test('live flag: a closed tab is marked not live, and a return makes it live again', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'LIVE1', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'LIVE1', name: 'Lia', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  const b = client(); await b.ready; b.send({ t: 'join', code: 'LIVE1', name: 'Bo', bw: 800, bh: 500 }); await b.wait('joined');
+  const st0 = client(); await st0.ready; st0.send({ t: 'host', code: 'LIVE1', key: KEY });
+  assert.deepEqual((await st0.wait('state')).students.map(x => x.live), [true, true]);
+  h.clear(); a.ws.close(); await sleep(120);
+  const m = h.last('live'); assert.deepEqual([m.id, m.on], [aj.id, false]);
+  const st1 = client(); await st1.ready; st1.send({ t: 'host', code: 'LIVE1', key: KEY });
+  assert.deepEqual((await st1.wait('state')).students.map(x => x.live), [false, true], 'a teacher who reloads still sees who left');
+  h.clear(); const back = client(); await back.ready; back.send({ t: 'join', code: 'LIVE1', name: 'Lia', id: aj.id, tok: aj.tok, bw: 800, bh: 500 }); await back.wait('joined');
+  assert.equal(h.last('join').s.live, true);
+  h.clear(); b.send({ t: 'bye' }); await sleep(100);
+  assert.equal(h.last('live'), undefined, 'leaving on purpose removes the card instead'); assert.ok(h.last('gone'));
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

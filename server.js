@@ -168,7 +168,7 @@ const live = s => !!(s && s.ws && s.ws.readyState === 1);
 const entryOf = (r, rid) => r.roster.find(e => e.rid === rid);
 const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null });
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
 const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
@@ -526,7 +526,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     if (!room) return;
     room.watchers.delete(ws);
-    if (me && me.ws === ws) me.ws = null;
+    if (me && me.ws === ws) { me.ws = null; if (room.students.get(me.id) === me) toWatchers(room, { t: 'live', id: me.id, on: false }); } // the card greys out; coming back sends a fresh 'join'
     room.last = Date.now();
   });
 });
