@@ -73,3 +73,10 @@ Commits "Phase 5 / 27" through "Phase 5 / 32 and 33". Server tests 79 -> 87 (mar
 - Known limit: a question sent from the set editor's "Send now" has no tags in history (it is not in a saved set).
 - Known limit: a sort question whose answer key is missing (a teacher page that connected after the question was sent without being a host) is not recorded.
 - Known limit: students who were removed during the lesson (Remove student) are not in that lesson's record.
+
+## Phase 6: Enhancements (done)
+Commits "Phase 6 / 34" through "Phase 6 / 37".
+- 34 Quick question box on /class (and the phone Questions tab): Enter sends, Shift+Enter new line, cleaned like any question, not saved to the set; Undo, auto-timer and lesson history apply.
+- 35 Student cards take the shape of the student's page; with 1-3 students the cards grow. This needed a CSS fix: the grid squeezed rows to the screen height (min-height:0 on the card), which made tall cards overlap. With 35 phone-shaped pages the grid is now longer (use the S size).
+- 36 Backup reminder banner on Today (14 days or 5 lessons since the last backup, only when there is something to lose, "Not now" waits 3 days). For a browser that has never backed up, "14 days" counts from the first time it opened Today after this change (`do_first`).
+- 37 "Test this network" on /start; five outcomes tested.
