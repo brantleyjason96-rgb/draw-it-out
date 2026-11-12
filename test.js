@@ -1017,6 +1017,21 @@ await test('starter sets: every question is valid and carries tags', () => {
   }
 });
 
+
+await test('file import: checkSets keeps good questions, skips and explains bad ones (also in old files without tags)', () => {
+  const file = [
+    { name: 'Old export', questions: [{ question: 'Draw it', bg: 'graph' }, { question: '', bg: 'blank' }, { question: 'Sort', kind: 'sort', bg: 'blank', img: null, sort: { lanes: [{ id: 'A', name: 'a' }, { id: 'B', name: 'b' }], cards: [{ id: 1, text: 'x', lane: 'A' }, { id: 2, text: 'y', lane: 'Q' }], shuffle: false, fb: 'now' } }] },
+    { name: 'New', tags: ['Unit 3'], questions: [{ question: 'Sort ok', kind: 'sort', sort: { lanes: [{ id: 'A', name: 'a' }, { id: 'B', name: 'b' }], cards: [{ id: 1, text: 'x', lane: 'A' }, { id: 2, text: 'y', lane: 'B' }], shuffle: false, fb: 'now' }, tags: ['T'] }, 7, null, { question: '<script>x</script>', bg: 'photo' }] },
+  ];
+  const r = SK.parseSets(file); assert.equal(r.error, ''); const c = SK.checkSets(r.sets);
+  assert.deepEqual(c[0].rows.map(x => !!x.q), [true, false, false]); assert.equal(c[0].rows[0].q.tags, undefined, 'a file without tags imports as untagged');
+  assert.deepEqual(c[0].rows[1].problems, ['has no question text']); assert.match(c[0].rows[2].problems[0], /Q/);
+  assert.deepEqual(c[1].rows.map(x => !!x.q), [true, false, false, true]); assert.deepEqual([c[1].rows[3].q.question, c[1].rows[3].q.bg], ['x', 'blank'], 'markup is stripped, a photo background without a photo becomes blank');
+  assert.equal(c[1].rows[0].q.sort.fb, 'now'); assert.equal(c[1].rows[0].q.sort.shuffle, false, 'sort options survive'); assert.deepEqual(c[1].rows[0].q.tags, ['T']); assert.deepEqual(r.sets[1].tags, ['Unit 3']);
+  assert.match(c[1].rows[1].problems[0], /not a question/);
+  const evil = SK.checkQuestion({ question: '<img src=x onerror=alert(1)>Hi<b onclick=1>there</b>', bg: 'blank' }).q.question; assert.equal(evil, 'Hi<b>there</b>', 'hostile markup never gets through');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

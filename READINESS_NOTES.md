@@ -37,3 +37,14 @@ Commits "Phase 3 / 17 and 21" through "Phase 3 / 20". Server tests 62 -> 68 (the
 - Decision: the "start with every new question" timer re-uses the last duration picked (default 2 minutes) rather than asking each time.
 - Decision: Undo of a question (item 9) does not bring back a timer that the new question stopped.
 - Known limit: "Start with every new question" only fires from the class screen's `go()`; questions sent from the set editor's "Send now" do not start a timer.
+
+## Phase 4: AI prompt builder and question tags (done)
+Commits "Phase 4 / 24 (part 1)" through "Phase 4 / 26". Server tests 68 -> 79. I ordered the work so the shared validator (item 24) came first, because the prompt, the paste step, tags and file import all depend on it; commit messages say which plan item each is.
+- Validator (`SK.checkQuestion`, `SK.cleanTags`, `SK.parseSets`, `SK.checkSets`, `SK.extractJson` in sortkit.js): client copy of the server's cleanHtml/cleanSort limits plus tag rules. `test.js` loads sortkit.js and compares it with the real server for html, lane/card/idea cut-offs.
+- Build with AI (`public/aibuild.js`, button on the Question sets tab): step 1 builds the prompt (type, goal, tags, grade, 3-10 questions, language support, lanes/cards/ideas); step 2 pastes and checks the answer. The app never calls an AI service. The worked examples inside the prompt are tested against the validator for every option combination.
+- Tags: data model (labels registry in IndexedDB, first spelling typed wins), editor row, bulk add/remove, set-wide tags, chips in /sets, Question sets tab and /class, "No tag" chips, filter, Tags dialog (rename/merge/delete). `retag()` calls `tagHistoryHooks` for lesson history in Phase 5. Tags travel through Export, import, backup, restore and share links. They never reach the server (tested). All 45 starter questions are tagged.
+- Decision: a card's `id` that is not a whole number (an AI often writes "c1") is replaced with 1, 2, 3 instead of rejecting the question; over-limit lane/card/idea text is shortened with a note; too many lanes/cards is a problem (the question is skipped), because silently dropping cards changes the question.
+- Decision: a tag may not contain a comma in practice (a comma ends the tag when typing).
+- Decision: bulk "Remove tag from selected" asks for the tag by name (with suggestions) rather than listing checkboxes.
+- Known limit: the Question sets tab filter shows at most 12 tags in the row; the rest are in the Tags dialog.
+- Known limit: Merge in the Tags dialog offers the 8 most used other tags as buttons (use Rename-to-an-existing-name to merge into any other tag).

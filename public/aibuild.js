@@ -110,11 +110,7 @@ const AIB = (() => {
   // Check a pasted reply. -> { error } or [{ name, tags, rows:[{ n, q, problems, notes, on }] }]
   function check(text) {
     const p = SK.parseSets(text); if (p.error) return { error: p.error };
-    return p.sets.map(s => ({
-      name: s.name, tags: s.tags,
-      rows: s.questions.slice(0, SK.MAX_QS).map((raw, i) => { const c = SK.checkQuestion(raw); return { n: i + 1, q: c.q, problems: c.problems, notes: c.notes, on: !!c.q }; }),
-      extra: Math.max(0, s.questions.length - SK.MAX_QS),
-    }));
+    return SK.checkSets(p.sets);
   }
   // The preview list: one row per question, problems in plain words, a tick box on each good one.
   function paint(sets, onChange) {

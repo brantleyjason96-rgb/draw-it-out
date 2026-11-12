@@ -146,6 +146,14 @@ const SK = {
     sets = sets.filter(s => s.questions.length);
     return sets.length ? { sets, error: '' } : { sets: [], error: 'That JSON has no questions in it. It should look like [{"name": "...", "questions": [ ... ]}].' };
   },
+  // Check every question of every set. -> [{ name, tags, rows:[{ n, q, problems, notes, on }], extra }]; used by "Build with AI" and by file import.
+  checkSets(sets) {
+    return sets.map(s => ({
+      name: s.name, tags: s.tags,
+      rows: s.questions.slice(0, SK.MAX_QS).map((raw, i) => { const c = SK.checkQuestion(raw); return { n: i + 1, q: c.q, problems: c.problems, notes: c.notes, on: !!c.q }; }),
+      extra: Math.max(0, s.questions.length - SK.MAX_QS),
+    }));
+  },
   // plain-language problems with a draft, shown in the editor; an empty list means it can be saved
   issues(s) {
     const out = [], un = s.cards.filter(c => !c.lane || !s.lanes.some(l => l.id === c.lane)).length;

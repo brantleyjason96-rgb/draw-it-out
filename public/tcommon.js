@@ -476,12 +476,23 @@ async function checkShared(after) { // call after loadSets(); a colleague's link
 // ---- export / import question sets as a file ----
 function downloadJSON(name, data) { const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })), download: name }); a.click(); }
 const exportSets = list => downloadJSON('draw-it-out-question-sets.json', list);
+// Every question in the file goes through the same validator as "Build with AI": good ones are added, bad ones are skipped and listed.
 async function importSetsFile(file) {
-  try {
-    const data = JSON.parse(await file.text()); let n = 0, last = null;
-    (Array.isArray(data) ? data : []).forEach(s => { if (s && Array.isArray(s.questions)) { last = addSet(s.name || 'Imported set', s.questions, undefined, s.tags); n++; } });
-    if (!n) throw 0; toast('Imported ' + n + ' set' + (n === 1 ? '' : 's') + '.'); return last;
-  } catch { tell('Choose a file that was saved with Export on the Question sets tab.', { title: 'That file is not a Draw It Out question set' }); return null; }
+  let sets;
+  try { const data = JSON.parse(await file.text()); const r = SK.parseSets(data); if (r.error) throw 0; sets = SK.checkSets(r.sets); }
+  catch { tell('Choose a file that was saved with Export on the Question sets tab.', { title: 'That file is not a Draw It Out question set' }); return null; }
+  let last = null, nq = 0; const skipped = [];
+  sets.forEach(s => {
+    s.rows.forEach(r => { if (!r.q) skipped.push((sets.length > 1 ? '"' + s.name + '", ' : '') + 'question ' + r.n + ': ' + r.problems.join('; ')); });
+    const qs = s.rows.filter(r => r.q).map(r => r.q);
+    if (qs.length) { last = addSet(s.name, qs, undefined, s.tags); nq += qs.length; }
+    if (s.extra) skipped.push((sets.length > 1 ? '"' + s.name + '": ' : '') + s.extra + ' more questions were left out (a set holds at most ' + SK.MAX_QS + ')');
+  });
+  if (!last) { tell(skipped.slice(0, 12).join('\n') || 'It has no usable questions.', { title: 'Nothing could be imported' }); return null; }
+  const made = sets.filter(s => s.rows.some(r => r.q)).length;
+  if (skipped.length) await tell(skipped.slice(0, 12).join('\n') + (skipped.length > 12 ? '\n…and ' + (skipped.length - 12) + ' more.' : ''), { title: 'Imported ' + nq + ' question' + (nq === 1 ? '' : 's') + '. ' + skipped.length + ' skipped' });
+  else toast('Imported ' + made + ' set' + (made === 1 ? '' : 's') + '.');
+  return last;
 }
 
 // ---- one-file backup of everything that lives in this browser ----
