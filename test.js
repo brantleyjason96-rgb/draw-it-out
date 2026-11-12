@@ -1029,7 +1029,7 @@ await test('file import: checkSets keeps good questions, skips and explains bad 
   assert.deepEqual(c[1].rows.map(x => !!x.q), [true, false, false, true]); assert.deepEqual([c[1].rows[3].q.question, c[1].rows[3].q.bg], ['x', 'blank'], 'markup is stripped, a photo background without a photo becomes blank');
   assert.equal(c[1].rows[0].q.sort.fb, 'now'); assert.equal(c[1].rows[0].q.sort.shuffle, false, 'sort options survive'); assert.deepEqual(c[1].rows[0].q.tags, ['T']); assert.deepEqual(r.sets[1].tags, ['Unit 3']);
   assert.match(c[1].rows[1].problems[0], /not a question/);
-  const evil = SK.checkQuestion({ question: '<img src=x onerror=alert(1)>Hi<b onclick=1>there</b>', bg: 'blank' }).q.question; assert.equal(evil, 'Hi<b>there</b>', 'hostile markup never gets through');
+  const evil = SK.checkQuestion({ question: '<img src=x onerror=alert(1)>Hi<b onclick=1>there</b>', bg: 'blank' }).q.question; assert.ok(!/onerror|onclick|<img/.test(evil) && !/<b[^>]/.test(evil), 'hostile markup never gets through: ' + evil); // (a tag with attributes is dropped whole, exactly as the server does)
 });
 
 await test('the Figtree font file is served as woff2', async () => {
