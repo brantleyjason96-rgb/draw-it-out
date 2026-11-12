@@ -119,7 +119,7 @@ const ME = (() => {
   // ---- the piece list and options ----
   function row(...kids) { return el('div', { className: 'srow' }, ...kids); }
   function renderLists() {
-    const m = D(), E = c.el;
+    const m = D(), E = c.el, rated = m.rate === 'teacher';
     E.rows.textContent = '';
     const ideas = [...new Set(m.pieces.map(p => p.idea).filter(Boolean))];
     const dl = el('datalist', { id: 'mideas' }); ideas.forEach(i => dl.append(el('option', { value: i }))); E.rows.append(dl);
@@ -155,7 +155,7 @@ const ME = (() => {
         if (p._pic && p._pic.raw !== p._pic.cut) { const cut = p.img === p._pic.cut; pic.push(el('button', { type: 'button', className: 'b sm', textContent: cut ? 'White is see-through' : 'White is kept', title: 'The white around the picture', onclick: () => { p.img = cut ? p._pic.raw : p._pic.cut; touch(true); } })); }
         pic.push(el('span', { className: 'mut', style: 'font-size:var(--fs-xs)', textContent: 'PNG with a see-through background looks best.' }));
       }
-      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;' + (selId === p.id ? 'border-color:var(--c-primary)' : '') }, row(inp, art, x), ...(pic.length ? [el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, ...pic)] : []), idea, szrow, zrow, el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, tl, ...turns)));
+      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;' + (selId === p.id ? 'border-color:var(--c-primary)' : '') }, row(inp, art, x), ...(pic.length ? [el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, ...pic)] : []), ...(rated ? [] : [idea]), szrow, ...(rated ? [] : [zrow]), el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, tl, ...turns)));
     });
     const add = el('button', { className: 'b sm', textContent: '+ Add piece', disabled: m.pieces.length >= SK.MODEL.PIECES });
     add.onclick = () => {
@@ -174,6 +174,9 @@ const ME = (() => {
       return el('div', { className: 'sec' }, el('div', { style: 'font-weight:700', textContent: label }), s, hint ? el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: hint }) : '');
     };
     E.opts.append(
+      seg('How is it scored?', rated ? 'teacher' : 'auto', [['auto', 'By where the pieces go'], ['teacher', 'By my rating']], v => {
+        if (v === 'teacher') { m.rate = 'teacher'; m.spots = 'hidden'; selId = null; setView('start'); } else { delete m.rate; setView('key'); } touch(true);
+      }, rated ? 'There is no right place. Students move the pieces and draw; you give each student Got it, Almost or Not yet on their drawing, and their team gets points for it (set what each is worth under Set up teams). Nothing is checked or shown to students.' : 'The app checks each piece against the answer spot you set. Choose “By my rating” when there is no exact right place, like fitting coastlines together.'),
       seg('Board shape', m.stage, [['wide', 'Wide (Chromebook)'], ['tall', 'Tall (phone)']], v => {
         if (v === m.stage) return; const a = SK.stageOf(m), b = SK.stageOf({ stage: v });
         m.pieces.forEach(p => { p.x = p.x * b.w / a.w; p.y = p.y * b.h / a.h; p.kx = p.kx * b.w / a.w; p.ky = p.ky * b.h / a.h; });
@@ -188,10 +191,12 @@ const ME = (() => {
     [['reveal', 'Only when I press Reveal answers'], ['now', 'Right away, as they place each piece']].forEach(([v, t]) => fb.append(el('option', { value: v, textContent: t }))); fb.value = m.fb;
     fb.onchange = () => { m.fb = fb.value; touch(); };
     E.opts.append(el('div', { className: 'sec' }, el('div', { style: 'font-weight:700', textContent: 'Show students if they are right' }), fb));
+    if (rated) [...E.opts.children].forEach(n => { const t = n.firstChild && n.firstChild.textContent || ''; if (/Can students see|How close counts|How close must the turn|Show students if they are right/.test(t)) n.remove(); }); // none of these apply when you do the scoring
   }
   function setView(v) {
-    view = v; c.el.tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-    c.el.hint.textContent = v === 'key' ? 'Drag each piece to where it belongs. The dashed ring is the area where a piece counts as right. These spots stay on the server. Pick a piece to see its handles: the square corner changes its size, and the round handle on its ring changes the area.' : 'This is what a student sees first. Drag pieces to change where they start, or press Scatter.';
+    const rated = !!D() && D().rate === 'teacher'; if (rated) v = 'start'; // no answer key to show
+    view = v; c.el.tabs.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); if (b.dataset.v === 'key') b.hidden = rated; });
+    c.el.hint.textContent = rated ? 'This is what a student sees first. You rate each student’s work (Got it, Almost, Not yet), so there is no answer key.' : v === 'key' ? 'Drag each piece to where it belongs. The dashed ring is the area where a piece counts as right. These spots stay on the server. Pick a piece to see its handles: the square corner changes its size, and the round handle on its ring changes the area.' : 'This is what a student sees first. Drag pieces to change where they start, or press Scatter.';
     paint();
   }
   return {

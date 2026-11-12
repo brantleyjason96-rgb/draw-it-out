@@ -1675,6 +1675,48 @@ await test('areas: a big area is "about right" in the results too, and the quest
   const c = SK.checkQuestion({ question: 'Q', bg: 'blank', model: { pieces: [{ label: 'a', kx: 100, ky: 100, tl: 250 }, { label: 'b', kx: 600, ky: 400 }] } }); assert.equal(c.q.model.pieces[0].tl, 250);
 });
 
+// ---- a pieces question you score with your own rating (no right place) ----
+const RATEQ = (extra = {}) => ({ t: 'q', question: 'Fit the coastlines together.', bg: 'blank', model: { rate: 'teacher', fb: 'now', spots: 'shown', pieces: [
+  { id: 1, label: 'Africa', art: 'card', x: 150, y: 120 }, { id: 2, label: 'South America', art: 'card', x: 800, y: 480, kx: 5, ky: 5, idea: 'Ignored', tl: 300 }], ...extra } });
+
+await test('rated by the teacher: no answer spots are needed, nothing is checked, and students are never told right or wrong', async () => {
+  const code = 'RATE1', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); await h.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Zed', team: 'ta', bw: 800, bh: 500 }); await s.wait('joined');
+  const pr = client(); await pr.ready; pr.send({ t: 'watch', code }); await pr.wait('state'); s.clear();
+  h.send(RATEQ()); await sleep(100);
+  const hq = h.last('q'); assert.ok(hq && hq.q.model, 'accepted without answer spots'); assert.equal(hq.q.model.rate, 'teacher'); assert.equal(hq.q.model.spots, 'hidden', 'outlines make no sense with no answer');
+  assert.deepEqual(hq.sk.pos, { 1: { x: 150, y: 120 }, 2: { x: 800, y: 480 } }, 'the "key" is just the start spots'); assert.deepEqual([hq.sk.tols, hq.sk.idea], [{}, {}], 'no areas and no ideas');
+  assert.equal(s.last('q').q.model.rate, 'teacher');
+  s.send({ t: 'place', p: { 1: { x: 150, y: 120 }, 2: { x: 800, y: 480 } } }); await sleep(100);
+  assert.equal(s.last('fb'), undefined, 'not even with "right away"'); h.send({ t: 'reveal', on: true }); await sleep(80); assert.equal(s.last('fb'), undefined, 'and not on Reveal');
+  assert.ok(h.last('pl'), 'the teacher still sees where the pieces are');
+  h.send({ t: 'sres', on: true }); await sleep(700); assert.equal(pr.last('sum'), undefined, 'no class percentages for the projector');
+  [h, s, pr].forEach(c => c.ws.close());
+});
+
+await test('rated by the teacher: the rating gives the team points even when marks giving points is off for the class', async () => {
+  const code = 'RATE2', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); await h.wait('state'); h.send({ t: 'mpts', on: false }); await sleep(60);
+  const c = client(); await c.ready; c.send({ t: 'join', code, name: 'Yan', team: 'ta', bw: 800, bh: 500 }); const id = (await c.wait('joined')).id;
+  const score = () => h.last('score').scores.ta; const a0 = score() || 0;
+  h.send({ t: 'q', question: 'A plain drawing', bg: 'blank' }); await sleep(60); h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score(), a0, 'an ordinary drawing: marks give nothing while the class setting is off');
+  h.send(RATEQ()); await sleep(100); h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score(), a0 + 2, 'the question you rate: Got it gives 2');
+  h.send({ t: 'mark', id, m: 'almost' }); await sleep(80); assert.equal(score(), a0 + 1, 'Almost changes it to 1'); h.send({ t: 'mark', id, m: 'not' }); await sleep(80); assert.equal(score(), a0, 'Not yet takes it back');
+  h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score(), a0 + 2); h.send({ t: 'q', question: 'Back to a drawing', bg: 'blank' }); await sleep(80); assert.equal(score(), a0 + 2, 'points earned stay with the team');
+  [h, c].forEach(x => x.ws.close());
+});
+
+await test('rated by the teacher: the browser rules agree, and an answer-key warning does not apply', () => {
+  const input = RATEQ(); const m = SK.cleanModel(input.model);
+  assert.equal(m.rate, 'teacher'); assert.equal(m.spots, 'hidden'); assert.deepEqual(m.pieces.map(p => [p.kx, p.ky, p.tl, p.idea]), [[150, 120, undefined, ''], [800, 480, undefined, '']], 'the key is the start spots; areas and ideas are dropped');
+  assert.equal(SK.cleanModel({ pieces: input.model.pieces.map(p => ({ ...p })), rate: 'x' }), null, 'without the setting the answer spots are required (the second piece has them, the first does not)');
+  assert.deepEqual(SK.modelIssues(m), []); const close = SK.cleanModel({ ...input.model, pieces: [{ id: 1, label: 'A', art: 'card', x: 100, y: 100 }, { id: 2, label: 'B', art: 'card', x: 400, y: 100 }], tol: 150 });
+  assert.deepEqual(SK.modelWarnings(close), [], 'no close-answer warnings when there is no answer');
+  assert.ok(SK.modelWarnings({ ...close, pieces: [{ ...close.pieces[0] }, { ...close.pieces[0], id: 2, label: 'B' }] }).some(t => /overlap at the start/.test(t)), 'pieces hiding each other at the start is still worth a look');
+  const c = SK.checkQuestion({ question: 'Fit the coastlines', bg: 'blank', model: { rate: 'teacher', pieces: [{ label: 'Africa', art: 'card', x: 100, y: 100 }, { label: 'Europe', art: 'card', x: 500, y: 100 }] } });
+  assert.deepEqual([c.problems, c.q.model.rate], [[], 'teacher'], 'an imported or pasted question needs no answer spots either');
+  const auto = SK.checkQuestion({ question: 'Q', bg: 'blank', model: { pieces: [{ label: 'a', x: 1, y: 1 }, { label: 'b', x: 2, y: 2 }] } }); assert.ok(auto.problems.some(t => /no answer spot/.test(t)), 'and a normal question still does');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

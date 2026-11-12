@@ -241,3 +241,19 @@ Two requests from a teacher using the continents question and the Got it / Almos
 - While the teams sheet is open the screen holds the scores it shows (existing behaviour), so a change made in that sheet shows when it closes; the card chip updates at once.
 - Marks are points to the *team*; there is no per-student total.
 - On Reveal, a large area label can sit partly off the board for a spot near an edge.
+
+
+---
+
+## After areas: score a pieces question by your own rating
+For the coastline matching, where there is no right place. `npm test`: 128 tests (125 before; 3 new). Run in Chromium end to end: the setting in the editor (the key view and every key control disappear, Save needs no answer spots), switching back and forth, a rated question sent to a class whose marks-give-points setting was **off**, two students on two teams moving pieces (no right/wrong anywhere), and the real Got it / Almost buttons moving team scores 0,0 → 2,1; the lesson record is a plain drawing with each mark.
+
+**How it works**
+- `model.rate = 'teacher'` (default is automatic). With it there are no answer spots: the key is the start spots, areas, ideas and outlines are dropped, and `spots` is forced hidden. The browser rules and the server do the same, and an imported or pasted question with `"rate": "teacher"` needs no `kx` / `ky`.
+- The server never checks it for the student (`fbOf` is null, so “right away” and Reveal do nothing), sends no class summary, and the points come from the marks **regardless of the class-wide setting** (`applyMark`).
+- On the teaching screen: chips say “n of m moved”, no rings, no Reveal button, no Class results switch, and the count line shows how many you have rated. The lesson is saved as an ordinary drawing with your mark, so mastery counts the mark.
+
+**Known limits**
+- It is a setting on pieces questions only; an ordinary drawing uses the class-wide *Marks give points* setting.
+- With automatic scoring switched on again, the answer spots you set earlier come back, but start spots you moved while it was on rating are not changed.
+- There is no per-student total of points, only the team's.

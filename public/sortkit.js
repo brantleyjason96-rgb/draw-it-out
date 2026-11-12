@@ -51,24 +51,25 @@ const SK = {
   cleanModel(m) {
     if (!m || typeof m !== 'object') return null;
     const M = SK.MODEL, st = SK.stageOf(m), num = v => typeof v === 'number' && isFinite(v), cl = (v, a, b) => Math.min(b, Math.max(a, v));
+    const rated = m.rate === 'teacher'; // scored by the teacher's own Got it / Almost / Not yet: no answer spots are needed, so the key is simply the start spots
     const pieces = [], seen = new Set(); let imgBytes = 0;
     (Array.isArray(m.pieces) ? m.pieces : []).slice(0, M.PIECES).forEach(p => {
       if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
-      const label = SK.str(p.label, 24); if (!label || !num(p.x) || !num(p.y) || !num(p.kx) || !num(p.ky)) return;
+      const label = SK.str(p.label, 24); if (!label || !num(p.x) || !num(p.y) || (!rated && (!num(p.kx) || !num(p.ky)))) return;
       let art = M.ARTS.includes(p.art) ? p.art : 'card', img = null;
       if (art === 'img') { if (SK.imgOk(p.img) && imgBytes + p.img.length <= M.IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
       seen.add(p.id);
       const s = num(p.s) ? Math.round(cl(p.s, M.SIZE[0], M.SIZE[1]) * 20) / 20 : 1, ar = art === 'img' && num(p.ar) ? Math.round(cl(p.ar, M.AR[0], M.AR[1]) * 100) / 100 : null;
       const bx = SK.boxOf({ art, s, ar }), cx = v => Math.round(cl(v, bx.w / 2, st.w - bx.w / 2)), cy = v => Math.round(cl(v, bx.h / 2, st.h - bx.h / 2));
-      const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) };
+      const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y), kx: cx(rated ? p.x : p.kx), ky: cy(rated ? p.y : p.ky), idea: rated ? '' : SK.str(p.idea, 30) };
       if (s !== 1) o.s = s;
-      if (num(p.tl)) o.tl = Math.round(cl(p.tl, M.ZONE[0], M.ZONE[1]));
+      if (num(p.tl) && !rated) o.tl = Math.round(cl(p.tl, M.ZONE[0], M.ZONE[1]));
       if (img) { o.img = img; if (ar) o.ar = ar; }
       if (p.turn === true) { o.turn = true; o.a = SK.ang(num(p.a) ? p.a : 0); o.ka = SK.ang(num(p.ka) ? p.ka : 0); }
       pieces.push(o);
     });
     if (pieces.length < 2) return null;
-    return { stage: m.stage === 'tall' ? 'tall' : 'wide', spots: m.spots === 'shown' ? 'shown' : 'hidden', fb: m.fb === 'now' ? 'now' : 'reveal', tol: num(m.tol) ? Math.round(Math.min(M.TOL[1], Math.max(M.TOL[0], m.tol))) : 60, atol: num(m.atol) ? Math.round(Math.min(M.ATOL[1], Math.max(M.ATOL[0], m.atol))) : 30, pieces };
+    return { stage: m.stage === 'tall' ? 'tall' : 'wide', ...(rated ? { rate: 'teacher' } : {}), spots: m.spots === 'shown' && !rated ? 'shown' : 'hidden', fb: m.fb === 'now' ? 'now' : 'reveal', tol: num(m.tol) ? Math.round(Math.min(M.TOL[1], Math.max(M.TOL[0], m.tol))) : 60, atol: num(m.atol) ? Math.round(Math.min(M.ATOL[1], Math.max(M.ATOL[0], m.atol))) : 30, pieces };
   },
   // A tidy starting scatter: free spots on the stage that are well away from every answer spot, handed out in a shuffled order.
   // Used by the editor's Scatter button and for imported pieces that have no start position.
@@ -110,15 +111,15 @@ const SK = {
   },
   // Worth a look, but the question works and can be saved. A jigsaw (continents that fit together) has pieces whose answer spots are close by nature.
   modelWarnings(m) {
-    const out = [], P = m.pieces, big = p => { const b = SK.boxOf(p); return Math.max(b.w, b.h); };
+    const out = [], P = m.pieces, rated = m.rate === 'teacher', big = p => { const b = SK.boxOf(p); return Math.max(b.w, b.h); };
     const nm = p => '“' + (p.label.trim() || 'A piece') + '”';
     outer: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
       if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < .9 * (big(P[i]) + big(P[j])) / 2) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' overlap at the start, so one hides the other. Drag one in Student start, or press Scatter.'); break outer; }
     }
     outer2: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < Math.max(SK.tolOf(m, P[i]), SK.tolOf(m, P[j]))) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”, so a piece put on the other’s spot would also count as right. That is fine for a jigsaw; choose Tight or Very tight to be stricter.'); break outer2; }
+      if (!rated && Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < Math.max(SK.tolOf(m, P[i]), SK.tolOf(m, P[j]))) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”, so a piece put on the other’s spot would also count as right. That is fine for a jigsaw; choose Tight or Very tight to be stricter.'); break outer2; }
     }
-    const atol = m.atol || 30, face = P.find(p => p.turn && SK.angDiff(p.a || 0, p.ka || 0) <= atol);
+    const atol = m.atol || 30, face = rated ? null : P.find(p => p.turn && SK.angDiff(p.a || 0, p.ka || 0) <= atol);
     if (face) out.push(nm(face) + ' already faces the right way at the start. Turn it in Student start.');
     return out;
   },
@@ -265,7 +266,7 @@ const SK = {
             const lb = p && SK.str(p.label, 100);
             if (!p || typeof p !== 'object' || !lb) return problems.push('piece ' + (i + 1) + ' has no label');
             if (lb.length > 24) notes.push('the piece "' + lb.slice(0, 24) + '…" was shortened to 24 characters');
-            if (!num(p.kx) || !num(p.ky)) return problems.push('the piece "' + lb.slice(0, 24) + '" has no answer spot (it needs "kx" and "ky", from 0 to ' + st.w + ' across and 0 to ' + st.h + ' down)');
+            if (m.rate !== 'teacher' && (!num(p.kx) || !num(p.ky))) return problems.push('the piece "' + lb.slice(0, 24) + '" has no answer spot (it needs "kx" and "ky", from 0 to ' + st.w + ' across and 0 to ' + st.h + ' down)');
             if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.filter(a => a !== 'img').join(', ') + ', so the piece became a text card');
             if (p.art === 'img' && !SK.imgOk(p.img)) notes.push('the own picture for "' + lb.slice(0, 24) + '" is not a PNG, JPEG or WebP under ' + Math.round(M.IMG_MAX / 1000) + ' KB, so the piece became a text card');
             if (!num(p.x) || !num(p.y) || (p.turn === true && !num(p.a))) noStart++;

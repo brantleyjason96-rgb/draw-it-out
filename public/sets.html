@@ -412,7 +412,7 @@ ME.mount({
   issues: (list, warns = []) => { // list stops Save; warns are worth a look but the question works
     modelIssues = list; const box = $('#missues'); box.innerHTML = '';
     if (list.length) list.forEach(t => box.append(el('div', { className: 'issue', textContent: t })));
-    else if (draft.model) box.append(el('div', { className: 'okmsg', textContent: 'Ready. ' + draft.model.pieces.length + ' pieces, each with an answer spot.' }));
+    else if (draft.model) box.append(el('div', { className: 'okmsg', textContent: draft.model.rate === 'teacher' ? 'Ready. ' + draft.model.pieces.length + ' pieces. You score it with Got it, Almost and Not yet.' : 'Ready. ' + draft.model.pieces.length + ' pieces, each with an answer spot.' }));
     warns.forEach(t => box.append(el('div', { className: 'warnnote', textContent: 'Worth a look: ' + t })));
     refreshSave();
   },

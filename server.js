@@ -189,10 +189,11 @@ const isNum = v => typeof v === 'number' && Number.isFinite(v);
 function cleanModel(m) {
   if (!m || typeof m !== 'object') return null;
   const stage = m.stage === 'tall' ? 'tall' : 'wide', st = STAGES[stage], cl = (v, a, b) => Math.min(b, Math.max(a, v));
+  const rated = m.rate === 'teacher'; // scored by the teacher's own marks: no answer spots are needed (the key is the start spots) and nothing is checked automatically
   const pieces = [], seen = new Set(), pos = {}, idea = {}, ka = {}, tols = {}; let imgBytes = 0;
   (Array.isArray(m.pieces) ? m.pieces : []).slice(0, MAX_PIECES).forEach(p => {
     if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
-    const label = cstr(p.label, 24); if (!label || !isNum(p.x) || !isNum(p.y) || !isNum(p.kx) || !isNum(p.ky)) return;
+    const label = cstr(p.label, 24); if (!label || !isNum(p.x) || !isNum(p.y) || (!rated && (!isNum(p.kx) || !isNum(p.ky)))) return;
     let art = PIECE_ARTS.includes(p.art) ? p.art : 'card', img = null;
     if (art === 'img') { if (imgOk(p.img) && imgBytes + p.img.length <= IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
     seen.add(p.id);
@@ -203,14 +204,14 @@ function cleanModel(m) {
     if (img) { o.img = img; if (ar) o.ar = ar; }
     if (p.turn === true) { o.turn = true; o.a = ang(isNum(p.a) ? p.a : 0); ka[p.id] = ang(isNum(p.ka) ? p.ka : 0); }
     pieces.push(o);
-    pos[p.id] = { x: cx(p.kx), y: cy(p.ky) };
-    if (isNum(p.tl)) tols[p.id] = Math.round(cl(p.tl, 20, 400)); // this piece's own area, when the teacher set one
-    const i = cstr(p.idea, 30); if (i) idea[p.id] = i;
+    pos[p.id] = { x: cx(rated ? p.x : p.kx), y: cy(rated ? p.y : p.ky) };
+    if (isNum(p.tl) && !rated) tols[p.id] = Math.round(cl(p.tl, 20, 400)); // this piece's own area, when the teacher set one
+    const i = cstr(p.idea, 30); if (i && !rated) idea[p.id] = i;
   });
   if (pieces.length < 2) return null;
-  const spots = m.spots === 'shown' ? 'shown' : 'hidden', tol = isNum(m.tol) ? Math.round(Math.min(150, Math.max(20, m.tol))) : 60, atol = isNum(m.atol) ? Math.round(Math.min(90, Math.max(10, m.atol))) : 30;
+  const spots = m.spots === 'shown' && !rated ? 'shown' : 'hidden', tol = isNum(m.tol) ? Math.round(Math.min(150, Math.max(20, m.tol))) : 60, atol = isNum(m.atol) ? Math.round(Math.min(90, Math.max(10, m.atol))) : 30;
   if (spots === 'shown') pieces.forEach(p => { p.kx = pos[p.id].x; p.ky = pos[p.id].y; if (p.turn) p.ka = ka[p.id]; });
-  return { pub: { stage, spots, fb: m.fb === 'now' ? 'now' : 'reveal', pieces }, key: { pos, idea, tol, tols, ang: ka, atol } };
+  return { pub: { stage, ...(rated ? { rate: 'teacher' } : {}), spots, fb: m.fb === 'now' ? 'now' : 'reveal', pieces }, key: { pos, idea, tol, tols, ang: ka, atol } };
 }
 // one door for every question that arrives: { nq, nk } or null when it is not complete
 function cleanQuestion(m) {
@@ -240,7 +241,7 @@ const pieceRight = (r, id, p) => { const k = r.sk.pos[id]; if (!k || !p) return 
 function fbOf(r, s) {
   const mq = modelOf(r);
   if (mq) { // pieces: right when the centre is within the teacher's distance of its spot; a wrong piece also learns where it belongs, on Reveal
-    if (!r.sk || !(r.revealed || mq.fb === 'now')) return null;
+    if (mq.rate === 'teacher' || !r.sk || !(r.revealed || mq.fb === 'now')) return null; // a question the teacher rates is never checked for the student
     const ok = {}, where = {};
     Object.keys(s.pl || {}).forEach(id => { const k = r.sk.pos[id], p = s.pl[id]; if (!k) return; ok[id] = pieceRight(r, id, p); if (r.revealed && !ok[id]) { const w = { x: k.x, y: k.y }, pc = mq.pieces.find(q => String(q.id) === String(id)), b = pc ? boxOf(pc) : { w: PIECE_A, h: PIECE_A }; if (id in r.sk.ang) w.a = r.sk.ang[id]; if (tolOf(r, id) > Math.max(b.w, b.h) / 2 + 20) w.r = tolOf(r, id); where[id] = w; } }); // a big area is shown as an area, not as one exact point
     return { t: 'fb', ok, where };
@@ -263,7 +264,7 @@ function sortSummary(r) {
 }
 // the same numbers for a pieces question: % of the students who moved a piece that have it within reach of its spot (no names, no key)
 function modelSummary(r) {
-  const mq = modelOf(r); if (!mq || !r.sk) return null;
+  const mq = modelOf(r); if (!mq || !r.sk || mq.rate === 'teacher') return null;
   const list = [...r.students.values()].filter(s => s.pl && Object.keys(s.pl).length);
   const right = (s, id) => pieceRight(r, id, s.pl[id]);
   const cards = mq.pieces.map(c => ({ id: c.id, text: c.label, pct: list.length ? Math.round(100 * list.filter(s => right(s, c.id)).length / list.length) : 0 }));
@@ -285,7 +286,7 @@ const cleanMpts = o => {
 };
 // `mp` is how many points this student's mark has given, and `mpt` the team that holds them. Safe to call again at any time.
 function applyMark(r, s) {
-  const m = r.marks[s.id], want = r.mpts.on && m && MARKS.includes(m) ? r.mpts[m] : 0, to = s.team && s.team in r.scores ? s.team : null;
+  const m = r.marks[s.id], by = r.mpts.on || (r.q.model && r.q.model.rate === 'teacher'), want = by && m && MARKS.includes(m) ? r.mpts[m] : 0, to = s.team && s.team in r.scores ? s.team : null;
   if (s.mp && s.mpt && s.mpt in r.scores) r.scores[s.mpt] = Math.max(0, r.scores[s.mpt] - s.mp); // take back what the old mark gave
   s.mp = 0; s.mpt = null;
   if (want && to) { r.scores[to] = Math.min(9999, (r.scores[to] || 0) + want); s.mp = want; s.mpt = to; }
@@ -691,7 +692,7 @@ wss.on('connection', (ws, req) => {
         if (m.m === null || m.m === undefined) delete room.marks[s.id]; else if (MARKS.includes(m.m)) room.marks[s.id] = m.m; else return;
         toHosts(room, { t: 'mark', id: s.id, m: room.marks[s.id] || null });
         const had = s.mp || 0; applyMark(room, s); if (s.mp !== had) pushScores(room); // the team's points follow the mark
-        else if (room.mpts.on && room.marks[s.id] && room.mpts[room.marks[s.id]] && !s.team) tx(ws, { t: 'note', m: 'Put this student on a team to give their team points for this mark.' });
+        else if ((room.mpts.on || (room.q.model && room.q.model.rate === 'teacher')) && room.marks[s.id] && room.mpts[room.marks[s.id]] && !s.team) tx(ws, { t: 'note', m: 'Put this student on a team to give their team points for this mark.' });
       } else if (m.t === 'mpts') { // what Got it / Almost / Not yet are worth, or marks giving no points at all
         room.mpts = cleanMpts(m); room.students.forEach(s => applyMark(room, s)); pushScores(room);
       } else if (m.t === 'timer') { // the class countdown: start, add time, pause or resume, stop

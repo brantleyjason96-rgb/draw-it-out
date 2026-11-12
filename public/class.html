@@ -287,12 +287,14 @@ function modelFull() {
   return { ...m, tol: k.tol, atol: k.atol || 30, pieces: m.pieces.map(p => ({ ...p, ...((k.tols || {})[p.id] != null ? { tl: k.tols[p.id] } : {}), kx: k.pos[p.id] ? k.pos[p.id].x : p.x, ky: k.pos[p.id] ? k.pos[p.id].y : p.y, ...(p.turn ? { ka: (k.ang || {})[p.id] || 0 } : {}), idea: (k.idea || {})[p.id] || '' })) };
 }
 const hasKey = () => !!(S.q && S.q.model && S.sk && S.sk.pos);
-const mpOf = s => (S.q.model ? { model: S.q.model, pl: s.pl || {}, ok: hasKey() ? SK.modelCheck(modelFull(), s.pl || {}).ok : undefined } : undefined);
+// a pieces question you score with your own Got it / Almost / Not yet: nothing is checked for you, and it has no class results
+const rated = () => !!(S.q && S.q.model && S.q.model.rate === 'teacher');
+const mpOf = s => (S.q.model ? { model: S.q.model, pl: s.pl || {}, ok: hasKey() && !rated() ? SK.modelCheck(modelFull(), s.pl || {}).ok : undefined } : undefined);
 function modelChip(s) {
   const c = s.el && s.el.querySelector('.mchip'); if (!c) return;
   const m = S.q.model; c.hidden = !m; if (!m) return;
   const moved = Object.keys(s.pl || {}).length;
-  c.textContent = !moved ? 'Not started' : hasKey() ? SK.modelCheck(modelFull(), s.pl).right + ' of ' + m.pieces.length + ' right' : moved + ' of ' + m.pieces.length + ' moved';
+  c.textContent = !moved ? 'Not started' : hasKey() && !rated() ? SK.modelCheck(modelFull(), s.pl).right + ' of ' + m.pieces.length + ' right' : moved + ' of ' + m.pieces.length + ' moved';
 }
 function setQ(q) {
   S.q = q; S.im = loadImg(q.img, () => S.stu.forEach(s => (s.dirty = true)));
@@ -350,7 +352,7 @@ function onmsg(m) {
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
     case 'timer': TK.handle(m); break;
-    case 'mark': if (m.m) S.marks[m.id] = m.m; else delete S.marks[m.id]; paintMarks(); break;
+    case 'mark': if (m.m) S.marks[m.id] = m.m; else delete S.marks[m.id]; paintMarks(); if (rated()) subSoon(); break;
     case 'freeze': S.frozen = m.on; ui(); if (ph.matches) toast(m.on ? 'Class frozen — students can’t draw.' : 'Unfrozen — back to work.'); break; // on a laptop the frozen row says it, so no toast covers it
   }
 }
@@ -381,8 +383,9 @@ function setMark(s, v) { // pressing the mark that is already on takes it off
   const cur = S.marks[s.id] || null, next = cur === v ? null : v;
   if (next) S.marks[s.id] = next; else delete S.marks[s.id];
   ws.send({ t: 'mark', id: s.id, m: next }); paintMarks();
-  const tm = teamOf(s.team), pts = TM.mpts.on && next ? TM.mpts[next] : 0; // what the server will give the team for this mark
-  if (next && TM.mpts.on && pts && tm) toast('+' + pts + ' for ' + tm.name);
+  const by = TM.mpts.on || rated(), tm = teamOf(s.team), pts = by && next ? TM.mpts[next] : 0; // what the server will give the team for this mark
+  if (next && by && pts && tm) toast('+' + pts + ' for ' + tm.name);
+  if (rated()) subSoon();
 }
 function paintMarks() {
   const sort = S.q.kind === 'sort';
@@ -489,7 +492,7 @@ function lessonRecord() {
   const q = S.q; if (DEMO || store['do_remote_' + code] || !qAt || !q || !(q.question || q.img)) return null;
   const sort = q.kind === 'sort', sk = S.sk, cards = sort && q.sort ? q.sort.cards : [];
   if (sort && !sk) return null; // the answer key comes with the question; without it there is nothing to score
-  const placing = !!q.model && hasKey(), full = placing ? modelFull() : null; // pieces are scored like cards, when the key is here
+  const placing = !!q.model && !rated() && hasKey(), full = placing ? modelFull() : null; // a question you rate yourself is a drawing with your mark, like any other // pieces are scored like cards, when the key is here
   const students = [...S.stu.values()].map(s => {
     const e = rosterOf(s), key = e ? e.rid : String(s.name || '').toLowerCase().trim(), name = e ? (e.first + ' ' + e.last).replace(/\s+/g, ' ').trim() : s.name;
     const mine = s.sort || {}, wrong = cards.filter(c => mine[c.id] !== (sk && sk.lane[c.id]));
@@ -559,7 +562,9 @@ $('#frzoff').onclick = $('#frzoff2').onclick = () => ws.send({ t: 'freeze', on: 
 function paintSub() {
   const n = S.stu.size, isSort = S.q.kind === 'sort';
   const drawn = [...S.stu.values()].filter(s => isSort ? s.done : (s.objs && s.objs.length) || Object.keys(s.pl || {}).length).length;
-  $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
+  const rt = rated() ? [...S.stu.values()].filter(x => S.marks[x.id]) : [], mk = k => rt.filter(x => S.marks[x.id] === k).length;
+  if (rated()) $('#sub').textContent = n ? drawn + ' of ' + n + ' have moved pieces · you have rated ' + rt.length + ' (Got it ' + mk('got') + ', Almost ' + mk('almost') + ', Not yet ' + mk('not') + ') · click a drawing to show it on the projector' : 'Waiting for students to join. Code ' + code + '.';
+  else $('#sub').textContent = n ? (isSort ? drawn + ' of ' + n + ' have handed in · click a card or a student for details' : drawn + ' of ' + n + ' have started · click a drawing to show it on the projector') : 'Waiting for students to join. Code ' + code + '.';
 }
 let subT = 0;
 function subSoon() { if (subT) return; subT = setTimeout(() => { subT = 0; paintSub(); }, 500); }
@@ -570,7 +575,7 @@ function ui() {
   if (S.conn) $('#cnt').textContent = nLive + (tot ? ' of ' + tot : '') + ' ha' + (nLive === 1 && !tot ? 's' : 've') + ' joined';
   $('#qtag').hidden = !S.simple;
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
-  const isSort = S.q.kind === 'sort', isModel = !!S.q.model, res = isSort || (isModel && S.mview === 'res'); // a pieces question has two views: the drawings, or the class results
+  const isSort = S.q.kind === 'sort', isModel = !!S.q.model && !rated(), res = isSort || (isModel && S.mview === 'res'); // a pieces question has two views: the drawings, or the class results
   $('#mview').hidden = !isModel; $$('#mview button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.mview ? 'true' : 'false'));
   $('#grid').hidden = res; $('#sres').hidden = !res; $('#sctlhost').hidden = !res; $('#csize').hidden = res;
   const rb = $('#revbtn'); rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
@@ -606,7 +611,7 @@ function ui() {
 }
 function qActions() {
   const isSort = S.q.kind === 'sort', sp = S.stu.get(S.spot), set = typeof activeSet === 'function' && activeSet(), n = set && set.questions ? set.questions.length : 0;
-  $('#revbtn').hidden = !isSort && !S.q.model;
+  $('#revbtn').hidden = !isSort && !(S.q.model && !rated());
   const award = !isSort && sp && TM.teams.length;
   $('#sendnext').hidden = isSort || award || cur + 1 >= n || !n;
   $('#qlbl').textContent = quickOn ? 'Quick question' : !n ? 'No questions yet' : cur < 0 ? 'No question sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
@@ -1128,7 +1133,7 @@ function phoneReview(box) {
   const list = phoneList(); if (pi >= list.length) pi = Math.max(0, list.length - 1);
   const q = el('div', { className: 'ph-q' }); const lab = el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' });
   const qt = el('div', {}); qt.innerHTML = S.q.question || 'Nothing sent yet. Open the Questions tab.'; q.append(lab, qt); box.append(q);
-  if (S.q.model) { // pieces: the class numbers sit above the drawing
+  if (S.q.model && !rated()) { // pieces: the class numbers sit above the drawing
     const d = el('details', { className: 'card', style: 'margin:0 12px 8px' }, el('summary', { textContent: 'Class results', style: 'font-weight:700;padding:12px;cursor:pointer;min-height:44px' }));
     d.open = phoneRes; d.ontoggle = () => { phoneRes = d.open; }; MR.phone(d, modelCtx()); box.append(d);
   }
