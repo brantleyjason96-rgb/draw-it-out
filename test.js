@@ -664,6 +664,49 @@ await test('restore: refused once a real question has been sent, and students ca
   assert.ok(!/Hijack/.test((await l.wait('joined')).q.question));
 });
 
+
+await test('undo: a replaced question comes back with every drawing, for 15 seconds', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'UNDO', key: KEY }); await h.wait('state');
+  h.send({ t: 'q', question: 'First', bg: 'blank' }); await sleep(60);
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'UNDO', name: 'Una', bw: 800, bh: 500 }); await a.wait('joined');
+  a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } });
+  a.send({ t: 'pulse', c: 'g' }); await sleep(80);
+  h.send({ t: 'q', question: 'Second', bg: 'blank' }); await sleep(80);
+  assert.equal(h.last('q').q.question, 'Second');
+  a.clear(); h.clear(); h.send({ t: 'undoq' }); await sleep(120);
+  const st = h.last('state'); assert.equal(st.q.question, 'First'); assert.equal(st.students[0].objs.length, 1); assert.equal(st.students[0].pulse, 'g');
+  assert.equal(st.fresh, false);
+  const j = a.last('joined'); assert.equal(j.undo, true); assert.equal(j.q.question, 'First'); assert.equal(j.objs.length, 1); assert.equal(j.pulse, 'g');
+  h.clear(); h.send({ t: 'undoq' }); await sleep(80);
+  assert.match(h.last('note').m, /Too late/, 'only once');
+  // the report history is rolled back too
+  h.send({ t: 'q', question: 'Third', bg: 'blank' }); await sleep(80);
+  assert.equal(h.last('q').phist.length, 1, 'First was snapshotted once, not twice');
+});
+
+await test('undo: students cannot undo, and Clear class forgets the old question', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'UNDO2', key: KEY }); await h.wait('state');
+  h.send({ t: 'q', question: 'A', bg: 'blank' }); await sleep(40);
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'UNDO2', name: 'Ula', bw: 800, bh: 500 }); await a.wait('joined');
+  h.send({ t: 'q', question: 'B', bg: 'blank' }); await sleep(60);
+  a.send({ t: 'undoq' }); await sleep(80);
+  const peek = client(); await peek.ready; peek.send({ t: 'host', code: 'UNDO2', key: KEY }); assert.equal((await peek.wait('state')).q.question, 'B', 'a student cannot undo');
+  h.send({ t: 'reset' }); await sleep(80); h.clear(); h.send({ t: 'undoq' }); await sleep(80);
+  assert.match(h.last('note').m, /Too late/);
+});
+
+await test('undo: the window closes after UNDO_MS', async () => {
+  const P2 = PORT + 700, s2 = spawn('node', ['server.js'], { env: { ...process.env, PORT: P2, UNDO_MS: '300' }, stdio: 'ignore' });
+  try {
+    await sleep(600);
+    const mk = () => { const ws = new WebSocket('ws://localhost:' + P2), got = []; ws.on('message', d => got.push(JSON.parse(d))); return { ws, got, open: new Promise(r => ws.on('open', r)) }; };
+    const send = (x, o) => x.ws.send(JSON.stringify(o));
+    const h = mk(); await h.open; send(h, { t: 'host', code: 'LATE', key: KEY }); send(h, { t: 'q', question: 'One', bg: 'blank' }); send(h, { t: 'q', question: 'Two', bg: 'blank' });
+    await sleep(700); send(h, { t: 'undoq' }); await sleep(150);
+    assert.match(h.got.filter(m => m.t === 'note').pop().m, /Too late/);
+  } finally { s2.kill(); }
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

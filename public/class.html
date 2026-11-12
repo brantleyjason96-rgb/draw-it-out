@@ -516,7 +516,13 @@ function restoreQ() {
   let p; try { p = JSON.parse(store['do_lastq_' + code] || 'null'); } catch {}
   if (p && typeof p === 'object') ws.send({ t: 'restore', ...p });
 }
-function go(i) { if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet(); }
+function go(i) {
+  if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true);
+  const prev = cur, prevQ = S.q, hadWork = [...S.stu.values()].some(s => (s.objs && s.objs.length) || Object.keys(s.sort || {}).length);
+  cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet();
+  // a new question wipes every drawing, so for 15 seconds the teacher can take it back (the server keeps the old work that long)
+  if (hadWork) toast('Question sent. Everyone\u2019s drawings were cleared.', { label: 'Undo', ms: 15000, f: () => { ws.send({ t: 'undoq' }); cur = prev; store.do_cur = prev; if (prev >= 0 && qs()[prev]) rememberQ(qs()[prev]); renderSet(); } });
+}
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
   fillSetSelect($('#setsel'), activeSet().id);

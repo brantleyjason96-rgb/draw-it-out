@@ -11,9 +11,16 @@ const rnd = () => Array.from({ length: 4 }, () => CH[Math.random() * 32 | 0]).jo
 const rid8 = () => Array.from({ length: 8 }, () => 'abcdefghjkmnpqrstuvwxyz23456789'[Math.random() * 31 | 0]).join('');
 const uid4 = () => 't' + Math.random().toString(36).slice(2, 6);
 const $$ = s => [...document.querySelectorAll(s)];
-function toast(m) {
+// toast(message) or toast(message, { label, f, ms }): the second form adds one labelled button (for example Undo)
+function toast(m, act) {
   let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.hidden = true; document.body.append(t); }
-  t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 3000);
+  t.textContent = m;
+  if (act && act.label) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'toastbtn'; b.textContent = act.label;
+    b.onclick = () => { t.hidden = true; clearTimeout(toast.h); act.f(); };
+    t.append(' ', b);
+  }
+  t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), (act && act.ms) || 3000);
 }
 const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); Object.assign(e, props); kids.forEach(k => e.append(k)); return e; };
 

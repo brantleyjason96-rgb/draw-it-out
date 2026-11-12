@@ -118,6 +118,8 @@ function fbOf(r, s) {
   Object.keys(s.sort || {}).forEach(id => { ok[id] = s.sort[id] === r.sk.lane[id]; if (r.revealed && !ok[id]) where[id] = r.sk.lane[id]; });
   return { t: 'fb', ok, where };
 }
+// everything a student's page needs to (re)build itself: used on join, on rejoin, and when the teacher undoes a question
+const joinedMsg = (r, s) => ({ t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: [...r.watchers].some(w => w.isHost && w.readyState === 1), teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
 const sendFb = (r, s) => { const f = fbOf(r, s); if (f) tx(s.ws, f); };
 // class-wide numbers for the projector: % right per card and per idea (no names, no key)
 function sortSummary(r) {
@@ -257,6 +259,7 @@ process.on('unhandledRejection', e => console.error('unhandledRejection:', e && 
 server.on('clientError', (e, sock) => { try { sock.destroy(); } catch {} });
 
 // ---- limits (items 2-3 of the readiness plan) ----
+const UNDO_MS = +process.env.UNDO_MS || 15000;      // how long a replaced question's drawings are kept for Undo
 const MSGS_PER_SEC = 60;                                  // per socket; the excess is dropped
 const MAX_PER_IP = +process.env.MAX_PER_IP || 150;        // a whole school shares one address, so this is generous
 const ROOM_EMPTY_MS = +process.env.ROOM_EMPTY_MS || 10 * 60e3, ROOM_WITH_STUDENTS_MS = 6 * 3600e3, SWEEP_MS = +process.env.SWEEP_MS || 30000; // (the two env overrides are for tests)
@@ -384,8 +387,7 @@ wss.on('connection', (ws, req) => {
       s.ws = ws; me = s; room = r; role = 'student';
       // `host` tells a page that is rejoining after a refresh whether a teacher is still in this class, so a student
       // whose lesson has ended is sent back to the join steps instead of sitting in a room nobody is running.
-      const hostLive = [...r.watchers].some(w => w.isHost && w.readyState === 1);
-      tx(ws, { t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: hostLive, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+      tx(ws, joinedMsg(r, s));
       toWatchers(r, { t: 'join', s: stuView(s) });
       return pushScores(r);
     }
@@ -425,6 +427,10 @@ wss.on('connection', (ws, req) => {
       if (m.t === 'q') {
         let nq, nk = null;
         if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        // keep the question that is ending, with every student's work, for 15 seconds so the teacher can undo a misclick
+        clearTimeout(room.undoT);
+        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
+        room.undoT = setTimeout(() => { room.undo = null; }, UNDO_MS);
         snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
         room.qn++;
@@ -442,6 +448,14 @@ wss.on('connection', (ws, req) => {
         room.q = nq; room.sk = nk; room.restored = true;
         room.students.forEach(s => tx(s.ws, { t: 'restore', q: room.q }));
         toPublic(room, { t: 'restore', q: room.q }); toHosts(room, { t: 'restore', q: room.q, sk: room.sk });
+      } else if (m.t === 'undoq') { // put back the question that was just replaced, with everyone's drawings
+        const u = room.undo; if (!u) return tx(ws, { t: 'note', m: 'Too late to undo. Send the question again from the list.' });
+        clearTimeout(room.undoT); room.undo = null;
+        room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.phist.length = Math.min(room.phist.length, u.phist);
+        room.students.forEach((s, id) => { const o = u.stu.get(id); if (o) Object.assign(s, { objs: o.objs, sort: o.sort, done: o.done, aw: o.aw, pulse: o.pulse }); });
+        broadcastState(room); // teacher screen and projector rebuild from the room
+        room.students.forEach(s => tx(s.ws, { ...joinedMsg(room, s), undo: true })); // each student page re-seeds from the server's copy
+        pushScores(room);
       } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
         room.simple = !!m.simple;
         room.students.forEach(s => tx(s.ws, { t: 'mode', simple: room.simple }));
@@ -452,7 +466,7 @@ wss.on('connection', (ws, req) => {
         setFreeze(room, m.on, m.secs);
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
-        room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
+        room.undo = null; room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
         setFreeze(room, false);
         broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
@@ -516,7 +530,7 @@ setInterval(() => {
   rooms.forEach((r, code) => {
     const live = r.watchers.size || [...r.students.values()].some(s => s.ws);
     if (live) r.last = Date.now();
-    else if (Date.now() - r.last > (r.students.size ? ROOM_WITH_STUDENTS_MS : ROOM_EMPTY_MS)) { clearTimeout(r.fz); rooms.delete(code); }
+    else if (Date.now() - r.last > (r.students.size ? ROOM_WITH_STUDENTS_MS : ROOM_EMPTY_MS)) { clearTimeout(r.fz); clearTimeout(r.undoT); rooms.delete(code); }
   });
 }, SWEEP_MS);
 

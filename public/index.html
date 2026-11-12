@@ -558,7 +558,8 @@ function onmsg(m) {
     id = m.id; if (target) { sessionStorage['do_id_' + target.code] = id; if (m.tok) sessionStorage['do_tok_' + target.code] = m.tok; } W = m.bw; H = m.bh; // (a page refreshed mid-join may not have a target yet)
     $('#join').hidden = true; $('#play').hidden = false; document.body.classList.add('playing');
     if (m.q.question || m.q.img || !$('#q').innerHTML) setQ(m.q);
-    if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
+    if (m.undo) resetDoc(m.objs); // the teacher undid a new question: the drawing comes back
+    else if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
     tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
     SS.joined(m);
     loaded = true; resuming = false; applyLock(!!m.proj); applySimple(!!m.simple); applyFreeze(!!m.frozen); setPulse(m.pulse || null, false);
