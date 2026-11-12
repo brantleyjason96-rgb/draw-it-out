@@ -22,6 +22,66 @@ function toast(m, act) {
   }
   t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), (act && act.ms) || 3000);
 }
+// ---- in-page dialogs: ask / askText / tell / choose / showCopy replace the browser's confirm / prompt / alert ----
+// All return a Promise, so a handler becomes `async` and says `if (!await ask('…', { ok: 'Delete', danger: true })) return;`.
+// They use <dialog>.showModal(), so focus stays inside, Escape cancels, and buttons carry words, not just colours.
+function dlgCss() {
+  if (document.getElementById('dlgcss')) return;
+  const st = document.createElement('style'); st.id = 'dlgcss';
+  st.textContent = `dialog.dlg{border:0;border-radius:var(--r-xl,16px);padding:22px 22px 18px;max-width:min(92vw,460px);width:100%;box-shadow:0 18px 60px rgba(10,20,40,.35);color:var(--c-ink,#17212B);background:var(--c-surface,#fff);font:var(--fs-md,16px)/1.45 var(--font-body,system-ui,sans-serif)}
+dialog.dlg::backdrop{background:rgba(15,23,42,.55)}
+dialog.dlg h2{margin:0 0 8px;font-size:var(--fs-xl,21px);line-height:1.25}
+dialog.dlg p{margin:0 0 14px;white-space:pre-line;color:var(--c-ink-2,#394551)}
+dialog.dlg label{display:block;font-weight:700;margin:0 0 6px}
+dialog.dlg input,dialog.dlg textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;min-height:44px;border:2px solid var(--c-line-2,#CBD3DA);border-radius:var(--r-md,10px);margin:0 0 14px}
+dialog.dlg textarea{min-height:92px;resize:vertical}
+dialog.dlg input:focus-visible,dialog.dlg textarea:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:1px}
+dialog.dlg .dbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+dialog.dlg .dbtns button{min-height:44px;padding:0 18px;border-radius:var(--r-md,10px);border:2px solid var(--c-line-2,#CBD3DA);background:var(--c-surface,#fff);color:inherit;font:inherit;font-weight:700;cursor:pointer}
+dialog.dlg .dbtns button:hover{background:var(--c-fill,#E8EDF2)}
+dialog.dlg .dbtns button.pri{background:var(--c-primary,#0B6BCB);border-color:var(--c-primary,#0B6BCB);color:#fff}
+dialog.dlg .dbtns button.pri:hover{background:var(--c-primary-strong,#0B5CAD)}
+dialog.dlg .dbtns button.danger{background:var(--c-bad,#B3261E);border-color:var(--c-bad,#B3261E);color:#fff}
+dialog.dlg .dbtns button.danger:hover{background:var(--c-bad-strong,#8C1D18)}
+dialog.dlg .dbtns button:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:2px}`;
+  document.head.append(st);
+}
+// core: buttons = [{ label, value, kind: 'pri' | 'danger' | '' }]; `input` adds a text box whose text is returned by the button flagged `submit`.
+function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
+  return new Promise(res => {
+    dlgCss();
+    const d = document.createElement('dialog'); d.className = 'dlg';
+    const f = document.createElement('form'); f.method = 'dialog'; d.append(f);
+    const id = 'dlg' + Math.random().toString(36).slice(2, 7);
+    if (title) f.append(el('h2', { textContent: title, id: id + 'h' })); d.setAttribute('aria-labelledby', title ? id + 'h' : '');
+    if (text) f.append(el('p', { textContent: text }));
+    let inp = null;
+    if (input) {
+      f.append(el('label', { textContent: input.label || '', htmlFor: id + 'i' }));
+      inp = el(input.multiline ? 'textarea' : 'input', { id: id + 'i', value: input.value || '', readOnly: !!input.readOnly });
+      if (input.max) inp.maxLength = input.max;
+      f.append(inp);
+    }
+    const row = el('div', { className: 'dbtns' }); f.append(row);
+    let out = cancel, firstPri = null, safe = null;
+    buttons.forEach(b => {
+      const bt = el('button', { type: 'button', textContent: b.label, className: b.kind || '' });
+      bt.onclick = () => { out = b.submit && inp ? inp.value : b.value; d.close(); };
+      row.append(bt); if (b.kind === 'pri' || b.kind === 'danger') firstPri = firstPri || bt; if (b.safe) safe = bt;
+    });
+    if (inp && !input.readOnly) inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !input.multiline) { e.preventDefault(); const b = buttons.find(x => x.submit); if (b) { out = inp.value; d.close(); } } });
+    d.addEventListener('close', () => { d.remove(); res(out); });
+    document.body.append(d); d.showModal();
+    // a destructive confirm starts on the safe button, a text box on the box, everything else on the main button
+    (focus === 'input' && inp ? inp : safe || (inp && !input.readOnly ? inp : firstPri) || row.firstChild).focus();
+    if (inp) { if (input.readOnly) inp.select(); else inp.select(); }
+  });
+}
+const ask = (text, o = {}) => dlgOpen({ title: o.title, text, cancel: false, buttons: [{ label: o.cancel || 'Cancel', value: false, safe: !!o.danger }, { label: o.ok || 'OK', value: true, kind: o.danger ? 'danger' : 'pri' }] });
+const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
+const tell = (text, o = {}) => dlgOpen({ title: o.title, text, buttons: [{ label: o.ok || 'OK', value: true, kind: 'pri' }] });
+const choose = (text, buttons, o = {}) => dlgOpen({ title: o.title, text, cancel: null, buttons });
+const showCopy = (label, text) => dlgOpen({ title: label, input: { label: 'Select the text and copy it', value: text, readOnly: true, multiline: true }, buttons: [{ label: 'Done', value: true, kind: 'pri' }] });
 const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); Object.assign(e, props); kids.forEach(k => e.append(k)); return e; };
 
 // ---- class periods ----
@@ -120,7 +180,9 @@ const demoWipe = DEMO
   : Promise.resolve();
 const db = demoWipe.then(() => new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; }));
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
-const persistSets = () => db.then(d => new Promise(ok => { const tx = d.transaction('k', 'readwrite'), o = tx.objectStore('k'); o.put(sets, 'sets'); o.put(folders, 'folders'); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => { alert('Could not save in this browser. Use Back up everything to keep a copy.'); ok(); }; })).catch(() => alert('Could not save in this browser. Use Back up everything to keep a copy.'));
+let saveFailShown = false;
+function saveFail() { if (saveFailShown) return; saveFailShown = true; tell('Use Back up everything to keep a copy of your work.', { title: 'Could not save in this browser' }).then(() => (saveFailShown = false)); }
+const persistSets = () => db.then(d => new Promise(ok => { const tx = d.transaction('k', 'readwrite'), o = tx.objectStore('k'); o.put(sets, 'sets'); o.put(folders, 'folders'); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => { saveFail(); ok(); }; })).catch(() => saveFail());
 function loadSets() {
   return Promise.all([idbGet('sets'), idbGet('set'), idbGet('folders')]).then(([s, old, f]) => {
     sets = s && s.length ? s : [{ id: crypto.randomUUID(), name: old ? 'My questions' : 'My first set', questions: old || [] }];
@@ -168,9 +230,9 @@ function newSetDialog(after, presetFolder) {
     sel.value = v && folderById(v) ? v : '';
   };
   fill(presetFolder); let last = sel.value;
-  sel.onchange = () => {
+  sel.onchange = async () => {
     if (sel.value !== '__new') { last = sel.value; return; }
-    const n = folders.length < MAX_FOLDERS ? (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim() : '';
+    const n = folders.length < MAX_FOLDERS ? ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim() : '';
     const f = n && addFolder(n); fill(f ? f.id : last); last = sel.value;
   };
   const close = () => { d.close(); d.remove(); };
@@ -198,9 +260,9 @@ function folderPicker(st, after) {
   const list = el('div', { className: 'fplist' });
   list.append(row('No folder', null, !folderById(st.folder), () => choose(null)));
   folders.forEach(f => list.append(row([icoEl('folder', 'sm'), ' ' + f.name], sets.filter(x => x.folder === f.id).length, st.folder === f.id, () => choose(f.id))));
-  const nb = el('button', { className: 'fpopt new', onclick: () => {
+  const nb = el('button', { className: 'fpopt new', onclick: async () => {
     if (folders.length >= MAX_FOLDERS) return toast('That is the most folders.');
-    const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return;
+    const n = ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return;
     const f = addFolder(n); if (f) choose(f.id);
   } }, el('span', { textContent: '＋ New folder…' }));
   list.append(nb);
@@ -301,17 +363,17 @@ async function unpackSet(t) {
 async function copyShareLink(st) {
   const photos = st.questions.filter(q => q.bg === 'photo' || q.img).length;
   const url = location.origin + '/teacher#set=' + await packSet(st);
-  if (url.length > 7500) return alert('This set is too long for a link. Use Export instead and send the file.');
+  if (url.length > 7500) return tell('Use Export instead and send the file.', { title: 'This set is too long for a link' });
   const note = photos ? '\n\n' + photos + ' question(s) use a photo. Photos are not included in links, so those arrive with a blank background.' : '';
-  navigator.clipboard.writeText(url).then(() => alert('Link copied. Send it to a colleague: opening it offers to add "' + st.name + '".' + note), () => prompt('Copy this link:', url));
+  navigator.clipboard.writeText(url).then(() => tell('Send it to a colleague: opening it offers to add "' + st.name + '".' + note, { title: 'Link copied' }), () => showCopy('Copy this link', url));
 }
 async function checkShared(after) { // call after loadSets(); a colleague's link opens /teacher#set=...
   const m = /^#set=([zr]\.[A-Za-z0-9_-]+)$/.exec(location.hash); if (!m || DEMO) return;
   history.replaceState(null, '', location.pathname + location.search);
   try {
     const st = await unpackSet(m[1]); if (!st.questions.length) throw 0;
-    if (confirm('Add the set "' + st.name + '" (' + st.questions.length + ' questions) to your sets?')) { const s = addSet(st.name, st.questions); toast('Added "' + s.name + '".'); after && after(s); }
-  } catch { alert('That share link could not be read. Ask for a new one.'); }
+    if (await ask(st.questions.length + ' questions.', { title: 'Add the set "' + st.name + '" to your sets?', ok: 'Add set', cancel: 'No thanks' })) { const s = addSet(st.name, st.questions); toast('Added "' + s.name + '".'); after && after(s); }
+  } catch { tell('Ask for a new one.', { title: 'That share link could not be read' }); }
 }
 
 // ---- export / import question sets as a file ----
@@ -322,15 +384,17 @@ async function importSetsFile(file) {
     const data = JSON.parse(await file.text()); let n = 0, last = null;
     (Array.isArray(data) ? data : []).forEach(s => { if (s && Array.isArray(s.questions)) { last = addSet(s.name || 'Imported set', s.questions); n++; } });
     if (!n) throw 0; toast('Imported ' + n + ' set' + (n === 1 ? '' : 's') + '.'); return last;
-  } catch { alert('That file is not a Draw It Out question set.'); return null; }
+  } catch { tell('Choose a file that was saved with Export on the Question sets tab.', { title: 'That file is not a Draw It Out question set' }); return null; }
 }
 
 // ---- one-file backup of everything that lives in this browser ----
 const lastBackup = () => +store.do_lastbackup || 0;
 function backupText() { const t = lastBackup(); if (!t) return 'No backup yet'; const d = Math.floor((Date.now() - t) / 864e5); return 'Last backup: ' + (d < 1 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'); }
 const backupStale = () => !lastBackup() || Date.now() - lastBackup() > 14 * 864e5;
-function doBackup() {
-  const withNames = confirm('Include class lists and scores in the backup?\n\nOK = include them (the file will contain student names, so keep it private).\nCancel = back up only your question sets and class periods.');
+async function doBackup() {
+  const pick = await choose('A class list has real student names, so keep that file private. "Questions only" saves your question sets and class periods without any names.', [{ label: 'Cancel', value: null }, { label: 'Questions only', value: false }, { label: 'Include class lists', value: true, kind: 'pri' }], { title: 'What goes in the backup?' });
+  if (pick === null) return;
+  const withNames = pick;
   const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, folders, periods, active: store.do_active, teams: {} };
   if (withNames) periods.forEach(p => { const t = loadTM(p.code); if (t.teams.length || t.roster.length) data.teams[p.code] = t; });
   downloadJSON('draw-it-out-backup-' + new Date().toISOString().slice(0, 10) + '.json', data);
@@ -339,7 +403,7 @@ function doBackup() {
 async function doRestore(file, after) {
   try {
     const d = JSON.parse(await file.text()); if (!d || d.app !== 'draw-it-out' || !Array.isArray(d.sets)) throw 0;
-    if (!confirm('Restore this backup? It adds its question sets and class periods to what is already here. Nothing is deleted.')) return;
+    if (!await ask('It adds its question sets and class periods to what is already here. Nothing is deleted.', { title: 'Restore this backup?', ok: 'Restore', cancel: 'Cancel' })) return;
     let ns = 0, np = 0;
     cleanFolders(d.folders).forEach(f => { if (!folderById(f.id) && folders.length < MAX_FOLDERS) folders.push(f); }); // folders first, so restored sets can point at them
     d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
@@ -348,8 +412,8 @@ async function doRestore(file, after) {
       periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;
       if (d.teams && d.teams[x.code]) saveTM(x.code, cleanTM(d.teams[x.code]));
     });
-    await persistSets(); savePeriods(); alert('Restored ' + ns + ' question set(s) and ' + np + ' class period(s).'); after && after();
-  } catch { alert('That file is not a Draw It Out backup.'); }
+    await persistSets(); savePeriods(); await tell(ns + ' question set(s) and ' + np + ' class period(s) added.', { title: 'Backup restored' }); after && after();
+  } catch { tell('Choose a file made with Back up everything.', { title: 'That file is not a Draw It Out backup' }); }
 }
 
 // A one-off host connection (e.g. to kick students out of a class that is being removed, or to send a question from the editor).

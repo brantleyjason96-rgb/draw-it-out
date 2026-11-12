@@ -323,16 +323,16 @@ function classMenu(p, card, e) {
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: ev => { ev.stopPropagation(); closeMenu(); f(); } }));
   add('Team names & icons', () => goTeams(p.code));
   add('Copy teams to…', () => teamsPickMenu(p.code, card, 'top:52px;right:12px', 'to'));
-  add('Rename', () => { const v = (prompt('Rename this class:', p.name) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
-  add('Remove class', () => {
-    if (!confirm('Remove "' + p.name + '"? Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''))) return;
+  add('Rename', async () => { const v = ((await askText('Class name', p.name, { title: 'Rename this class', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
+  add('Remove class', async () => {
+    if (!await ask('Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''), { title: 'Remove "' + p.name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return;
     if ((live[p.code] || {}).live) hostSend(p.code, [{ t: 'reset' }]);
     removePeriod(p.code); renderClasses();
   }, 'danger');
   card.append(menu);
 }
-function addClass() {
-  const name = (prompt('Name for the new class (for example 3rd Hour):') || '').trim(); if (!name) return;
+async function addClass() {
+  const name = ((await askText('Class name', '', { title: 'New class', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (!name) return;
   const c = newPeriod(name); renderClasses(); toast('Added "' + name + '". Code ' + c + '.');
 }
 
@@ -352,10 +352,10 @@ function folderMenu(f, anchor) {
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, fn, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); fn(); } }));
   add('New set in this folder…', () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'), f.id));
-  add('Rename folder', () => { const v = (prompt('Rename this folder:', f.name) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
-  add('Delete folder', () => {
+  add('Rename folder', async () => { const v = ((await askText('Folder name', f.name, { title: 'Rename this folder', ok: 'Rename', max: 40 })) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
+  add('Delete folder', async () => {
     const n = sets.filter(x => x.folder === f.id).length;
-    if (!confirm('Delete the folder "' + f.name + '"?' + (n ? '\n\nThe ' + n + ' set' + (n === 1 ? '' : 's') + ' inside will be kept and moved out of the folder.' : ''))) return;
+    if (!await ask(n ? 'The ' + n + ' set' + (n === 1 ? '' : 's') + ' inside will be kept and moved out of the folder.' : '', { title: 'Delete the folder "' + f.name + '"?', ok: 'Delete folder', cancel: 'Keep folder', danger: true })) return;
     deleteFolder(f); renderSets();
   }, 'danger');
   anchor.append(menu);
@@ -407,7 +407,7 @@ function renderBackup() {
 }
 
 $('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
-$('#newfolder').onclick = () => { const n = (prompt('Name for the new folder (for example Unit 3: Plate Tectonics):') || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
+$('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
 $('#newbtn').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';
@@ -416,7 +416,7 @@ $('#newbtn').onclick = e => {
   $('#newbtn').parentElement.append(menu);
 };
 $('#impfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await importSetsFile(f)) { renderSets(); renderShelf(); } };
-$('#bkup').onclick = () => { doBackup(); renderBackup(); };
+$('#bkup').onclick = async () => { await doBackup(); renderBackup(); };
 $('#rst').onclick = () => $('#restore').click();
 $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doRestore(f, () => { renderClasses(); renderSets(); renderBackup(); }); };
 
@@ -454,8 +454,8 @@ function editTeams() {
   editT = setTimeout(() => { saveTeams(taCode, working); pushTeams(taCode, working); }, 450);
   renderPreview();
 }
-function removeTeam(t) {
-  if (!confirm('Remove team "' + t.name + '"? Its students become unassigned and its points are lost.')) return;
+async function removeTeam(t) {
+  if (!await ask('Its students become unassigned and its points are lost.', { title: 'Remove team "' + t.name + '"?', ok: 'Remove team', cancel: 'Keep team', danger: true })) return;
   working = working.filter(x => x.id !== t.id);
   editTeams(); renderTeamsTab();
 }
@@ -479,7 +479,7 @@ function teamsPickMenu(srcCode, anchor, pos, dir) {
   });
   anchor.append(menu);
 }
-function copyTeams(from, to) {
+async function copyTeams(from, to) {
   const teams = loadTM(from).teams, src = periodOf(from), dst = periodOf(to);
   if (!dst) return;
   if (!teams.length) return toast('There are no teams in "' + (src ? src.name : from) + '" yet.');
@@ -490,7 +490,7 @@ function copyTeams(from, to) {
   if (gone.length) msg += '\n\nThe ' + gone.length + (gone.length === 1 ? ' team there now that is not in this copy will be removed; its points start at 0'
     : ' teams there now that are not in this copy will be removed; their points start at 0') + (moved ? ', and ' + moved + (moved === 1 ? ' student needs' : ' students need') + ' putting on a new team' : '') + '.';
   if (isLive(to)) msg += '\n\n"' + dst.name + '" is running now, so students will see the change straight away.';
-  if ((gone.length || isLive(to)) && !confirm(msg)) return;
+  if ((gone.length || isLive(to)) && !await ask(msg.split('\n\n').slice(1).join('\n\n'), { title: msg.split('\n\n')[0], ok: 'Copy teams', cancel: 'Cancel', danger: !!gone.length })) return;
   saveTeams(to, teams); // teams only: the class list and the points are never touched from here
   pushTeams(to, teams); // a running class gets the new teams straight away
   toast(teams.length + (teams.length === 1 ? ' team copied to "' : ' teams copied to "') + dst.name + '".');
@@ -653,14 +653,14 @@ $('#tamenu').onclick = ev => {
   menu.append(el('hr'), el('button', { className: 'danger', onclick: () => { closeMenu(); resetScores(); } }, icoEl('reset', 'sm'), ' Reset all scores'));
   $('#tamw').append(menu);
 };
-$('#tacreate').onclick = () => {
-  if (working.length && !confirm('Replace your ' + working.length + ' teams? Their points will be lost.')) return;
+$('#tacreate').onclick = async () => {
+  if (working.length && !await ask('Their points will be lost.', { title: 'Replace your ' + working.length + ' teams?', ok: 'Replace teams', cancel: 'Keep teams', danger: true })) return;
   const n = taN;
   working = []; for (let i = 0; i < n; i++) working.push(newTeam(working));
   editTeams(); renderTeamsTab();
 };
-function resetScores() {
-  if (!confirm('Set every team in "' + (periodOf(taCode) || {}).name + '" back to 0 points?')) return;
+async function resetScores() {
+  if (!await ask('', { title: 'Set every team in "' + (periodOf(taCode) || {}).name + '" back to 0 points?', ok: 'Reset all', cancel: 'Keep points', danger: true })) return;
   const zeros = Object.fromEntries(working.map(t => [t.id, 0]));
   const tm = loadTM(taCode); tm.scores = zeros; saveTM(taCode, tm);
   const li = liveInfo.get(taCode); if (li) markLive(taCode, { ...li, scores: zeros });

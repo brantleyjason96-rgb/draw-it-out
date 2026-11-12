@@ -321,8 +321,8 @@ function award(s) {
 // Remove or rename one student. A class-list student's name comes from the list, so only Remove applies to them.
 function studentMenu(anchor, s) {
   const items = [];
-  if (!s.rid) items.push({ t: 'Rename', f: () => { const v = (prompt('New name for ' + disp(s) + ':', s.name) || '').trim(); if (v) ws.send({ t: 'rename', id: s.id, name: v }); } });
-  items.push({ t: 'Remove student', danger: true, f: () => { if (confirm('Remove ' + disp(s) + ' from the class? Their drawing is deleted and they go back to the join screen.')) ws.send({ t: 'release', id: s.id }); } });
+  if (!s.rid) items.push({ t: 'Rename', f: async () => { const v = ((await askText('New name', s.name, { title: 'Rename ' + disp(s), ok: 'Rename', max: 20 })) || '').trim(); if (v) ws.send({ t: 'rename', id: s.id, name: v }); } });
+  items.push({ t: 'Remove student', danger: true, f: async () => { if (await ask('Their drawing is deleted and they go back to the join screen.', { title: 'Remove ' + disp(s) + '?', ok: 'Remove student', cancel: 'Keep', danger: true })) ws.send({ t: 'release', id: s.id }); } });
   openMenuFixed(anchor, items, 200);
 }
 function setTeam(s, team) { ws.send({ t: 'team', id: s.id, team }); } // the server updates the class list entry too, then tells everyone
@@ -497,7 +497,7 @@ function renderScores() {
         { t: 'Take a point away', f: () => ws.send({ t: 'adj', team: t.id, d: -1 }) },
         { t: 'Rename, icon and color', f: () => window.open(teamAdminHref(code), '_blank') },
         '-',
-        { t: 'Reset this team to 0', danger: true, f: () => { if (!confirm('Set ' + t.name + ' back to 0 points?')) return; for (let n = x.score; n > 0;) { const d = n >= 5 ? 5 : 1; ws.send({ t: 'adj', team: t.id, d: -d }); n -= d; } } }, // the server only takes steps of 1 or 5
+        { t: 'Reset this team to 0', danger: true, f: async () => { if (!await ask('', { title: 'Set ' + t.name + ' back to 0 points?', ok: 'Reset to 0', cancel: 'Keep points', danger: true })) return; for (let n = x.score; n > 0;) { const d = n >= 5 ? 5 : 1; ws.send({ t: 'adj', team: t.id, d: -d }); n -= d; } } }, // the server only takes steps of 1 or 5
       ], 230);
     };
     r.append(el('div', { className: 'r1' }, el('span', { className: 'rk', textContent: x.rank }),
@@ -557,8 +557,8 @@ function mv(i, d) {
   [a[i], a[j]] = [a[j], a[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
   store.do_cur = cur; persistSets(); renderSet();
 }
-function rm(i) {
-  if (!confirm('Delete this question?')) return;
+async function rm(i) {
+  if (!await ask('It is removed from this set.', { title: 'Delete this question?', ok: 'Delete', cancel: 'Keep', danger: true })) return;
   qs().splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
   store.do_cur = cur; persistSets(); renderSet();
 }
@@ -597,10 +597,10 @@ function openMenu(anchor, items, css) {
 $('#cpick').onclick = e => {
   e.stopPropagation();
   openMenu($('#cpick'), [...periods.map(p => ({ t: p.name, check: p.code === code, f: () => { if (p.code !== code) location.href = '/class?code=' + p.code; } })), '-',
-    { t: '+ New class', f: () => { const n = (prompt('Name for the new class (for example 3rd Hour):') || '').trim(); if (n) location.href = '/class?code=' + newPeriod(n); } },
+    { t: '+ New class', f: async () => { const n = ((await askText('Class name', '', { title: 'New class', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (n) location.href = '/class?code=' + newPeriod(n); } },
     { t: 'Rename this class', f: renameClass }], 'top:52px;left:0;min-width:260px');
 };
-function renameClass() { const v = (prompt('Rename this class:', per().name) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); setCpick(v); $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
+async function renameClass() { const v = ((await askText('Class name', per().name, { title: 'Rename this class', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); setCpick(v); $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
 $('#more').onclick = e => {
   e.stopPropagation();
   openMenu($('#more'), [
@@ -618,8 +618,8 @@ $('#more').onclick = e => {
     { t: 'Set up teams', sub: 'Teams, icons, class list and points', f: () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); } },
     { t: 'Rename this class', f: renameClass },
     '-',
-    { t: 'Clear class (send students back to join)', danger: true, f: () => { if (confirm('Send all students in "' + per().name + '" back to the join screen? Teams, the class list and scores are kept. Save the PNG first if you want their drawings.')) ws.send({ t: 'reset' }); } },
-    { t: 'Remove this class', danger: true, f: () => { if (!confirm('Remove "' + per().name + '"? Its teams, class list and scores on this computer will be deleted, and students are sent back to the join screen.')) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
+    { t: 'Clear class (send students back to join)', danger: true, f: async () => { if (await ask('Teams, the class list and scores are kept. Save the PNG first if you want their drawings.', { title: 'Send everyone in "' + per().name + '" back to the join screen?', ok: 'Clear class', cancel: 'Keep class', danger: true })) ws.send({ t: 'reset' }); } },
+    { t: 'Remove this class', danger: true, f: async () => { if (!await ask('Its teams, class list and scores on this computer will be deleted, and students are sent back to the join screen.', { title: 'Remove "' + per().name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
   ], 'top:52px;right:0;width:370px');
 };
 $('#setmenu').onclick = e => {
@@ -636,11 +636,11 @@ $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''
 function showRemote() {
   const u = location.origin + '/class?code=' + code + '#k=' + encodeURIComponent(key) + '&n=' + encodeURIComponent(per().name);
   try { $('#rqr').innerHTML = qrSvg(u); } catch { return toast('Could not make a QR code here.'); }
-  $('#rcopy').onclick = () => navigator.clipboard.writeText(u).then(() => toast('Link copied. Open it on your phone (email or message it to yourself).'), () => prompt('Copy this link:', u));
+  $('#rcopy').onclick = () => navigator.clipboard.writeText(u).then(() => toast('Link copied. Open it on your phone (email or message it to yourself).'), () => showCopy('Copy this link', u));
   $('#rdlg').showModal();
 }
 $('#rclose').onclick = () => $('#rdlg').close();
-function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Student link copied.'), () => prompt('Copy this link:', link)); }
+function copyLink() { navigator.clipboard.writeText(link).then(() => toast('Student link copied.'), () => showCopy('Copy this link', link)); }
 function showQR() { try { $('#qrbig').innerHTML = qrSvg(link); } catch { return toast('Could not make a QR code here.'); } $('#qrurl').textContent = location.host; $('#qrcode').textContent = code; $('#qrdlg').showModal(); }
 $('#join').onclick = showQR; $('#qrclose').onclick = () => $('#qrdlg').close(); $('#qrcopy').onclick = copyLink;
 $('#proj').onclick = $('#pproj').onclick = () => window.open('/projector?code=' + code, 'projector');
@@ -793,7 +793,7 @@ $('#repcsv').onclick = () => { if (!reportRows().length) return toast('No colour
 $('#repcopy').onclick = () => {
   if (!reportRows().length) return toast('No colours to report on yet.');
   const t = reportText();
-  navigator.clipboard.writeText(t).then(() => toast('Summary copied.'), () => prompt('Copy this summary:', t));
+  navigator.clipboard.writeText(t).then(() => toast('Summary copied.'), () => showCopy('Copy this summary', t));
 };
 
 
@@ -842,7 +842,7 @@ $('#tdone').onclick = () => sheet.close();
 sheet.addEventListener('close', () => {
   const ch = dedupeInitials(TM.roster); // two teammates can't share initials: a number is added
   syncRoster();
-  if (ch.length) alert('These students share initials with a teammate, so a number was added:\n\n' + ch.join('\n'));
+  if (ch.length) tell('These students share initials with a teammate, so a number was added:\n\n' + ch.join('\n'), { title: 'Shared initials' });
 });
 $('#tn').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + ' teams</option>').join('');
 function sheetUI() {
@@ -881,16 +881,16 @@ function sheetUI() {
     r.append(nm, ini, sel, x); rows.append(r);
   });
 }
-$('#mkteams').onclick = () => {
-  if (TM.teams.length && !confirm('Replace your current teams? Points for the old teams will be lost.')) return;
+$('#mkteams').onclick = async () => {
+  if (TM.teams.length && !await ask('Points for the old teams will be lost.', { title: 'Replace your current teams?', ok: 'Replace teams', cancel: 'Keep teams', danger: true })) return;
   const n = +$('#tn').value; TM.teams = []; TM.scores = {}; for (let i = 0; i < n; i++) TM.teams.push(newTeam(TM.teams));
   TM.roster.forEach(e => (e.team = null)); S.stu.forEach(s => { if (!s.rid) ws.send({ t: 'team', id: s.id, team: null }); });
   teamsChanged(); ws.send({ t: 'resetscores' });
 };
 $('#addteam').onclick = () => { if (TM.teams.length >= 12) return toast('12 teams is the most.'); TM.teams.push(newTeam(TM.teams)); teamsChanged(); };
 $('#cap').onclick = () => { TM.cap = !TM.cap; teamsChanged(); };
-$('#rsc').onclick = () => { if (confirm('Set every team back to 0 points?')) ws.send({ t: 'resetscores' }); };
-$('#rclr').onclick = () => { if (confirm('Remove the class list? Signed-in students will be sent back to the join screen. Teams and points are kept.')) { TM.roster = []; save(); sendSetup(); ui(); sheetUI(); } };
+$('#rsc').onclick = async () => { if (await ask('', { title: 'Set every team back to 0 points?', ok: 'Reset all', cancel: 'Keep points', danger: true })) ws.send({ t: 'resetscores' }); };
+$('#rclr').onclick = async () => { if (await ask('Signed-in students will be sent back to the join screen. Teams and points are kept.', { title: 'Remove the class list?', ok: 'Remove list', cancel: 'Keep list', danger: true })) { TM.roster = []; save(); sendSetup(); ui(); sheetUI(); } };
 function parseCSV(text) {
   const rows = []; let row = [], cur2 = '', q = false;
   for (let i = 0; i < text.length; i++) {
@@ -921,9 +921,9 @@ $('#rfile').onchange = async e => { const f = e.target.files[0]; e.target.value 
 $('#rpastebtn').onclick = () => { $('#rpastebox').hidden = !$('#rpastebox').hidden; $('#rpaste').focus(); };
 $('#rread').onclick = () => { readList($('#rpaste').value); $('#rpaste').value = ''; $('#rpastebox').hidden = true; };
 $('#radd').onclick = () => { TM.roster.push({ rid: rid8(), first: '', last: '', ini: '', team: null }); sheetUI(); const i = $$('#rrows .rr input'); i[i.length - 2].focus(); };
-$('#rrand').onclick = () => {
+$('#rrand').onclick = async () => {
   if (!TM.roster.length) return toast('Add students first.');
-  if (!TM.teams.length) { const n = Math.max(2, Math.min(8, +prompt('How many teams? (2-8)', '4') || 0)); for (let i = 0; i < n; i++) TM.teams.push(newTeam(TM.teams)); }
+  if (!TM.teams.length) { const a = await askText('Number of teams (2 to 8)', '4', { title: 'How many teams?', ok: 'Make teams', max: 1 }); if (a === null) return; const n = Math.max(2, Math.min(8, +a || 0)); for (let i = 0; i < n; i++) TM.teams.push(newTeam(TM.teams)); }
   const a = TM.roster.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; }
   a.forEach((r, i) => (r.team = TM.teams[i % TM.teams.length].id)); save(); sendSetup(); ui(); sheetUI();
 };

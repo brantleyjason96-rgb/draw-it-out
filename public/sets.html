@@ -208,8 +208,8 @@ loadSets().then(() => {
 });
 
 const blank = () => ({ question: '', bg: 'graph', img: null });
-function pick(i, force) {
-  if (!force && dirty && !confirm('You have unsaved changes to this question. Leave without saving?')) return;
+async function pick(i, force) {
+  if (!force && dirty && !await ask('You have unsaved changes to this question.', { title: 'Leave without saving?', ok: 'Leave without saving', cancel: 'Stay and keep editing', danger: true })) return;
   sel = i; draft = i === -1 ? blank() : JSON.parse(JSON.stringify(set.questions[i])); dirty = false; loadDraft(); renderAll();
 }
 function loadDraft() { $('#qin').innerHTML = clean(draft.question); }
@@ -285,13 +285,13 @@ function preview() {
   if (draft.bg === 'photo' && draft.img) { if (!pim || pim.dataset.src !== draft.img) { pim = loadImg(draft.img, paint); pim.dataset.src = draft.img; } }
   paint();
 }
-function move(i, d) {
+async function move(i, d) {
   const j = i + d, a = set.questions; if (j < 0 || j >= a.length) return;
-  if (dirty && !confirm('You have unsaved changes to this question. Move anyway? Unsaved changes will be lost.')) return;
+  if (dirty && !await ask('Unsaved changes to this question will be lost.', { title: 'Move anyway?', ok: 'Move anyway', cancel: 'Stay and keep editing', danger: true })) return;
   [a[i], a[j]] = [a[j], a[i]]; persistSets(); pick(sel === i ? j : sel === j ? i : sel, true);
 }
-function remove(i) {
-  if (!confirm('Delete question ' + (i + 1) + '?')) return;
+async function remove(i) {
+  if (!await ask('', { title: 'Delete question ' + (i + 1) + '?', ok: 'Delete', cancel: 'Keep', danger: true })) return;
   set.questions.splice(i, 1); persistSets();
   if (!set.questions.length) pick(-1, true); else pick(Math.min(i, set.questions.length - 1), true);
 }
@@ -315,17 +315,17 @@ const finished = () => {
   if (isSort()) { const sort = SK.clean(draft.sort); return sort ? { question: draft.question, bg: 'blank', img: null, kind: 'sort', sort } : null; }
   const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg; return { question: draft.question, bg, img: bg === 'photo' ? draft.img : null }; };
 $('#save').onclick = () => {
-  const q = finished(); if (!q) return alert('This sort question is not finished yet. See the notes under the lanes and cards.');
-  if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  const q = finished(); if (!q) return tell('See the notes under the lanes and cards.', { title: 'This sort question is not finished yet' });
+  if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
   if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
   persistSets(); draft = JSON.parse(JSON.stringify(q)); dirty = false; renderAll(); toast('Saved.');
   const sv = $('#save'); sv.replaceChildren(icoEl('check'), ' Saved'); clearTimeout(sv._t); sv._t = setTimeout(() => (sv.textContent = 'Save question'), 2000);
 };
-$('#cancel').onclick = () => { if (dirty && !confirm('Discard your changes to this question?')) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
+$('#cancel').onclick = async () => { if (dirty && !await ask('', { title: 'Discard your changes to this question?', ok: 'Discard changes', cancel: 'Keep editing', danger: true })) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
 $('#add').onclick = () => pick(-1);
 $('#sendnow').onclick = () => {
-  const q = finished(); if (!q) return alert('This sort question is not finished yet. See the notes under the lanes and cards.');
-  if (!plain(q.question).trim() && !q.img) return alert('Type a question or add a photo first.');
+  const q = finished(); if (!q) return tell('See the notes under the lanes and cards.', { title: 'This sort question is not finished yet' });
+  if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
   hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
 };
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
@@ -339,11 +339,11 @@ $('#manage').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
-  add('Rename this set', () => { const v = (prompt('Rename this set:', set.name) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
+  add('Rename this set', async () => { const v = ((await askText('Set name', set.name, { title: 'Rename this set', ok: 'Rename', max: 60 })) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
   add('Move to a folder…', () => folderPicker(set, renderAll));
   add('Export this set as a file', () => exportSets([set]));
-  add('Delete this set', () => {
-    if (!confirm('Delete the set "' + set.name + '" and all ' + set.questions.length + ' of its questions? This cannot be undone.')) return;
+  add('Delete this set', async () => {
+    if (!await ask('This cannot be undone.', { title: 'Delete "' + set.name + '" and all ' + set.questions.length + ' of its questions?', ok: 'Delete set', cancel: 'Keep set', danger: true })) return;
     dirty = false; sets = sets.filter(s => s !== set); if (!sets.length) sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }];
     persistSets().then(() => (location.href = backUrl));
   }, 'danger');
