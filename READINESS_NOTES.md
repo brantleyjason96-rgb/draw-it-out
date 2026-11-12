@@ -80,3 +80,23 @@ Commits "Phase 6 / 34" through "Phase 6 / 37".
 - 35 Student cards take the shape of the student's page; with 1-3 students the cards grow. This needed a CSS fix: the grid squeezed rows to the screen height (min-height:0 on the card), which made tall cards overlap. With 35 phone-shaped pages the grid is now longer (use the S size).
 - 36 Backup reminder banner on Today (14 days or 5 lessons since the last backup, only when there is something to lose, "Not now" waits 3 days). For a browser that has never backed up, "14 days" counts from the first time it opened Today after this change (`do_first`).
 - 37 "Test this network" on /start; five outcomes tested.
+
+## Hosting (done where code can do it)
+Commits "Hosting / 38" through "Hosting / 41 and 42". Server tests 87 -> 90.
+- 38 `plan: starter` in render.yaml. **Nothing is deployed by this; syncing the blueprint on Render starts the paid plan (about $7 a month).** README explains why.
+- 39 Gzip + ETag + 304 for text files (kept in memory, rebuilt when the file changes); fonts cached a week; `/healthz` no-store, GET and HEAD.
+- 40 CSP with a SHA-256 hash for each page's inline scripts (no `unsafe-inline` for scripts), `X-Frame-Options: DENY`, Permissions-Policy, HSTS only behind an HTTPS proxy. Tests keep the hashes honest and fail if someone adds an inline event handler. Browser check with the policy enforced found no violations in the main flows. **If you add a new inline `onclick="..."` or an external script/image/font from another site, the policy will block it on purpose.**
+- 41, 42 cannot be done from code (a domain has to be bought; a monitor has to be created in an outside service). The README has a checklist with the exact steps.
+
+## What is waiting for you
+1. Decide whether to sync the Render blueprint (starts the paid plan). Until then the app still runs on whatever plan is live now, with the old behaviour on restarts.
+2. Buy a short domain and point it at the service; create the uptime monitor (README, "Before you share it with other teachers").
+3. Try it on real student devices on your school wifi: the **Test this network** button on /start, a phone on its side, a Chromebook, a real projector, and the new Dashboard after a few real lessons. I could only emulate touch.
+4. Read the "Decision" and "Known limit" lines above; they are the judgment calls most worth a second look. The biggest: marks live on the server by anonymous id (so the phone and laptop agree); a paired phone keeps no lesson history; "this week" starts on Monday.
+5. The process slip in Phase 4 (item 26's code is inside the commit titled "Notes for Phase 4").
+
+## How it was checked
+- `npm test`: 90 server and pure-logic tests (the browser-side validator and mastery code are loaded into the test the same way a page loads them, and the validator is compared with the real server).
+- Before every commit from item 14 on, a gate loaded every page in Chromium and failed on any page error, console error or native dialog.
+- Each UI item also got a Playwright run against a local server (clicks, keyboard, phone and touch viewports, reloads, a second teacher device, a restarted server). Those scripts are not in the repo (Playwright is not a dependency; "no new dependencies"). Screenshots were looked at for the timer, the dashboard, the tag screens, the cards and the dialogs.
+- Not run: a real load test with 35 live devices, real Chromebooks, a real projector, a real Render deploy.
