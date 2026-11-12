@@ -144,6 +144,7 @@ function cleanTeams(a) {
     return { id: t.id, name: trunc(String(t.name || '').replace(/\s+/g, ' ').trim(), 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(t.color) ? t.color : '#2563eb', emoji: trunc(t.emoji, 8) };
   }).filter(Boolean);
 }
+const cleanName = v => String(v || '').replace(/\s+/g, ' ').trim().slice(0, 20);
 const cleanIni = s => Array.from(String(s || '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()).slice(0, 6).join('');
 function cleanRoster(a, teams) {
   const ids = new Set(teams.map(t => t.id)), seen = new Set();
@@ -255,7 +256,7 @@ process.on('uncaughtException', e => console.error('uncaughtException:', e && e.
 process.on('unhandledRejection', e => console.error('unhandledRejection:', e && e.stack || e));
 server.on('clientError', (e, sock) => { try { sock.destroy(); } catch {} });
 
-// ---- limits ----
+// ---- limits (items 2-3 of the readiness plan) ----
 const MSGS_PER_SEC = 60;                                  // per socket; the excess is dropped
 const MAX_PER_IP = +process.env.MAX_PER_IP || 150;        // a whole school shares one address, so this is generous
 const ROOM_EMPTY_MS = +process.env.ROOM_EMPTY_MS || 10 * 60e3, ROOM_WITH_STUDENTS_MS = 6 * 3600e3, SWEEP_MS = +process.env.SWEEP_MS || 30000; // (the two env overrides are for tests)
@@ -367,7 +368,7 @@ wss.on('connection', (ws, req) => {
         } else if (s !== verified) s.tok = newTok(); // picked up by initials, not by token: the old holder's token stops working
         s.rid = e.rid; e.sid = s.id; s.name = e.ini; s.team = e.team;
       } else {
-        let name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+        let name = cleanName(m.name);
         if (!s) {
           const tm = r.teams.find(t => t.id === m.team); // quick teams: a student can pick a team with no nickname at all
           if (!name && tm) name = tm.name + ' ' + ([...r.students.values()].filter(x => x.team === tm.id).length + 1);
@@ -486,6 +487,10 @@ wss.on('connection', (ws, req) => {
         room.board = !!m.on; toWatchers(room, { t: 'board', on: room.board });
       } else if (m.t === 'release') { // free up a student's initials (wrong pick, or a new device)
         const s = room.students.get(m.id); if (s) { release(room, s, 'Your teacher reset your sign-in. Join again.'); pushScores(room); }
+      } else if (m.t === 'rename') { // a nickname-joined student only: with a class list, the list decides the name
+        const s = room.students.get(m.id); if (!s || s.rid) return;
+        const name = cleanName(m.name); if (!name) return tx(ws, { t: 'note', m: 'Type a name.' });
+        s.name = name; toWatchers(room, { t: 'join', s: stuView(s) });
       }
     }
   }

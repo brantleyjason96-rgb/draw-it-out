@@ -514,6 +514,7 @@ await test('leaving on purpose removes the student instead of leaving a ghost ca
   st.ws.close();
 });
 
+
 // ---- Phase 1: safety ----
 await test('safety: a 7 MB frame closes that socket only; the server and other classes keep running', async () => {
   const bad = client(); await bad.ready;
@@ -526,7 +527,6 @@ await test('safety: a 7 MB frame closes that socket only; the server and other c
   assert.equal((await fetch('http://localhost:' + PORT + '/healthz')).status, 200);
 });
 
-
 await test('safety: garbage and hostile messages do not take the server down', async () => {
   const c = client(); await c.ready;
   for (const m of ['null', '[]', '"x"', '{"t":"join"}', '{"t":"host","code":{},"key":[]}', '{"t":"q"}', '{"t":"sort","p":5}']) c.ws.send(m);
@@ -534,7 +534,6 @@ await test('safety: garbage and hostile messages do not take the server down', a
   await sleep(150);
   assert.equal((await fetch('http://localhost:' + PORT + '/healthz')).status, 200);
 });
-
 
 await test('tokens: watchers see ids but cannot use them to take over a student', async () => {
   const h = client(); await h.ready; h.send({ t: 'host', code: 'TOKEN', key: KEY }); await h.wait('state');
@@ -557,7 +556,6 @@ await test('tokens: watchers see ids but cannot use them to take over a student'
   const bj = await back.wait('joined'); assert.equal(bj.id, aj.id); assert.equal(bj.objs.length, 1);
 });
 
-
 await test('tokens: picking a disconnected student\'s initials works but cuts off the old token', async () => {
   const h = client(); await h.ready; h.send({ t: 'host', code: 'TOKR', key: KEY, setup: { teams, roster } }); await h.wait('state');
   const a = client(); await a.ready; a.send({ t: 'join', code: 'TOKR', rid: 'r0001', bw: 800, bh: 500 }); const aj = await a.wait('joined');
@@ -567,7 +565,6 @@ await test('tokens: picking a disconnected student\'s initials works but cuts of
   const c = client(); await c.ready; c.send({ t: 'join', code: 'TOKR', id: aj.id, tok: aj.tok, bw: 800, bh: 500 });
   assert.match((await c.wait('err')).m, /initials/, 'the old token no longer works');
 });
-
 
 await test('limits: one hosted class per socket', async () => {
   const h = client(); await h.ready; h.send({ t: 'host', code: 'ONE1', key: KEY }); await h.wait('state'); h.clear();
@@ -579,7 +576,6 @@ await test('limits: one hosted class per socket', async () => {
   h.clear(); h.send({ t: 'host', code: 'ONE1', key: KEY }); assert.ok(await h.wait('state'), 'the same class can be re-entered');
 });
 
-
 await test('limits: a flood of messages is dropped, not processed', async () => {
   const h = client(); await h.ready; h.send({ t: 'host', code: 'FLOOD', key: KEY }); await h.wait('state');
   const c = client(); await c.ready; c.send({ t: 'join', code: 'FLOOD', name: 'Fl', bw: 800, bh: 500 }); await c.wait('joined');
@@ -590,7 +586,30 @@ await test('limits: a flood of messages is dropped, not processed', async () => 
   assert.ok(n > 0 && n <= 65, 'about 60 got through, not 400 (' + n + ')');
 });
 
+await test('teacher can remove one student, and rename a nickname student (not a class-list one)', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'REMOVE', key: KEY, setup: { teams, roster } }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'REMOVE', rid: 'r0001', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  h.clear(); h.send({ t: 'rename', id: aj.id, name: 'Hacker' }); await sleep(80);
+  assert.equal(h.last('join'), undefined, 'a class-list student keeps the name from the list');
+  h.send({ t: 'release', id: aj.id }); await sleep(80);
+  assert.ok(a.last('kicked')); assert.equal(h.last('gone').id, aj.id);
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'RENAME2', key: KEY }); await h2.wait('state');
+  const b = client(); await b.ready; b.send({ t: 'join', code: 'RENAME2', name: 'Bob', bw: 800, bh: 500 }); const bj = await b.wait('joined');
+  h2.clear(); h2.send({ t: 'rename', id: bj.id, name: '  Robert    with a very long name indeed ' }); await sleep(80);
+  const card = h2.last('join').s; assert.equal(card.id, bj.id); assert.equal(card.name, 'Robert with a very l', 'trimmed, spaces squeezed, cut at 20 like a nickname');
+  h2.clear(); h2.send({ t: 'rename', id: bj.id, name: '   ' }); await sleep(80);
+  assert.match(h2.last('note').m, /name/); assert.equal(h2.last('join'), undefined);
+});
 
+await test('students cannot rename or remove each other', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'NOMOD', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'NOMOD', name: 'Ann', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  const b = client(); await b.ready; b.send({ t: 'join', code: 'NOMOD', name: 'Ben', bw: 800, bh: 500 }); await b.wait('joined');
+  h.clear(); b.send({ t: 'rename', id: aj.id, name: 'Zed' }); b.send({ t: 'release', id: aj.id }); await sleep(100);
+  assert.equal(h.last('join'), undefined); assert.equal(h.last('gone'), undefined); assert.equal(a.last('kicked'), undefined);
+});
+
+// a second server with tight limits, to test the connection cap and the sweep of abandoned classes
 await test('limits: per-address cap, and classes nobody uses are swept', async () => {
   const P2 = PORT + 600, s2 = spawn('node', ['server.js'], { env: { ...process.env, PORT: P2, MAX_PER_IP: '4', ROOM_EMPTY_MS: '300', SWEEP_MS: '200' }, stdio: 'ignore' });
   try {
@@ -611,7 +630,6 @@ await test('limits: per-address cap, and classes nobody uses are swept', async (
     assert.equal(stat('EMPTY').live, false, 'an empty abandoned class is deleted'); assert.equal(stat('BUSY').live, true, 'a class with a student in it is kept');
   } finally { s2.kill(); }
 });
-
 
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');

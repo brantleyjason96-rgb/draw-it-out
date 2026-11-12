@@ -227,3 +227,5 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 #demobar .b{min-height:40px}
 @media(max-width:1000px){#demobar .dsteps{display:none}#demobar{justify-content:space-between}}
 @media(max-width:700px){#demobar .dsub{display:none}#demobar{gap:8px}}
+.stu .top .smore{margin-left:auto;min-width:32px;min-height:32px;padding:0}
+.stu .top .pchip+.smore,.stu .top .chip+.smore{margin-left:4px}
