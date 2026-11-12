@@ -556,6 +556,7 @@ function onmsg(m) {
     target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'This class has ended. Your teacher will tell you when to join again.' : m.why;
   } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
+  else if (m.t === 'restore') { setQ(m.q); SS.restore(m.q); } // the teacher's page put the question back after a server restart: nothing is wiped
 }
 
 

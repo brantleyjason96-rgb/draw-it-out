@@ -128,6 +128,7 @@ function onmsg(m) {
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.d = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.d = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.d = true; } break;
+    case 'restore': setQ(m.q); break;
     case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; x.d = true; }); break;
     case 'sort': if (s) s.sort = m.p; break;
     case 'sres': S.sres = m.on; break;

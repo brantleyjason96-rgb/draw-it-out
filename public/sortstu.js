@@ -116,6 +116,8 @@ const SS = (() => {
     show,
     // a new question: every student starts with an empty answer
     newQ(nq) { map = {}; done = false; fb = null; sel = null; show(nq); },
+    // the teacher's page put the question back after a server restart: show it, keep this student's answer
+    restore(nq) { show(nq); },
     // joining or rejoining: the server hands back this student's answer, so a refresh loses nothing
     joined(m) { seed = m.id; map = m.sort || {}; done = !!m.done; fb = m.fb ? { ok: m.fb.ok, where: m.fb.where } : null; sel = null; show(m.q); },
     // returns true when the message was about sorting

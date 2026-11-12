@@ -274,8 +274,10 @@ function onmsg(m) {
       else if (TM.teams.length || TM.roster.length) sendSetup(true);
       if (DEMO && !TM.teams.length) { for (let i = 0; i < 4; i++) TM.teams.push(newTeam(TM.teams)); sendSetup(); }
       if (DEMO) startBots();
+      if (m.fresh && !DEMO) restoreQ(); // a brand-new class: put back the question this page last sent
       ui(); break;
     }
+    case 'restore': setQ(m.q); S.sk = m.sk || null; SR.reset(); ui(); break;
     case 'score': // team names/icons are always adopted (a rename must show here too); scores wait while the sheet is open
       TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap;
       if (editing()) TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
@@ -497,7 +499,16 @@ function renderScores() {
 
 // ---- question rail ----
 let cur = +store.do_cur; const qs = () => activeSet().questions;
-const sendQ = q => ws.send({ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
+const qPayload = q => ({ question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
+const sendQ = q => { ws.send({ t: 'q', ...qPayload(q) }); rememberQ(q); };
+// The last question sent is kept in this browser, so a server restart (which empties the class) can be put right.
+function rememberQ(q) {
+  const p = qPayload(q); try { store['do_lastq_' + code] = JSON.stringify(p); } catch { try { store['do_lastq_' + code] = JSON.stringify({ ...p, img: null }); } catch {} }
+}
+function restoreQ() {
+  let p; try { p = JSON.parse(store['do_lastq_' + code] || 'null'); } catch {}
+  if (p && typeof p === 'object') ws.send({ t: 'restore', ...p });
+}
 function go(i) { if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet(); }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {

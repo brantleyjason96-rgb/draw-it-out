@@ -348,6 +348,8 @@ async function doRestore(file, after) {
 // A one-off host connection (e.g. to kick students out of a class that is being removed, or to send a question from the editor).
 function hostSend(code, msgs) {
   const tm = loadTM(code); let sent = false;
+  const lq = msgs.find(x => x.t === 'q'); // remembered, so a server restart can be put right (see rememberQ in class.html)
+  if (lq) { const { t, ...p } = lq; try { localStorage['do_lastq_' + code] = JSON.stringify(p); } catch { try { localStorage['do_lastq_' + code] = JSON.stringify({ ...p, img: null }); } catch {} } }
   const w = connect(m => { if (m.t === 'state' && !sent) { sent = true; msgs.forEach(x => w.send(x)); setTimeout(() => w.close(), 600); } },
     () => w.send({ t: 'host', code, key: hostKey(), setup: { teams: tm.teams, roster: pubRoster(tm), cap: tm.cap, scores: tm.scores } }));
 }

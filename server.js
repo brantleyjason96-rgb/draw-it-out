@@ -162,7 +162,7 @@ const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
 const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
-const stateMsg = (r, host) => ({ t: 'state', q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -435,6 +435,13 @@ wss.on('connection', (ws, req) => {
         room.students.forEach(s => { tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
         toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk, phist: room.phist });
         pushScores(room);
+      } else if (m.t === 'restore') { // a teacher page coming back to a brand-new class (the server restarted): put its last question back without touching any drawing
+        if (room.qn || room.restored) return;
+        let nq, nk = null;
+        if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return; nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        room.q = nq; room.sk = nk; room.restored = true;
+        room.students.forEach(s => tx(s.ws, { t: 'restore', q: room.q }));
+        toPublic(room, { t: 'restore', q: room.q }); toHosts(room, { t: 'restore', q: room.q, sk: room.sk });
       } else if (m.t === 'mode') { // quick mode: students get just the pen and a few colors
         room.simple = !!m.simple;
         room.students.forEach(s => tx(s.ws, { t: 'mode', simple: room.simple }));

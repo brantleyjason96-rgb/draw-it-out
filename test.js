@@ -631,6 +631,39 @@ await test('limits: per-address cap, and classes nobody uses are swept', async (
   } finally { s2.kill(); }
 });
 
+
+// ---- Phase 2: classroom reliability ----
+await test('restore: a brand-new class takes the teacher\'s last question back without wiping drawings', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'RESTO', key: KEY }); const st0 = await h.wait('state');
+  assert.equal(st0.fresh, true, 'the teacher page can tell the class is brand new');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'RESTO', name: 'Rae', bw: 800, bh: 500 }); await a.wait('joined');
+  a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } }); await sleep(80);
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'RESTO' }); await p.wait('state');
+  a.clear(); h.clear(); p.clear();
+  h.send({ t: 'restore', question: 'Draw the water cycle', bg: 'blank' }); await sleep(100);
+  assert.match(a.last('restore').q.question, /water cycle/); assert.match(p.last('restore').q.question, /water cycle/); assert.ok(h.last('restore'));
+  assert.equal(a.last('q'), undefined, 'not a new question'); assert.equal(h.last('q'), undefined);
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'RESTO', key: KEY }); const st = await h2.wait('state');
+  assert.equal(st.fresh, false); assert.match(st.q.question, /water cycle/); assert.equal(st.students[0].objs.length, 1, 'the drawing stays');
+  const late = client(); await late.ready; late.send({ t: 'join', code: 'RESTO', name: 'Lee', bw: 800, bh: 500 });
+  assert.match((await late.wait('joined')).q.question, /water cycle/, 'late joiners get the question');
+  h.send({ t: 'restore', question: 'Something else', bg: 'blank' }); await sleep(80);
+  assert.match((await (async () => { const x = client(); await x.ready; x.send({ t: 'host', code: 'RESTO', key: KEY }); return x.wait('state'); })()).q.question, /water cycle/, 'a second restore is ignored');
+});
+
+await test('restore: refused once a real question has been sent, and students cannot restore', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'RESTO2', key: KEY }); await h.wait('state');
+  h.send({ t: 'q', question: 'Real one', bg: 'blank' }); await sleep(60);
+  h.send({ t: 'restore', question: 'Old one', bg: 'blank' }); await sleep(80);
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'RESTO2', name: 'Al', bw: 800, bh: 500 });
+  assert.match((await a.wait('joined')).q.question, /Real one/);
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'RESTO3', key: KEY }); await h2.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code: 'RESTO3', name: 'Sy', bw: 800, bh: 500 }); await s.wait('joined');
+  s.send({ t: 'restore', question: 'Hijack', bg: 'blank' }); await sleep(80);
+  const l = client(); await l.ready; l.send({ t: 'join', code: 'RESTO3', name: 'Lu', bw: 800, bh: 500 });
+  assert.ok(!/Hijack/.test((await l.wait('joined')).q.question));
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
