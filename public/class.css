@@ -249,3 +249,8 @@ body.demo .app{height:calc(100vh - var(--dbh,64px));height:calc(100dvh - var(--d
 .mkb.big svg{width:20px;height:20px}
 .ph-rev .mk{display:flex;gap:8px}
 .stu:focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}
+
+.qq{display:flex;flex-direction:column;gap:6px;padding:10px 16px;border-top:1px solid var(--line)}
+.qq .lbl{margin:0}
+.qq textarea{min-height:64px;resize:vertical;font:inherit;padding:8px 10px}
+.qq .b{min-height:44px}

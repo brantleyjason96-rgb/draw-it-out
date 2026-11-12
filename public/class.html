@@ -50,6 +50,11 @@
      <button class="b sq" id="setmenu" aria-label="Manage this set" title="Manage this set"><svg data-i="dots"></svg></button>
     </div>
     <div class="qlist" id="qlist"></div>
+    <form id="qq" class="qq">
+     <label for="qqin" class="lbl">Quick question</label>
+     <textarea id="qqin" class="inp" rows="2" maxlength="300" placeholder="Type a question and send it now"></textarea>
+     <button class="b pri" id="qqsend" type="submit" disabled><svg data-i="send"></svg>Send now</button>
+    </form>
     <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px">
      <button class="b" id="addq" style="flex:1"><svg data-i="plus"></svg>Add question</button>
      <button class="b ter" id="starter" style="flex:1">Starter sets</button>
@@ -568,7 +573,7 @@ function qActions() {
   $('#revbtn').hidden = !isSort;
   const award = !isSort && sp && TM.teams.length;
   $('#sendnext').hidden = isSort || award || cur + 1 >= n || !n;
-  $('#qlbl').textContent = !n ? 'No questions yet' : cur < 0 ? 'No question sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
+  $('#qlbl').textContent = quickOn ? 'Quick question' : !n ? 'No questions yet' : cur < 0 ? 'No question sent yet' : 'Question ' + (cur + 1) + ' of ' + n;
 }
 function openMenuFixed(anchor, items, minw) {
   minw = minw || 190;
@@ -625,8 +630,22 @@ function restoreQ() {
   let p; try { p = JSON.parse(store['do_lastq_' + code] || 'null'); } catch {}
   if (p && typeof p === 'object') ws.send({ t: 'restore', ...p });
 }
+// Quick question: type and send without opening the editor. It is not saved in the set (use Add question for that).
+let quickOn = false;
+function quickSend(text) {
+  const t = String(text || '').trim(); if (!t) return false;
+  demoStep(0);
+  const hadWork = [...S.stu.values()].some(s => (s.objs && s.objs.length) || Object.keys(s.sort || {}).length), prevQ = S.q, prevQuick = quickOn;
+  const html = SK.cleanHtml(t.replace(/\r?\n/g, '<br>'));
+  if (!SK.plain(html).trim()) return false;
+  quickOn = true; try { store['do_day_' + code] = String(Date.now()); } catch (e) { }
+  sendQ({ question: html, bg: 'blank' }); renderSet();
+  if (TO.auto) ws.send({ t: 'timer', secs: TO.auto, freeze: TO.freeze });
+  if (hadWork) toast('Question sent. Everyone\u2019s drawings were cleared.', { label: 'Undo', ms: 15000, f: () => { ws.send({ t: 'undoq' }); quickOn = prevQuick; rememberQ(prevQ); renderSet(); } });
+  return true;
+}
 function go(i) {
-  if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true);
+  if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true); quickOn = false;
   const prev = cur, prevQ = S.q, hadWork = [...S.stu.values()].some(s => (s.objs && s.objs.length) || Object.keys(s.sort || {}).length);
   cur = i; setCurIdx(i); store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet();
   if (TO.auto) ws.send({ t: 'timer', secs: TO.auto, freeze: TO.freeze }); // "start this timer with every new question"
@@ -672,6 +691,9 @@ async function rm(i) {
   qs().splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
   setCurIdx(cur); persistSets(); renderSet();
 }
+$('#qqin').addEventListener('input', () => { $('#qqsend').disabled = !$('#qqin').value.trim(); });
+$('#qqin').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#qq').requestSubmit(); } }); // Enter sends, Shift+Enter makes a new line
+$('#qq').onsubmit = e => { e.preventDefault(); if (quickSend($('#qqin').value)) { $('#qqin').value = ''; $('#qqsend').disabled = true; } };
 $('#setsel').onchange = e => { setActiveId(e.target.value); cur = -1; setCurIdx(-1); renderSet(); };
 function foldRail(on) { $('#rail').classList.toggle('shut', on); try { store.do_qfold = on ? '1' : '0'; } catch (e) { } }
 try { if (store.do_qfold === '1') $('#rail').classList.add('shut'); } catch (e) { }
@@ -1086,6 +1108,10 @@ function phoneQuestions(box) {
   const t = el('div', { style: 'font-family:var(--disp);font-weight:600;font-size:var(--fs-xl);line-height:1.25' }); t.innerHTML = S.q.question || 'Pick a question to send.'; now.append(t);
   if (tot) now.append(el('div', { style: 'display:flex;align-items:center;gap:12px' }, el('div', { style: 'flex:1;height:10px;border-radius:var(--r-pill);background:var(--c-fill);overflow:hidden' }, el('div', { style: 'height:100%;border-radius:var(--r-pill);background:var(--pri);width:' + Math.round(drawn / tot * 100) + '%' })), el('span', { textContent: drawn + ' of ' + tot + (srt ? ' handed in' : ' drawing'), style: 'font-weight:700;font-size:var(--fs-sm)' })));
   pad.append(now);
+  const qf = el('form', { className: 'card', style: 'padding:12px 16px;display:flex;flex-direction:column;gap:8px' }); const qin = el('textarea', { className: 'inp', rows: 2, maxLength: 300, placeholder: 'Type a question and send it now', id: 'pqin' }); qin.setAttribute('aria-label', 'Quick question');
+  const qsb = el('button', { className: 'b pri', type: 'submit', textContent: 'Send quick question', style: 'min-height:52px' });
+  qf.append(el('div', { className: 'lbl', textContent: 'Quick question' }), qin, qsb); qf.onsubmit = ev => { ev.preventDefault(); if (quickSend(qin.value)) { qin.value = ''; } };
+  pad.append(qf);
   if (cur + 1 < n) {
     const nx = qs()[cur + 1], c = el('div', { className: 'card', style: 'padding:14px 16px;display:flex;flex-direction:column;gap:12px' });
     c.append(el('div', { className: 'lbl', textContent: 'Up next · Question ' + (cur + 2) + ' of ' + n }), el('div', { textContent: plain(nx.question).trim() || '(photo only)', style: 'font-size:var(--fs-lg);line-height:1.35;font-weight:500' }),
