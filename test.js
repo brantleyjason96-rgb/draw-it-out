@@ -514,6 +514,28 @@ await test('leaving on purpose removes the student instead of leaving a ghost ca
   st.ws.close();
 });
 
+// ---- Phase 1: safety ----
+await test('safety: a 7 MB frame closes that socket only; the server and other classes keep running', async () => {
+  const bad = client(); await bad.ready;
+  const closed = new Promise(r => bad.ws.on('close', r)); bad.ws.on('error', () => {});
+  bad.ws.send('x'.repeat(7e6));
+  await Promise.race([closed, sleep(3000)]);
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'AFTER', key: KEY }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'join', code: 'AFTER', name: 'Ok', bw: 800, bh: 500 });
+  assert.ok(await c.wait('joined'), 'a second client can still join');
+  assert.equal((await fetch('http://localhost:' + PORT + '/healthz')).status, 200);
+});
+
+
+await test('safety: garbage and hostile messages do not take the server down', async () => {
+  const c = client(); await c.ready;
+  for (const m of ['null', '[]', '"x"', '{"t":"join"}', '{"t":"host","code":{},"key":[]}', '{"t":"q"}', '{"t":"sort","p":5}']) c.ws.send(m);
+  c.send({ t: 'join', code: 'AFTER', name: { toString: 1 }, objs: 'no', bw: {}, bh: [] });
+  await sleep(150);
+  assert.equal((await fetch('http://localhost:' + PORT + '/healthz')).status, 200);
+});
+
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

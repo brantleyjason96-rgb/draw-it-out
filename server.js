@@ -250,13 +250,21 @@ function snapshotPulse(r) {
   if (r.phist.length > 40) r.phist.shift();
 }
 
+// ---- safety net: one bad message or socket must never end every class ----
+process.on('uncaughtException', e => console.error('uncaughtException:', e && e.stack || e));
+process.on('unhandledRejection', e => console.error('unhandledRejection:', e && e.stack || e));
+server.on('clientError', (e, sock) => { try { sock.destroy(); } catch {} });
+
 const wss = new WebSocketServer({ server, maxPayload: 6e6 });
 wss.on('connection', ws => {
   let room = null, role = null, me = null;
   ws.isAlive = true;
   ws.on('pong', () => (ws.isAlive = true));
+  ws.on('error', e => console.error('socket error:', e && e.message)); // e.g. a frame over maxPayload; the socket is closed, the process lives on
 
-  ws.on('message', raw => {
+  ws.on('message', raw => { try { handle(raw); } catch (e) { console.error('message handler:', e && e.stack || e); } });
+
+  function handle(raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (!m || typeof m !== 'object') return;
 
@@ -451,7 +459,7 @@ wss.on('connection', ws => {
         const s = room.students.get(m.id); if (s) { release(room, s, 'Your teacher reset your sign-in. Join again.'); pushScores(room); }
       }
     }
-  });
+  }
 
   ws.on('close', () => {
     if (!room) return;
