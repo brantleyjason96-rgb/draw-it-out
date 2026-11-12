@@ -1032,6 +1032,23 @@ await test('file import: checkSets keeps good questions, skips and explains bad 
   const evil = SK.checkQuestion({ question: '<img src=x onerror=alert(1)>Hi<b onclick=1>there</b>', bg: 'blank' }).q.question; assert.ok(!/onerror|onclick|<img/.test(evil) && !/<b[^>]/.test(evil), 'hostile markup never gets through: ' + evil); // (a tag with attributes is dropped whole, exactly as the server does)
 });
 
+
+// ---- Phase 5: lesson history needs the question's start time from the server ----
+await test('lesson history: the server stamps each question with its start time (and restore keeps the original)', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'QAT1', key: KEY }); const s0 = await h.wait('state'); assert.equal(s0.qat, 0);
+  const t0 = Date.now(); h.send({ t: 'q', question: 'First', bg: 'blank' }); await sleep(80);
+  const q1 = h.last('q'); assert.ok(q1.at >= t0 && q1.at <= Date.now(), 'the teacher gets the start time with the question');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'QAT1', name: 'Quin', bw: 800, bh: 500 }); await a.wait('joined'); const p = client(); await p.ready; p.send({ t: 'watch', code: 'QAT1' }); await p.wait('state');
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'QAT1', key: KEY }); assert.equal((await h2.wait('state')).qat, q1.at, 'a reloaded teacher page learns it');
+  await sleep(30); h.send({ t: 'q', question: 'Second', bg: 'blank' }); await sleep(80); assert.ok(h.last('q').at > q1.at);
+  h.send({ t: 'undoq' }); await sleep(100); assert.equal(h.last('state').qat, q1.at, 'undo brings the old start time back, so the old lesson record is reused');
+  const old = Date.now() - 5000; const r = client(); await r.ready; r.send({ t: 'host', code: 'QAT2', key: KEY }); await r.wait('state');
+  r.send({ t: 'restore', question: 'Back', bg: 'blank', at: old }); await sleep(80); assert.equal(r.last('restore').at, old);
+  const r2 = client(); await r2.ready; r2.send({ t: 'host', code: 'QAT2', key: KEY }); assert.equal((await r2.wait('state')).qat, old);
+  const r3 = client(); await r3.ready; r3.send({ t: 'host', code: 'QAT3', key: KEY }); await r3.wait('state'); r3.send({ t: 'restore', question: 'x', bg: 'blank', at: Date.now() + 1e7 }); await sleep(60);
+  assert.ok(r3.last('restore').at <= Date.now(), 'a start time in the future is not believed');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

@@ -179,7 +179,7 @@ const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
 const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
-const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, qat: r.qat, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -361,7 +361,7 @@ wss.on('connection', (ws, req) => {
         if (ws.hostCode && ws.hostCode !== code) return tx(ws, { t: 'err', m: 'This connection already runs another class.' }); // one hosted class per socket
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
-          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
+          r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, qat: 0, students: new Map(), watchers: new Set(), last: Date.now() };
           if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
@@ -491,30 +491,31 @@ wss.on('connection', (ws, req) => {
         if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
         // keep the question that is ending, with every student's work, for 15 seconds so the teacher can undo a misclick
         clearTimeout(room.undoT);
-        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
+        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, qat: room.qat, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
         room.undoT = setTimeout(() => { room.undo = null; }, UNDO_MS);
         snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
-        room.qn++;
+        room.qn++; room.qat = Date.now(); // when this question started: the teacher page files its lesson record under this time
         // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
         room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; s.pulse = null; });
         setPicks(room, []);
         stopTimer(room); // a new question starts with no timer (the teacher page can start one with the question)
         if (room.frozen) setFreeze(room, false); // new question = work time
         room.students.forEach(s => { tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
-        toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk, phist: room.phist });
+        toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk, phist: room.phist, at: room.qat });
         pushScores(room);
       } else if (m.t === 'restore') { // a teacher page coming back to a brand-new class (the server restarted): put its last question back without touching any drawing
         if (room.qn || room.restored) return;
         let nq, nk = null;
         if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return; nq = c.pub; nk = c.key; } else nq = cleanQ(m);
         room.q = nq; room.sk = nk; room.restored = true;
+        if (Number.isFinite(m.at) && m.at > 1.6e12 && m.at <= Date.now()) room.qat = Math.round(m.at); // the original start time, so the lesson record stays one record
         room.students.forEach(s => tx(s.ws, { t: 'restore', q: room.q }));
-        toPublic(room, { t: 'restore', q: room.q }); toHosts(room, { t: 'restore', q: room.q, sk: room.sk });
+        toPublic(room, { t: 'restore', q: room.q }); toHosts(room, { t: 'restore', q: room.q, sk: room.sk, at: room.qat });
       } else if (m.t === 'undoq') { // put back the question that was just replaced, with everyone's drawings
         const u = room.undo; if (!u) return tx(ws, { t: 'note', m: 'Too late to undo. Send the question again from the list.' });
         clearTimeout(room.undoT); room.undo = null;
-        room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.phist.length = Math.min(room.phist.length, u.phist);
+        room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.qat = u.qat; room.phist.length = Math.min(room.phist.length, u.phist);
         room.students.forEach((s, id) => { const o = u.stu.get(id); if (o) Object.assign(s, { objs: o.objs, sort: o.sort, done: o.done, aw: o.aw, pulse: o.pulse }); });
         broadcastState(room); // teacher screen and projector rebuild from the room
         room.students.forEach(s => tx(s.ws, { ...joinedMsg(room, s), undo: true })); // each student page re-seeds from the server's copy

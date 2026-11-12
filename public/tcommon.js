@@ -106,7 +106,7 @@ const savePeriods = () => { store.do_periods = JSON.stringify(periods); };
 const periodOf = c => periods.find(p => p.code === c);
 function currentCode(want) { const p = periodOf(want) || periodOf(store.do_tcode) || periods[0]; store.do_tcode = p.code; savePeriods(); return p.code; }
 function newPeriod(name) { let c; do c = rnd(); while (periods.some(p => p.code === c)); periods.push({ name: String(name).slice(0, 40), code: c }); savePeriods(); return c; }
-function removePeriod(code) { periods = periods.filter(p => p.code !== code); store.removeItem('do_team_' + code); if (!periods.length) periods = [{ name: 'My class', code: rnd() }]; savePeriods(); store.do_tcode = periods[0].code; }
+function removePeriod(code) { lessonsDeleteFor(code); periods = periods.filter(p => p.code !== code); store.removeItem('do_team_' + code); if (!periods.length) periods = [{ name: 'My class', code: rnd() }]; savePeriods(); store.do_tcode = periods[0].code; }
 const hostKey = () => store.do_tkey || (store.do_tkey = crypto.randomUUID());
 
 // ---- teams, class list and scores, one set per class period ----
@@ -263,8 +263,8 @@ function retag(fromKey, to) {
     const a = swap(st.tags); if (a.length) st.tags = a; else delete st.tags;
     (st.questions || []).forEach(q => { const b = swap(q.tags); if (b.length) q.tags = b; else delete q.tags; });
   });
-  tagHistoryHooks.forEach(f => { try { f(fromKey, toKey || '', label); } catch {} });
-  return persistSets();
+  const hooks = tagHistoryHooks.map(f => { try { return f(fromKey, toKey || '', label); } catch { return null; } });
+  return Promise.all([...hooks, persistSets()]);
 }
 let folders = []; // unit folders for question sets: [{ id, name }]; a set points at one with set.folder
 // A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
@@ -272,7 +272,12 @@ let folders = []; // unit folders for question sets: [{ id, name }]; a set point
 const demoWipe = DEMO
   ? new Promise(ok => { const d = indexedDB.deleteDatabase('doi-demo'); d.onsuccess = d.onerror = d.onblocked = () => ok(); })
   : Promise.resolve();
-const db = demoWipe.then(() => new Promise((ok, no) => { const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 1); o.onupgradeneeded = () => o.result.createObjectStore('k'); o.onsuccess = () => ok(o.result); o.onerror = no; }));
+// version 2 adds the 'lessons' store (lesson history) beside 'k' (sets, folders, tags)
+const db = demoWipe.then(() => new Promise((ok, no) => {
+  const o = indexedDB.open(DEMO ? 'doi-demo' : 'doi', 2);
+  o.onupgradeneeded = () => { const d = o.result; if (!d.objectStoreNames.contains('k')) d.createObjectStore('k'); if (!d.objectStoreNames.contains('lessons')) d.createObjectStore('lessons', { keyPath: 'id' }); };
+  o.onsuccess = () => { o.result.onversionchange = () => o.result.close(); ok(o.result); }; o.onerror = no;
+}));
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
 let saveFailShown = false;
 function saveFail() { if (saveFailShown) return; saveFailShown = true; tell('Use Back up everything to keep a copy of your work.', { title: 'Could not save in this browser' }).then(() => (saveFailShown = false)); }
@@ -288,6 +293,46 @@ function loadSets() {
 }
 const setById = id => sets.find(s => s.id === id);
 const activeSet = () => setById(store.do_active) || sets[0];
+
+// ---- lesson history: one record per question that was asked, kept ONLY in this browser (IndexedDB 'lessons') ----
+// { id: code@startTime, code, className, at, q (plain text), kind, tags (the question's own plus its set's, as they were when it was asked),
+//   nick (students joined with nicknames, so they are matched by nickname),
+//   students: [{ key (class-list id, or the nickname in lower case), name, pulse r|y|g|null, mark got|almost|not|null,
+//                sortRight, sortTotal, sortPlaced (sort questions), missedIdeas }] }
+// Nothing here goes to the server. It is in Back up everything only when the teacher chooses to include class lists (it holds names).
+const LESSON_KEEP_MS = 365 * 864e5;
+const idbDo = (fn) => db.then(d => new Promise(ok => { try { fn(d, ok); } catch { ok(null); } })).catch(() => null);
+const lessonPut = rec => idbDo((d, ok) => { const tx = d.transaction('lessons', 'readwrite'); tx.objectStore('lessons').put(rec); tx.oncomplete = () => ok(true); tx.onerror = tx.onabort = () => ok(false); });
+const lessonsAll = () => idbDo((d, ok) => { const r = d.transaction('lessons').objectStore('lessons').getAll(); r.onsuccess = () => ok(r.result || []); r.onerror = () => ok([]); }).then(x => x || []);
+function lessonsWhere(test, change) { // run over every record: change(rec) returns a new record, or null to delete it
+  return idbDo((d, ok) => {
+    const tx = d.transaction('lessons', 'readwrite'), st = tx.objectStore('lessons'); let n = 0;
+    st.openCursor().onsuccess = e => { const c = e.target.result; if (!c) return; if (test(c.value)) { n++; const r = change(c.value); if (r) c.update(r); else c.delete(); } c.continue(); };
+    tx.oncomplete = () => ok(n); tx.onerror = tx.onabort = () => ok(0);
+  }).then(x => x || 0);
+}
+const lessonsDeleteFor = code => lessonsWhere(r => r.code === code, () => null);
+const lessonsTrim = () => lessonsWhere(r => !(r.at > Date.now() - LESSON_KEEP_MS), () => null); // 12 months, then trimmed
+const cleanLesson = r => {
+  if (!r || typeof r !== 'object' || typeof r.id !== 'string' || r.id.length > 80 || !/^[A-Z0-9]{4,10}$/.test(r.code) || !Number.isFinite(r.at)) return null;
+  const n = v => (Number.isFinite(v) && v >= 0 && v <= 1000 ? v : null), s = (v, k) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, k);
+  const students = (Array.isArray(r.students) ? r.students : []).slice(0, 150).map(x => x && typeof x === 'object' && s(x.key, 40) ? ({
+    key: s(x.key, 40), name: s(x.name, 60), pulse: ['r', 'y', 'g'].includes(x.pulse) ? x.pulse : null, mark: ['got', 'almost', 'not'].includes(x.mark) ? x.mark : null,
+    sortRight: n(x.sortRight), sortTotal: n(x.sortTotal), sortPlaced: n(x.sortPlaced), missedIdeas: (Array.isArray(x.missedIdeas) ? x.missedIdeas : []).slice(0, 24).map(i => s(i, 30)).filter(Boolean),
+  }) : null).filter(Boolean);
+  return { id: r.id, code: r.code, className: s(r.className, 40), at: r.at, q: s(r.q, 200), kind: r.kind === 'sort' ? 'sort' : 'draw', tags: SK.cleanTags(r.tags).tags, nick: !!r.nick, students };
+};
+async function lessonsMerge(list) { // restore: add records that are not already here
+  const have = new Set((await lessonsAll()).map(r => r.id)); let n = 0;
+  for (const raw of Array.isArray(list) ? list : []) { const r = cleanLesson(raw); if (r && !have.has(r.id) && await lessonPut(r)) n++; }
+  return n;
+}
+// renaming, merging or deleting a tag also rewrites saved history, so the dashboard keeps one row per skill
+tagHistoryHooks.push((fromKey, toKey, label) => lessonsWhere(r => (r.tags || []).some(t => SK.tagKey(t) === fromKey), r => {
+  const out = [], seen = new Set();
+  r.tags.forEach(t => { const k = SK.tagKey(t), lab = k === fromKey ? label : t; if (lab && !seen.has(SK.tagKey(lab))) { seen.add(SK.tagKey(lab)); out.push(lab); } });
+  return { ...r, tags: out };
+}));
 
 // ---- folders: group sets by unit ----
 const MAX_FOLDERS = 40;
@@ -504,7 +549,7 @@ async function doBackup() {
   if (pick === null) return;
   const withNames = pick;
   const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, folders, tagLabels, periods, active: store.do_active, teams: {} };
-  if (withNames) periods.forEach(p => { const t = loadTM(p.code); if (t.teams.length || t.roster.length) data.teams[p.code] = t; });
+  if (withNames) { periods.forEach(p => { const t = loadTM(p.code); if (t.teams.length || t.roster.length) data.teams[p.code] = t; }); data.lessons = await lessonsAll(); } // lesson history holds names, so it goes in only with the class lists
   downloadJSON('draw-it-out-backup-' + new Date().toISOString().slice(0, 10) + '.json', data);
   store.do_lastbackup = Date.now();
 }
@@ -521,7 +566,8 @@ async function doRestore(file, after) {
       periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;
       if (d.teams && d.teams[x.code]) saveTM(x.code, cleanTM(d.teams[x.code]));
     });
-    await persistSets(); savePeriods(); await tell(ns + ' question set(s) and ' + np + ' class period(s) added.', { title: 'Backup restored' }); after && after();
+    const nl = await lessonsMerge(d.lessons);
+    await persistSets(); savePeriods(); await tell(ns + ' question set(s) and ' + np + ' class period(s) added' + (nl ? ', and ' + nl + ' saved lesson' + (nl === 1 ? '' : 's') : '') + '.', { title: 'Backup restored' }); after && after();
   } catch { tell('Choose a file made with Back up everything.', { title: 'That file is not a Draw It Out backup' }); }
 }
 

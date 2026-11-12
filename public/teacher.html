@@ -326,8 +326,12 @@ function classMenu(p, card, e) {
   add('Team names & icons', () => goTeams(p.code));
   add('Copy teams to…', () => teamsPickMenu(p.code, card, 'top:52px;right:12px', 'to'));
   add('Rename', async () => { const v = ((await askText('Class name', p.name, { title: 'Rename this class', required: 'Type a class name', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
+  add('Delete lesson history', async () => {
+    if (!await ask('The saved results for this class (who answered what, confidence, marks) are deleted from this computer. Teams, the class list and question sets are kept.', { title: 'Delete the lesson history for "' + p.name + '"?', ok: 'Delete history', cancel: 'Keep history', danger: true })) return;
+    const n = await lessonsDeleteFor(p.code); toast(n ? 'Deleted ' + n + ' saved lesson' + (n === 1 ? '' : 's') + '.' : 'There was no saved history.');
+  });
   add('Remove class', async () => {
-    if (!await ask('Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''), { title: 'Remove "' + p.name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return;
+    if (!await ask('Its teams, class list, scores and lesson history on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''), { title: 'Remove "' + p.name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return;
     if ((live[p.code] || {}).live) hostSend(p.code, [{ t: 'reset' }]);
     removePeriod(p.code); renderClasses();
   }, 'danger');

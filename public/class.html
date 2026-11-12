@@ -190,7 +190,8 @@ const sp = new URLSearchParams(location.search);
   const h = new URLSearchParams(location.hash.slice(1)), c = (sp.get('code') || '').toUpperCase(), k = h.get('k');
   if (DEMO || !k || !/^[A-Z0-9]{4,10}$/.test(c) || k.length < 8 || k.length > 80) return;
   if (!periodOf(c)) { periods.push({ name: String(h.get('n') || 'Class').slice(0, 40), code: c }); savePeriods(); }
-  store['do_key_' + c] = k; history.replaceState(null, '', '/class?code=' + c);
+  store['do_key_' + c] = k; store['do_remote_' + c] = '1'; // a paired phone is a remote: lesson history stays on the computer
+  history.replaceState(null, '', '/class?code=' + c);
 })();
 let code = currentCode((sp.get('code') || '').toUpperCase());
 if (!DEMO && sp.get('code') !== code) history.replaceState(null, '', '/class?code=' + code);
@@ -269,7 +270,7 @@ function onmsg(m) {
       }
       break;
     case 'state': {
-      TK.set(m.timer); $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
+      TK.set(m.timer); startLesson(m.qat, m.q); $('#grid').innerHTML = ''; S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.simple = !!m.simple; S.sk = m.sk || null; S.revealed = !!m.revealed; S.projSum = !!m.sres; S.frozen = !!m.frozen; S.phist = Array.isArray(m.phist) ? m.phist : []; setQ(m.q);
       m.students.forEach(addStu);
       // A class that is already running is the truth (a second device, like a phone, must not overwrite it).
       // Only an empty room is seeded from this browser's saved teams and class list.
@@ -280,7 +281,7 @@ function onmsg(m) {
       if (m.fresh && !DEMO) restoreQ(); // a brand-new class: put back the question this page last sent
       ui(); break;
     }
-    case 'restore': setQ(m.q); S.sk = m.sk || null; SR.reset(); ui(); break;
+    case 'restore': startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; SR.reset(); ui(); break;
     case 'score': // team names/icons are always adopted (a rename must show here too); scores wait while the sheet is open
       TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap;
       if (editing()) TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
@@ -296,7 +297,7 @@ function onmsg(m) {
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; subSoon(); } break;
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; subSoon(); } break;
-    case 'q': setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
+    case 'q': saveLesson(); startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
       S.stu.forEach(x => { x.objs = []; x.sort = {}; x.done = false; x.aw = false; x.pulse = null; x.dirty = true; });
       // the server has already taken everyone off the projector; do the same here so no card stays outlined
       S.picks = []; S.spot = null; S.frozen = false;
@@ -410,6 +411,35 @@ function freezeMenu(btn) {
     { t: 'Freeze for 2 minutes', f: () => ws.send({ t: 'freeze', on: true, secs: 120 }) },
   ], 'top:52px;right:0;min-width:280px');
 }
+// ---- lesson history: a record of each question is kept in THIS browser (see tcommon.js) ----
+// The record is filed under the time the question started (the server sends it), so every save of the same question is one record.
+let qAt = 0, qTags = [];
+function tagsFor(q) { // the question's tags as they are in the sets right now: its own plus its set's (the server never sees tags)
+  const want = String(q && q.question || ''), sets0 = [activeSet(), ...sets.filter(x => x !== activeSet())].filter(Boolean);
+  for (const st of sets0) { const f = st.questions.find(x => x.question === want && (x.kind === 'sort') === (q.kind === 'sort')); if (f) return SK.tagsOf(f, st); }
+  return [];
+}
+function startLesson(at, q) { qAt = Number.isFinite(at) && at > 0 ? at : (qAt || 0); qTags = q && (q.question || q.img) ? (sets.length ? tagsFor(q) : null) : []; } // null = the sets have not loaded yet (a page reload): looked up when the record is saved
+function lessonRecord() {
+  const q = S.q; if (DEMO || store['do_remote_' + code] || !qAt || !q || !(q.question || q.img)) return null;
+  const sort = q.kind === 'sort', sk = S.sk, cards = sort && q.sort ? q.sort.cards : [];
+  if (sort && !sk) return null; // the answer key comes with the question; without it there is nothing to score
+  const students = [...S.stu.values()].map(s => {
+    const e = rosterOf(s), key = e ? e.rid : String(s.name || '').toLowerCase().trim(), name = e ? (e.first + ' ' + e.last).replace(/\s+/g, ' ').trim() : s.name;
+    const mine = s.sort || {}, wrong = cards.filter(c => mine[c.id] !== (sk && sk.lane[c.id]));
+    const r = { key, name, pulse: pulseOf(s.pulse) ? s.pulse : null, mark: (S.marks || {})[s.id] || null, sortRight: null, sortTotal: null, sortPlaced: null, missedIdeas: [] };
+    if (sort) { r.sortPlaced = cards.filter(c => mine[c.id]).length; r.sortTotal = cards.length; r.sortRight = cards.length - wrong.length; r.missedIdeas = [...new Set(wrong.map(c => sk.idea[c.id]).filter(Boolean))]; }
+    const worked = sort ? r.sortPlaced > 0 : !!(s.objs && s.objs.length);
+    return worked || r.pulse || r.mark ? r : null;
+  }).filter(Boolean);
+  if (!students.length) return null;
+  return { id: code + '@' + qAt, code, className: per() ? per().name : '', at: qAt, q: plain(q.question || '').replace(/\s+/g, ' ').trim().slice(0, 200) || (sort ? 'Sort question' : 'Picture question'), kind: sort ? 'sort' : 'draw', tags: qTags || tagsFor(q), nick: !TM.roster.length, students };
+}
+function saveLesson() { const r = lessonRecord(); if (r) lessonPut(r); }
+addEventListener('pagehide', saveLesson);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveLesson(); });
+setInterval(saveLesson, 60000); // and once a minute, so a crash loses at most a minute
+lessonsTrim();
 // ---- class timer: the Timer button, its menu, and the two per-class options ----
 // freeze: freeze the class at zero. auto: seconds of a timer to start with every new question (0 = off). Both are remembered per class.
 let TO = { freeze: false, auto: 0, last: 120 }; try { Object.assign(TO, JSON.parse(store['do_timer_' + code] || '{}')); } catch {}
@@ -668,8 +698,9 @@ $('#more').onclick = e => {
     { t: 'Set up teams', sub: 'Teams, icons, class list and points', f: () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); } },
     { t: 'Rename this class', f: renameClass },
     '-',
-    { t: 'Clear class (send students back to join)', danger: true, f: async () => { if (await ask('Teams, the class list and scores are kept. Save the PNG first if you want their drawings.', { title: 'Send everyone in "' + per().name + '" back to the join screen?', ok: 'Clear class', cancel: 'Keep class', danger: true })) ws.send({ t: 'reset' }); } },
-    { t: 'Remove this class', danger: true, f: async () => { if (!await ask('Its teams, class list and scores on this computer will be deleted, and students are sent back to the join screen.', { title: 'Remove "' + per().name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
+    { t: 'Clear class (send students back to join)', danger: true, f: async () => { if (await ask('Teams, the class list and scores are kept. Save the PNG first if you want their drawings. The lesson is kept in your lesson history.', { title: 'Send everyone in "' + per().name + '" back to the join screen?', ok: 'Clear class', cancel: 'Keep class', danger: true })) { saveLesson(); ws.send({ t: 'reset' }); } } },
+    { t: 'Delete this class\'s lesson history', danger: true, f: async () => { if (!await ask('The saved results for this class (who answered what, confidence, marks) are deleted from this computer. The lesson on screen is kept.', { title: 'Delete the lesson history for "' + per().name + '"?', ok: 'Delete history', cancel: 'Keep history', danger: true })) return; const n = await lessonsDeleteFor(code); toast(n ? 'Deleted ' + n + ' saved lesson' + (n === 1 ? '' : 's') + '.' : 'There was no saved history.'); } },
+    { t: 'Remove this class', danger: true, f: async () => { if (!await ask('Its teams, class list, scores and lesson history on this computer will be deleted, and students are sent back to the join screen.', { title: 'Remove "' + per().name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return; ws.send({ t: 'reset' }); removePeriod(code); setTimeout(() => (location.href = '/teacher'), 300); } },
   ], 'top:52px;right:0;width:370px');
 };
 $('#setmenu').onclick = e => {
