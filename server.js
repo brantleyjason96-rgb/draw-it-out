@@ -128,7 +128,7 @@ function fbOf(r, s) {
   return { t: 'fb', ok, where };
 }
 // everything a student's page needs to (re)build itself: used on join, on rejoin, and when the teacher undoes a question
-const joinedMsg = (r, s) => ({ t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: [...r.watchers].some(w => w.isHost && w.readyState === 1), teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+const joinedMsg = (r, s) => ({ t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, timer: timerView(r), host: [...r.watchers].some(w => w.isHost && w.readyState === 1), teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
 const sendFb = (r, s) => { const f = fbOf(r, s); if (f) tx(s.ws, f); };
 // class-wide numbers for the projector: % right per card and per idea (no names, no key)
 function sortSummary(r) {
@@ -179,7 +179,7 @@ const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
 const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
-const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
+const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
 function fixAwards(r) {
   r.students.forEach(s => {
@@ -254,6 +254,47 @@ function setFreeze(r, on, secs) {
   const s = r.frozen && Number.isFinite(secs) ? Math.min(900, Math.max(5, Math.round(secs))) : 0;
   if (s) r.fz = setTimeout(() => { r.frozen = false; r.fz = null; pushFreeze(r); }, s * 1000); // a timed freeze lets go on its own
   pushFreeze(r);
+}
+// ---- class timer (modelled on freeze) ----
+// Times travel as milliseconds REMAINING, never as a clock time, so a Chromebook with a wrong clock still shows the right number;
+// every page counts down on its own from the moment the message arrived.
+const MIN_TIMER_S = 5, MAX_TIMER_S = 3600;
+const timerLeft = r => (!r.timer ? 0 : r.timer.paused ? r.timer.left : Math.max(0, r.timer.endsAt - Date.now()));
+const timerView = r => (r.timer ? { left: timerLeft(r), paused: !!r.timer.paused, freeze: !!r.timer.freeze } : null);
+function pushTimer(r, o) {
+  const m = { t: 'timer', ...(o || timerView(r) || { off: true }) };
+  toWatchers(r, m); r.students.forEach(s => tx(s.ws, m));
+}
+function armTimer(r) {
+  clearTimeout(r.tm); r.tm = null;
+  if (r.timer && !r.timer.paused) r.tm = setTimeout(() => timerDone(r), timerLeft(r));
+}
+function timerDone(r) { // sent once; the timer is then gone. A running timer keeps going through a freeze.
+  const fz = r.timer && r.timer.freeze; r.timer = null; clearTimeout(r.tm); r.tm = null;
+  pushTimer(r, { done: true });
+  if (fz) setFreeze(r, true); // the teacher chose "freeze the class when time is up"
+}
+function stopTimer(r) { if (!r.timer) return; clearTimeout(r.tm); r.tm = null; r.timer = null; pushTimer(r); }
+function hostTimer(r, m) {
+  if (m.off === true) return stopTimer(r);
+  if (typeof m.pause === 'boolean') {
+    if (!r.timer) return;
+    if (m.pause && !r.timer.paused) { r.timer.left = timerLeft(r); r.timer.paused = true; clearTimeout(r.tm); r.tm = null; }
+    else if (!m.pause && r.timer.paused) { r.timer.endsAt = Date.now() + r.timer.left; r.timer.paused = false; armTimer(r); }
+    return pushTimer(r);
+  }
+  if (m.add !== undefined) {
+    const ms = Math.round(Number(m.add)) * 1000;
+    if (!r.timer || !Number.isFinite(ms) || ms < 1000 || ms > MAX_TIMER_S * 1000) return;
+    if (r.timer.paused) r.timer.left = Math.min(MAX_TIMER_S * 1000, r.timer.left + ms);
+    else r.timer.endsAt = Math.min(Date.now() + MAX_TIMER_S * 1000, r.timer.endsAt + ms);
+    armTimer(r); return pushTimer(r);
+  }
+  const secs = Math.round(Number(m.secs));
+  if (!Number.isFinite(secs) || secs < MIN_TIMER_S || secs > MAX_TIMER_S) return;
+  clearTimeout(r.tm);
+  r.timer = { endsAt: Date.now() + secs * 1000, left: secs * 1000, paused: false, freeze: m.freeze === true };
+  armTimer(r); pushTimer(r);
 }
 // ---- confidence history, for the report at the end of the lesson ----
 const plainQ = q => (String(q.question || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)
@@ -458,6 +499,7 @@ wss.on('connection', (ws, req) => {
         // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
         room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; s.pulse = null; });
         setPicks(room, []);
+        stopTimer(room); // a new question starts with no timer (the teacher page can start one with the question)
         if (room.frozen) setFreeze(room, false); // new question = work time
         room.students.forEach(s => { tx(s.ws, { t: 'q', q: room.q }); lockMsg(room, s); }); // a new question: every student can earn a point again
         toPublic(room, { t: 'q', q: room.q }); toHosts(room, { t: 'q', q: room.q, sk: room.sk, phist: room.phist });
@@ -483,12 +525,14 @@ wss.on('connection', (ws, req) => {
         toWatchers(room, { t: 'mode', simple: room.simple });
       } else if (m.t === 'spot') { // up to 3 drawings side by side; ids [] clears the projector
         setPicks(room, m.ids !== undefined ? m.ids : m.id, m.hide);
+      } else if (m.t === 'timer') { // the class countdown: start, add time, pause or resume, stop
+        hostTimer(room, m);
       } else if (m.t === 'freeze') { // stop everything so the teacher has the whole class's attention
         setFreeze(room, m.on, m.secs);
       } else if (m.t === 'reset') { // "Clear class": send everyone back to the join screen (teams, class list and scores are kept)
         room.students.forEach(s => tx(s.ws, { t: 'kicked' }));
         room.undo = null; room.students.clear(); room.picks = []; room.spot = null; room.phist = []; room.roster.forEach(e => (e.sid = null));
-        setFreeze(room, false);
+        setFreeze(room, false); stopTimer(room);
         broadcastState(room);
       } else if (m.t === 'setup') { // teams, class list (initials only) and point rule, all replaced at once
         applySetup(room, m); pushScores(room);
@@ -551,7 +595,7 @@ setInterval(() => {
   rooms.forEach((r, code) => {
     const live = r.watchers.size || [...r.students.values()].some(s => s.ws);
     if (live) r.last = Date.now();
-    else if (Date.now() - r.last > (r.students.size ? ROOM_WITH_STUDENTS_MS : ROOM_EMPTY_MS)) { clearTimeout(r.fz); clearTimeout(r.undoT); rooms.delete(code); }
+    else if (Date.now() - r.last > (r.students.size ? ROOM_WITH_STUDENTS_MS : ROOM_EMPTY_MS)) { clearTimeout(r.fz); clearTimeout(r.undoT); clearTimeout(r.tm); rooms.delete(code); }
   });
 }, SWEEP_MS);
 

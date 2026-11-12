@@ -772,6 +772,89 @@ await test('routes: /Teacher, /teacher/, /join and /favicon.ico work; unknown pa
   assert.equal((await get('/healthz')).b, 'ok');
 });
 
+
+// ---- Phase 3: class timer ----
+await test('timer: start sends milliseconds remaining to everyone, and a late joiner gets what is left', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME1', key: KEY }); const st0 = await h.wait('state'); assert.equal(st0.timer, null);
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TIME1', name: 'Tia', bw: 800, bh: 500 }); await a.wait('joined');
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'TIME1' }); await p.wait('state');
+  h.clear(); a.clear(); p.clear(); h.send({ t: 'timer', secs: 120 }); await sleep(100);
+  for (const c of [h, a, p]) { const m = c.last('timer'); assert.ok(m.left > 118000 && m.left <= 120000, 'left=' + m.left); assert.equal(m.paused, false); assert.equal(m.at, undefined, 'no clock time is sent'); assert.ok(!('endsAt' in m)); }
+  await sleep(1100);
+  const late = client(); await late.ready; late.send({ t: 'join', code: 'TIME1', name: 'Lou', bw: 800, bh: 500 });
+  const j = await late.wait('joined'); assert.ok(j.timer.left > 116000 && j.timer.left < 119000, 'late joiner sees the time left (' + j.timer.left + ')');
+  const w = client(); await w.ready; w.send({ t: 'watch', code: 'TIME1' }); const s = await w.wait('state'); assert.ok(s.timer.left < 119000 && s.timer.left > 116000, 'a refreshed projector or teacher page too');
+});
+
+await test('timer: pause holds the value, resume continues, add extends, stop clears', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME2', key: KEY }); await h.wait('state');
+  h.send({ t: 'timer', secs: 60 }); await sleep(1100);
+  h.clear(); h.send({ t: 'timer', pause: true }); await sleep(80);
+  const held = h.last('timer'); assert.equal(held.paused, true); assert.ok(held.left < 59500 && held.left > 57500, 'left=' + held.left);
+  await sleep(1200);
+  const w = client(); await w.ready; w.send({ t: 'watch', code: 'TIME2' }); const s = await w.wait('state');
+  assert.equal(s.timer.paused, true); assert.equal(s.timer.left, held.left, 'a paused timer does not move');
+  h.clear(); h.send({ t: 'timer', add: 60 }); await sleep(80);
+  assert.equal(h.last('timer').left, held.left + 60000, 'add extends a paused timer'); assert.equal(h.last('timer').paused, true);
+  h.send({ t: 'timer', pause: false }); await sleep(1100);
+  const r = client(); await r.ready; r.send({ t: 'watch', code: 'TIME2' }); const s2 = await r.wait('state');
+  assert.equal(s2.timer.paused, false); assert.ok(s2.timer.left < held.left + 60000 - 900 && s2.timer.left > held.left + 60000 - 2500, 'running again: ' + s2.timer.left);
+  h.clear(); h.send({ t: 'timer', add: 30 }); await sleep(80);
+  assert.ok(h.last('timer').left > s2.timer.left + 28000, 'add extends a running timer');
+  h.send({ t: 'timer', add: 99999 }); h.send({ t: 'timer', add: -5 }); h.send({ t: 'timer', add: 'x' }); await sleep(80);
+  assert.ok(h.last('timer').left <= 3600000, 'nonsense or huge additions are ignored or capped');
+  h.clear(); h.send({ t: 'timer', off: true }); await sleep(80); assert.equal(h.last('timer').off, true);
+  h.clear(); h.send({ t: 'timer', pause: true }); h.send({ t: 'timer', add: 10 }); await sleep(80); assert.equal(h.last('timer'), undefined, 'nothing to pause or extend');
+});
+
+await test('timer: out-of-range starts are refused (5 s to 60 min)', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME3', key: KEY }); await h.wait('state'); h.clear();
+  for (const secs of [0, 4, 3601, -1, 'abc', null, NaN, {}]) h.send({ t: 'timer', secs });
+  await sleep(100); assert.equal(h.last('timer'), undefined);
+  h.send({ t: 'timer', secs: 5 }); h.send({ t: 'timer', secs: 3600 }); await sleep(100);
+  assert.ok(h.last('timer').left > 3598000, 'the last valid start wins');
+});
+
+await test('timer: a new question and Clear class stop it, and a freeze does not', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME4', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TIME4', name: 'Tom', bw: 800, bh: 500 }); await a.wait('joined');
+  h.send({ t: 'timer', secs: 90 }); await sleep(60); a.clear();
+  h.send({ t: 'freeze', on: true }); await sleep(80);
+  const w = client(); await w.ready; w.send({ t: 'watch', code: 'TIME4' }); assert.ok((await w.wait('state')).timer, 'the timer keeps running during a freeze');
+  h.send({ t: 'q', question: 'Next', bg: 'blank' }); await sleep(100);
+  assert.equal(a.last('timer').off, true, 'students are told it stopped');
+  const w2 = client(); await w2.ready; w2.send({ t: 'watch', code: 'TIME4' }); assert.equal((await w2.wait('state')).timer, null);
+  h.send({ t: 'timer', secs: 90 }); await sleep(60); h.send({ t: 'reset' }); await sleep(100);
+  const w3 = client(); await w3.ready; w3.send({ t: 'watch', code: 'TIME4' }); assert.equal((await w3.wait('state')).timer, null, 'Clear class stops it');
+});
+
+await test('timer: students and watchers cannot send timer messages', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME5', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TIME5', name: 'Uma', bw: 800, bh: 500 }); await a.wait('joined');
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'TIME5' }); await p.wait('state'); h.clear();
+  a.send({ t: 'timer', secs: 30 }); p.send({ t: 'timer', secs: 30 }); await sleep(100);
+  assert.equal(h.last('timer'), undefined);
+  h.send({ t: 'timer', secs: 100 }); await sleep(60); h.clear();
+  a.send({ t: 'timer', off: true }); a.send({ t: 'timer', add: 600 }); a.send({ t: 'timer', pause: true }); p.send({ t: 'timer', off: true }); await sleep(100);
+  assert.equal(h.last('timer'), undefined); const w = client(); await w.ready; w.send({ t: 'watch', code: 'TIME5' });
+  const s = await w.wait('state'); assert.equal(s.timer.paused, false); assert.ok(s.timer.left < 100000);
+});
+
+await test('timer: at zero everyone gets done once; the freeze option freezes the class', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TIME6', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TIME6', name: 'Val', bw: 800, bh: 500 }); await a.wait('joined');
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'TIME6' }); await p.wait('state'); h.clear(); a.clear(); p.clear();
+  h.send({ t: 'timer', secs: 5, freeze: true }); await sleep(5600);
+  for (const c of [h, a, p]) assert.equal(c.got.filter(m => m.t === 'timer' && m.done).length, 1, 'exactly one done');
+  assert.equal(a.last('freeze').on, true, 'the class froze when time was up');
+  const w = client(); await w.ready; w.send({ t: 'watch', code: 'TIME6' }); assert.equal((await w.wait('state')).timer, null, 'no timer left after done');
+  h.send({ t: 'freeze', on: false }); await sleep(60);
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code: 'TIME7', key: KEY }); await h2.wait('state');
+  const b = client(); await b.ready; b.send({ t: 'join', code: 'TIME7', name: 'Wes', bw: 800, bh: 500 }); await b.wait('joined');
+  h2.send({ t: 'timer', secs: 5 }); await sleep(5600);
+  assert.equal(b.got.filter(m => m.t === 'timer' && m.done).length, 1); assert.equal(b.last('freeze'), undefined, 'without the option, nothing freezes and drawing stays open');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
