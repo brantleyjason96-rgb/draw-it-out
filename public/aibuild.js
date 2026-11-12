@@ -107,7 +107,44 @@ const AIB = (() => {
     return fs;
   }
 
-  function open() {
+  // Check a pasted reply. -> { error } or [{ name, tags, rows:[{ n, q, problems, notes, on }] }]
+  function check(text) {
+    const p = SK.parseSets(text); if (p.error) return { error: p.error };
+    return p.sets.map(s => ({
+      name: s.name, tags: s.tags,
+      rows: s.questions.slice(0, SK.MAX_QS).map((raw, i) => { const c = SK.checkQuestion(raw); return { n: i + 1, q: c.q, problems: c.problems, notes: c.notes, on: !!c.q }; }),
+      extra: Math.max(0, s.questions.length - SK.MAX_QS),
+    }));
+  }
+  // The preview list: one row per question, problems in plain words, a tick box on each good one.
+  function paint(sets, onChange) {
+    const out = [], good = sets.reduce((a, s) => a + s.rows.filter(r => r.q).length, 0), bad = sets.reduce((a, s) => a + s.rows.filter(r => !r.q).length, 0);
+    out.push(el('p', { className: 'aibsum', textContent: good + (good === 1 ? ' question looks' : ' questions look') + ' good' + (bad ? ', and ' + bad + (bad === 1 ? ' needs' : ' need') + ' fixing. You can add the good ones now and skip the rest.' : '. Untick any you do not want.') }));
+    sets.forEach((s, si) => {
+      const nm = el('input', { type: 'text', className: 'aibin', value: s.name, maxLength: 60, id: 'aibsn' + si }); nm.oninput = () => { s.name = nm.value.trim() || 'AI set'; };
+      out.push(el('div', { className: 'aibf' }, el('label', { htmlFor: 'aibsn' + si, textContent: sets.length > 1 ? 'Set ' + (si + 1) + ' name' : 'Set name' }), nm));
+      if (s.tags.length) out.push(el('div', { className: 'tgrow' }, el('span', { className: 'mut', textContent: 'Tags on the whole set: ' }), ...s.tags.map(t => el('span', { className: 'tg ro', textContent: t }))));
+      const ul = el('ul', { className: 'aiblist' });
+      s.rows.forEach(r => {
+        const id = 'aibq' + si + '-' + r.n, cb = el('input', { type: 'checkbox', id, checked: r.on, disabled: !r.q }); cb.onchange = () => { r.on = cb.checked; onChange(); };
+        const kind = r.q ? (r.q.kind === 'sort' ? 'Sort' : 'Draw') : '';
+        const txt = r.q ? SK.plain(r.q.question) : '';
+        const li = el('li', { className: 'aibrow' + (r.q ? '' : ' bad') },
+          cb, el('div', { className: 'aibrowb' },
+            el('label', { htmlFor: id, className: 'aibrowt' }, el('b', { textContent: 'Question ' + r.n }), ...(kind ? [el('span', { className: 'chip', textContent: kind })] : []), ...(txt ? [el('span', { className: 'aibq', textContent: ' ' + txt.slice(0, 160) + (txt.length > 160 ? '…' : '') })] : [])),
+            ...(r.q && r.q.kind === 'sort' ? [el('small', { className: 'mut', textContent: r.q.sort.lanes.map(l => l.name).join(' · ') + ' — ' + r.q.sort.cards.length + ' cards' })] : []),
+            ...(r.q && r.q.tags ? [el('div', { className: 'tgrow' }, ...r.q.tags.map(t => el('span', { className: 'tg ro', textContent: t })))] : []),
+            ...r.problems.map(m => el('div', { className: 'aibprob' }, icoEl('x', 'sm'), ' Question ' + r.n + ': ' + m + '.')),
+            ...r.notes.map(m => el('div', { className: 'aibfix', textContent: 'Fixed: ' + m + '.' }))));
+        ul.append(li);
+      });
+      out.push(ul);
+      if (s.extra) out.push(el('p', { className: 'aibbad', textContent: s.extra + ' more questions were left out: a set holds at most ' + SK.MAX_QS + '.' }));
+    });
+    return out;
+  }
+
+  function open(onDone) {
     document.getElementById('aibdlg')?.remove();
     const o = { ...DEFAULTS, ...saved, goal: '', tags: [] };
     const d = el('dialog', { id: 'aibdlg', className: 'aib' }); d.setAttribute('aria-labelledby', 'aibh');
@@ -147,7 +184,7 @@ const AIB = (() => {
       if (!o.goal.trim()) { goal.focus(); copyNote.textContent = 'Type the learning goal first.'; return; }
       try { await navigator.clipboard.writeText(out.value); copyNote.textContent = 'Copied. Paste it into your AI tool.'; } catch { showCopy('Copy the prompt', out.value); }
     };
-    const next = el('button', { type: 'button', className: 'b', id: 'aibnext', textContent: 'Next: paste the answer', hidden: true }); // step 2 comes in the next commit
+    const next = el('button', { type: 'button', className: 'b', id: 'aibnext', textContent: 'Next: paste the answer' });
     s1.append(typeFs, field('Learning goal or standard', 'aibgoal', goal, 'What should students show they understand?'),
       field('What does each question assess? (tags)', 'aibtagsi', tags, 'Every question gets exactly these tags, so the set lands on your dashboard already labelled. Optional.'),
       el('div', { className: 'aibtwo' }, field('Grade', 'aibgrade', grade), field('Number of questions', 'aibn', num)),
@@ -155,11 +192,40 @@ const AIB = (() => {
       el('div', { className: 'aibf' }, el('label', { htmlFor: 'aibout', textContent: 'Your prompt' }), el('small', { textContent: 'Copy this into ChatGPT, Gemini, Claude or any AI tool you already use.' }), out),
       el('div', { className: 'aibbtns' }, copyBtn, copyNote, el('span', { style: 'flex:1' }), next));
 
-    body.append(s1);
+    // ---- step 2: paste the answer, check it, import the good questions
+    const s2 = el('div', { className: 'aibp', hidden: true });
+    const paste = el('textarea', { id: 'aibpaste', rows: 9, className: 'aibin', placeholder: 'Paste the AI\'s whole reply here. A code block, or sentences around the JSON, are fine.' }); paste.setAttribute('aria-label', 'Paste the AI\'s reply here');
+    const results = el('div', { className: 'aibres', id: 'aibres', role: 'region', ariaLabel: 'Check results' }); results.setAttribute('aria-live', 'polite');
+    const checkBtn = el('button', { type: 'button', className: 'b pri', id: 'aibcheck', textContent: 'Check it' });
+    const back = el('button', { type: 'button', className: 'b', id: 'aibback', textContent: 'Back to the prompt' });
+    const addBtn = el('button', { type: 'button', className: 'b pri', id: 'aibadd', textContent: 'Add to my sets', hidden: true });
+    let checked = null; // [{ name, tags, rows:[{ n, q, problems, notes, on }] }]
+    const nSel = () => checked ? checked.reduce((a, s) => a + s.rows.filter(r => r.q && r.on).length, 0) : 0;
+    const syncAdd = () => { const n = nSel(); addBtn.hidden = !checked; addBtn.disabled = !n; addBtn.textContent = n ? 'Add ' + n + ' question' + (n === 1 ? '' : 's') + ' to my sets' : 'Nothing to add'; };
+    function show() { results.replaceChildren(...paint(checked, syncAdd)); syncAdd(); }
+    checkBtn.onclick = () => {
+      results.replaceChildren(); checked = null;
+      if (!paste.value.trim()) { results.append(el('p', { className: 'aibbad', role: 'alert', textContent: 'Paste the AI\'s reply first.' })); paste.focus(); return syncAdd(); }
+      checked = check(paste.value);
+      if (checked.error) { results.append(el('p', { className: 'aibbad', role: 'alert', textContent: checked.error })); checked = null; return syncAdd(); }
+      show();
+    };
+    addBtn.onclick = () => {
+      const made = [];
+      checked.forEach(s => { const qs = s.rows.filter(r => r.q && r.on).map(r => r.q); if (qs.length) made.push(addSet(s.name, qs, undefined, s.tags)); });
+      const n = made.reduce((a, s) => a + s.questions.length, 0);
+      d.close(); toast('Added ' + (made.length === 1 ? '"' + made[0].name + '"' : made.length + ' sets') + ' with ' + n + ' question' + (n === 1 ? '' : 's') + '.'); onDone && onDone(made);
+    };
+    next.onclick = () => { s1.hidden = true; s2.hidden = false; step.textContent = 'Step 2 of 2: paste the answer'; paste.focus(); };
+    back.onclick = () => { s2.hidden = true; s1.hidden = false; step.textContent = 'Step 1 of 2: build the prompt'; goal.focus(); };
+    s2.append(el('div', { className: 'aibf' }, el('label', { htmlFor: 'aibpaste', textContent: 'The AI\'s answer' }), el('small', { textContent: 'Copy the whole reply from your AI tool and paste it here. Nothing is added until you press the Add button.' }), paste),
+      el('div', { className: 'aibbtns' }, back, el('span', { style: 'flex:1' }), checkBtn), results, el('div', { className: 'aibbtns' }, el('span', { style: 'flex:1' }), addBtn));
+
+    body.append(s1, s2);
     d.append(head, step, body);
     document.body.append(d); d.showModal();
     refresh(); goal.focus();
     return { d, body, step, s1, next, o, refresh };
   }
-  return { buildPrompt, examples, clampOpts, open, GRADES, DEFAULTS };
+  return { buildPrompt, examples, clampOpts, open, check, GRADES, DEFAULTS };
 })();

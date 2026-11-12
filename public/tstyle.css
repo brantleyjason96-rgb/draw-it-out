@@ -146,3 +146,17 @@ dialog.aib textarea:focus-visible,dialog.aib select:focus-visible{outline:3px so
 .aibbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .aibnote{color:var(--c-good-strong,#0A5A36);font-weight:700}
 @media(max-width:560px){.aibtwo,.aibsort{grid-template-columns:1fr}}
+
+.aibres{display:flex;flex-direction:column;gap:12px}
+.aibsum{margin:0;font-weight:800}
+.aibbad{margin:0;color:var(--c-bad,#B3261E);font-weight:700}
+.aiblist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aibrow{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:2px solid var(--c-line,#E1E6EB);border-radius:var(--r-md,10px)}
+.aibrow.bad{border-color:var(--c-bad-line,#E3B1AD);background:var(--c-bad-soft,#FBE4E1)}
+.aibrow input[type=checkbox]{width:20px;height:20px;margin-top:3px;flex:none}
+.aibrowb{display:flex;flex-direction:column;gap:3px;min-width:0}
+.aibrowt{display:block;cursor:pointer}
+.aibrowt .chip{margin-left:8px}
+.aibprob{color:var(--c-bad-strong,#8C1D18);font-weight:700;display:flex;gap:4px;align-items:flex-start}
+.aibprob svg{flex:none;margin-top:3px}
+.aibfix{color:var(--c-warn-strong,#5E4300);font-size:var(--fs-sm,14px)}

@@ -953,7 +953,7 @@ await test('privacy: tags never reach the server, students or the projector', as
 
 
 // ---- the AI prompt (public/aibuild.js is loaded here without a browser: only buildPrompt and examples are used) ----
-const AIB = new Function('SK', 'el', 'tagInput', 'tagUsage', 'toast', 'showCopy', 'localStorage', fs.readFileSync('public/aibuild.js', 'utf8') + '\nreturn AIB;')(SK, null, null, null, null, null, {});
+const AIB = new Function('SK', 'el', 'tagInput', 'tagUsage', 'toast', 'showCopy', 'localStorage', 'tagLabel', fs.readFileSync('public/aibuild.js', 'utf8') + '\nreturn AIB;')(SK, null, null, null, null, null, {}, t => t);
 
 await test('prompt: the worked examples pass the same validator the pasted answer goes through', () => {
   for (const type of ['draw', 'sort', 'mix']) for (const lanes of [2, 3, 4]) for (const ideas of [true, false]) for (const lang of ['none', 'frame']) for (const tags of [[], ['Rock cycle', 'MS-ESS2-1']]) {
@@ -980,6 +980,30 @@ await test('prompt: states the format, the limits and the options the teacher ch
   // option limits are enforced
   const c = AIB.clampOpts({ n: 99, lanes: 9, cards: 1, type: 'x', lang: 'y', tags: ['a', 'b', 'c', 'd', 'e', 'f'] }); assert.deepEqual([c.n, c.lanes, c.cards, c.type, c.lang, c.tags.length], [10, 4, 6, 'draw', 'none', 5]);
   assert.equal(AIB.clampOpts({ n: 1 }).n, 3);
+});
+
+
+await test('paste check: good questions pass, bad ones say what is wrong, per question', () => {
+  const reply = 'Here you go!\n```json\n' + JSON.stringify([{ name: 'Rocks & minerals', tags: ['Unit 3'], questions: [
+    { question: 'Draw the <b>rock cycle</b>.', bg: 'blank', tags: ['Rock cycle', 'MS-ESS2-1'] },
+    { question: 'Sort these.', kind: 'sort', tags: ['Rock cycle'], sort: { lanes: [{ id: 'A', name: 'Igneous' }, { id: 'B', name: 'Sedimentary' }], cards: [{ id: 1, text: 'Granite', lane: 'A', idea: 'Forms' }, { id: 2, text: 'Basalt', lane: 'Z' }, { id: 3, text: 'Sandstone', lane: 'B' }] } },
+    { question: '', bg: 'graph' },
+    { question: 'Graph the <script>x</script> speed.', bg: 'neon', tags: ['t1', 't2', 't3', 't4', 't5', 't6'] },
+    { question: 'Sort fine', kind: 'sort', sort: { lanes: [{ id: 'A', name: 'x'.repeat(40) }, { id: 'B', name: 'Y' }], cards: [{ id: 'a', text: 'one', lane: 'A' }, { id: 'b', text: 'two', lane: 'B' }] } },
+  ] }]) + '\n```\nLet me know if you want more!';
+  const r = AIB.check(reply); assert.equal(r.length, 1); const rows = r[0].rows;
+  assert.equal(r[0].name, 'Rocks & minerals'); assert.deepEqual(r[0].tags, ['Unit 3']);
+  assert.deepEqual(rows.map(x => !!x.q), [true, false, false, true, true]);
+  assert.deepEqual(rows[1].problems, ['the card "Basalt" points to a lane that does not exist ("Z")']);
+  assert.deepEqual(rows[2].problems, ['has no question text']);
+  assert.ok(rows[3].notes.some(n => /formatting/.test(n)) && rows[3].notes.some(n => /neon/.test(n)) && rows[3].notes.some(n => /extra tags|sixth/.test(n)), rows[3].notes.join('|'));
+  assert.equal(rows[3].q.tags.length, 5);
+  assert.ok(rows[4].notes.some(n => /shortened to 24/.test(n))); assert.equal(rows[4].q.sort.lanes[0].name.length, 24);
+  assert.deepEqual(rows[0].q.tags, ['Rock cycle', 'MS-ESS2-1']);
+  assert.match(AIB.check('nothing useful').error, /could not find any JSON/);
+  assert.match(AIB.check('{"hello": 1}').error, /no questions|could not find/);
+  const many = AIB.check(JSON.stringify([{ name: 'Big', questions: Array.from({ length: 205 }, (_, i) => ({ question: 'Q' + i })) }]));
+  assert.equal(many[0].rows.length, 200); assert.equal(many[0].extra, 5);
 });
 
 await test('the Figtree font file is served as woff2', async () => {

@@ -192,6 +192,7 @@ function canonTag(t) { // the stored spelling for this tag (registering it if it
   if (!tagLabels[k]) tagLabels[k] = c;
   return tagLabels[k];
 }
+const tagLabel = t => tagLabels[SK.tagKey(t)] || t; // how a tag is shown (without registering it)
 const canonTags = v => { const r = SK.cleanTags(v); return SK.cleanTags(r.tags.map(canonTag)).tags; };
 // { key -> { key, label, qs: questions carrying it, sets: set names, own: how many questions have it themselves } }, most used first
 function tagUsage() {

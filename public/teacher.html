@@ -409,7 +409,7 @@ function renderBackup() {
 
 $('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
 $('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
-$('#aibtn').onclick = () => AIB.open();
+$('#aibtn').onclick = () => AIB.open(() => { renderSets(); renderShelf(); });
 $('#newbtn').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';
