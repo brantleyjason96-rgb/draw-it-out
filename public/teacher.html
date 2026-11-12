@@ -182,6 +182,7 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 
  <!-- Classes: everything that is on Today today -->
  <div id="tab-classes" style="display:flex;flex-direction:column;gap:26px">
+  <div id="bkremind" class="bkremind" role="region" aria-label="Backup reminder" hidden></div>
   <section class="sec">
    <div class="lbl">Your classes</div>
    <div class="grid" id="classes"></div>
@@ -313,7 +314,7 @@ function welcomeCard(p) {
     el('div', { className: 'mut wsteps', textContent: '1 Name your class · 2 Start it · 3 Share the code' }));
 }
 let lessonList = []; // saved lesson history, for the strip on each class card
-const refreshLessons = () => lessonsAll().then(l => { lessonList = l; if (tab === 'classes') renderClasses(); });
+const refreshLessons = () => lessonsAll().then(l => { lessonList = l; if (tab === 'classes') renderClasses(); renderBackup(); });
 function renderClasses() {
   const box = $('#classes'); box.innerHTML = '';
   const fresh = periods.length === 1 && !(store.do_welcomed === '1') && !lastSet(periods[0].code) && !loadTM(periods[0].code).teams.length && !loadTM(periods[0].code).roster.length;
@@ -473,7 +474,22 @@ async function renderShelf() {
     t.append(b); box.append(t);
   });
 }
+// A reminder on Today: 14 days, or 5 lessons, since the last backup (and only when there is something to lose). "Not now" waits 3 days.
+try { if (!store.do_first) store.do_first = String(Date.now()); } catch {}
+function backupReminder() {
+  const box = $('#bkremind'); box.hidden = true; box.replaceChildren();
+  const last = lastBackup(), since = lessonList.filter(l => l.at > last).length, base = last || +store.do_first || Date.now(), days = Math.floor((Date.now() - base) / 864e5);
+  const hasData = sets.some(s => s.questions.length) || periods.some(p => { const t = loadTM(p.code); return t.teams.length || t.roster.length; }) || lessonList.length;
+  if (!hasData || Date.now() < (+store.do_bk_snooze || 0)) return;
+  const why = since >= 5 ? 'You have run ' + since + ' lessons since your last backup. Lesson history, with student names, lives only on this computer.' : days >= 14 ? (last ? 'It has been ' + days + ' days since your last backup.' : 'You have not made a backup yet.') + ' Your sets, class lists and lesson history live only on this computer.' : '';
+  if (!why) return;
+  box.append(el('b', { textContent: 'Time for a backup' }), el('span', { textContent: why }), el('span', { style: 'flex:1' }),
+    el('button', { type: 'button', className: 'b sm pri', textContent: 'Back up now', onclick: async () => { await doBackup(); renderBackup(); backupReminder(); } }),
+    el('button', { type: 'button', className: 'b sm', textContent: 'Not now', onclick: () => { try { store.do_bk_snooze = String(Date.now() + 3 * 864e5); } catch {} backupReminder(); } }));
+  box.hidden = false;
+}
 function renderBackup() {
+  backupReminder();
   const stale = backupStale();
   $('#bk').classList.toggle('stale', stale);
   $('#bkt').textContent = stale ? 'Class lists live only on this computer.' : 'Your work is backed up.';
