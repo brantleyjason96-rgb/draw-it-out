@@ -1,11 +1,12 @@
 # Deploy on Render (https://render.com): New + > Blueprint > pick this repo.
-# Free plan: the service sleeps after ~15 minutes without traffic and takes up to a minute to wake.
-# Keep it at ONE instance either way: live classes are held in memory, so a second instance would not see them.
+# Starter plan (about $7 a month): always awake, so a class never meets a sleeping server.
+# The free plan sleeps after ~15 minutes without traffic, and a restart drops every live class, which is not OK once teachers rely on this.
+# Keep it at ONE instance: live classes are held in memory, so a second instance would not see them (do not turn on autoscaling).
 services:
   - type: web
     name: draw-it-out
     runtime: docker
-    plan: free           # change to "starter" (about $7/mo) if you want it always awake
+    plan: starter        # was "free"; syncing this blueprint on Render starts the paid plan
     healthCheckPath: /healthz
     envVars:
       - key: TRUST_PROXY   # the per-address connection cap reads the address Render's proxy appended to X-Forwarded-For

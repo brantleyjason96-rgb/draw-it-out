@@ -59,14 +59,14 @@ npm test         # server tests
 ```
 
 ## Host it for other teachers
-Draw It Out is one small Node process (HTTP + WebSocket) with **no database**. Classes live in memory and are deleted after 6 idle hours.
+Draw It Out is one small Node process (HTTP + WebSocket) with **no database**. Classes live in memory. A class nobody is in is deleted after 10 minutes if no student ever joined, or after 6 hours if students had.
 
-1. **Render (easiest):** push this repo to GitHub, then in Render choose *New + → Blueprint* and select it. `render.yaml` and the `Dockerfile` do the rest. It is set to the **free** plan, which sleeps after ~15 minutes idle and takes up to a minute to wake: open the teacher page a couple of minutes before class. Switch `plan` to `starter` for an always-on server.
+1. **Render (easiest):** push this repo to GitHub, then in Render choose *New + → Blueprint* and select it. `render.yaml` and the `Dockerfile` do the rest. `render.yaml` is set to the **starter** plan (about $7 a month): it stays awake, so a class never meets a sleeping server, and a restart does not catch a class by surprise during the day. (The free plan sleeps after ~15 minutes idle, takes up to a minute to wake, and drops every live class when it restarts. It is fine for trying the app, not for teachers.) Syncing the blueprint starts the paid plan.
 2. **Anywhere that runs Docker or Node 18+** (Fly.io, Railway, a VPS): `docker build -t draw-it-out . && docker run -p 3000:3000 draw-it-out`, or `npm ci && node server.js`.
 3. Put it behind HTTPS (the hosts above do this for you). WebSockets must be allowed.
 4. **Run exactly one instance.** Rooms are held in memory.
 
-Environment variables: `PORT` (default 3000), `MAX_ROOMS` (default 200).
+Environment variables: `PORT` (default 3000), `MAX_ROOMS` (default 200), `MAX_PER_IP` (sockets per address, default 150; a whole school shares one address), `TRUST_PROXY=1` (behind Render or another proxy: use the address the proxy added to `X-Forwarded-For`; `render.yaml` sets it).
 
 ## Class timer
 - **Timer** next to **Freeze** (and in the phone header): 30 seconds to 10 minutes, or a custom time like `4`, `1.5` or `1:30` (5 seconds to 60 minutes). While it runs the button shows the time and offers **+1 minute**, **Pause** and **Stop**.
