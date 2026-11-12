@@ -408,6 +408,11 @@ wss.on('connection', (ws, req) => {
         me = null; room = null; role = null;
         return;
       }
+      if (m.t === 'size') { // the phone was turned or resized: while the page is still empty, it takes the new shape
+        const bw = dim(m.bw), bh = dim(m.bh);
+        if (bw && bh && !me.objs.length && !room.picks.includes(me.id)) { me.bw = bw; me.bh = bh; tx(me.ws, { t: 'size', bw, bh }); toWatchers(room, { t: 'join', s: stuView(me) }); }
+        return;
+      }
       if (room.picks.includes(me.id)) return lockMsg(room, me);
       if (room.frozen) return tx(me.ws, { t: 'freeze', on: true }); // frozen: nothing gets through, not even a colour
       if (m.t === 'pulse') { // how confident the student feels about their drawing: red, amber or green (or none)

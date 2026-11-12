@@ -286,6 +286,12 @@ body.simple #quick .qsep{width:32px;height:1px;margin:4px 0}
 body.sorting #mid,body.sorting #bbar{display:none!important}
 #sortview{position:static;left:auto;right:auto;top:auto;bottom:auto;flex:1;min-height:0;padding:12px}
 body.locked #qbox #qt{background:rgba(255,255,255,.2)}
+/* a phone on its side: shrink the bottom bar to one row so the page keeps as much room as possible (the tool rail scrolls) */
+@media(max-height:480px) and (min-width:701px){
+ #pulse .pb span,#pulse .plb{display:none}
+ #bbar{gap:6px;padding:4px 8px;flex-wrap:nowrap}
+ #ur .lb{display:none}
+}
 @media(max-width:700px){
  #mid{flex-direction:column}
  #stage{order:1}
@@ -397,6 +403,17 @@ $('#name').value = localStorage.do_name || '';
 let tmList = [], tmSc = {}, tmMy = null, tmIni = null, jstep = 'code', pickTeam = null, quick = [], qteam = null;
 
 let waking = false;
+// A phone turned on its side, or a window resized, while the page is still empty: the page takes the screen's new shape.
+let refitT = 0;
+function refit() {
+  clearTimeout(refitT);
+  refitT = setTimeout(() => {
+    if (!id || objs.length) return; // only while nothing is drawn: a drawing is never stretched
+    const n = pageSize(); if (Math.abs(n.bw - W) < 60 && Math.abs(n.bh - H) < 60) return;
+    ws.send({ t: 'size', bw: n.bw, bh: n.bh });
+  }, 400);
+}
+addEventListener('resize', refit); addEventListener('orientationchange', refit);
 // A dropped connection must be visible to a student: after a moment offline (and only once they are in a class) a banner says so.
 let netT = 0;
 function netState(ok) {
@@ -571,6 +588,7 @@ function onmsg(m) {
     target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'This class has ended. Your teacher will tell you when to join again.' : m.why;
   } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
+  else if (m.t === 'size') { W = m.bw; H = m.bh; V = { z: 1, ox: 0, oy: 0 }; layout(); } // the server accepted the new page shape
   else if (m.t === 'restore') { setQ(m.q); SS.restore(m.q); } // the teacher's page put the question back after a server restart: nothing is wiped
 }
 
@@ -832,7 +850,7 @@ document.querySelectorAll('[data-qc]').forEach(b=>b.onclick=()=>{S.color=b.datas
 
 /* ---------- floating question + slide-out tools ---------- */
 const drawer=$('#drawer');
-function layout(){PAD.l=12;clampView();all(true)}
+function layout(){PAD.l=12;const short=innerHeight<=480&&innerWidth>700;PAD.t=short?12:76;PAD.b=short?12:64;clampView();all(true)} // a phone on its side gives the page the space the floating controls would take
 function openDrawer(o){drawer.classList.toggle('open',o);if(!o)S.cpanel=false;layout()}
 // leaving on purpose: the server takes the student out of the room, so no ghost card is left on the teacher's screen
 $('#leave').onclick=()=>ws.send({t:'bye'});
@@ -928,7 +946,7 @@ function resetDoc(list){
  synced=new Map(objs.map(o=>[o.id,JSON.stringify(o)]));uid=Math.max(uid,...objs.map(o=>o.id+1),1);V={z:1,ox:0,oy:0};all();
 }
 
-new ResizeObserver(()=>{const d=devicePixelRatio||1;if(!cv.clientWidth||!cv.clientHeight)return;cv.width=Math.max(1,cv.clientWidth*d);cv.height=Math.max(1,cv.clientHeight*d);clampView();all(true)}).observe(cv);
+new ResizeObserver(()=>{const d=devicePixelRatio||1;if(!cv.clientWidth||!cv.clientHeight)return;cv.width=Math.max(1,cv.clientWidth*d);cv.height=Math.max(1,cv.clientHeight*d);PAD.t=innerHeight<=480&&innerWidth>700?12:76;PAD.b=innerHeight<=480&&innerWidth>700?12:64;clampView();all(true)}).observe(cv);
 renderOpts();
 </script>
 </body>

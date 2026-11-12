@@ -739,6 +739,22 @@ await test('live flag: a closed tab is marked not live, and a return makes it li
   assert.equal(h.last('live'), undefined, 'leaving on purpose removes the card instead'); assert.ok(h.last('gone'));
 });
 
+
+await test('size: an empty page takes a new shape; a page with a drawing does not', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'SIZE', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'SIZE', name: 'Sia', bw: 360, bh: 700 }); const aj = await a.wait('joined');
+  assert.deepEqual([aj.bw, aj.bh], [360, 700]);
+  a.clear(); h.clear(); a.send({ t: 'size', bw: 780, bh: 330 }); await sleep(100);
+  assert.deepEqual([a.last('size').bw, a.last('size').bh], [780, 330]); assert.deepEqual([h.last('join').s.bw, h.last('join').s.bh], [780, 330]);
+  a.send({ t: 'size', bw: 99999, bh: 'x' }); a.send({ t: 'size', bw: 10, bh: 10 }); await sleep(80);
+  assert.equal(a.got.filter(m => m.t === 'size').length, 1, 'nonsense sizes are ignored');
+  a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } }); await sleep(60);
+  a.clear(); a.send({ t: 'size', bw: 400, bh: 800 }); await sleep(80);
+  assert.equal(a.last('size'), undefined, 'once something is drawn the page keeps its shape');
+  const back = client(); await back.ready; back.send({ t: 'join', code: 'SIZE', name: 'Sia', id: aj.id, tok: aj.tok, bw: 400, bh: 800 });
+  assert.deepEqual([(await back.wait('joined')).bw, back.last('joined').bh], [780, 330]);
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
