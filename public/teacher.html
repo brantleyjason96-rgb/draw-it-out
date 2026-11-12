@@ -23,6 +23,19 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 .cls .go{margin-top:4px;min-height:48px;font-size:var(--fs-lg);font-weight:700}
 .dots{background:none;border:0;width:44px;height:44px;border-radius:var(--r-sm);font-size:var(--fs-xl);line-height:1;color:var(--mut)}
 .dots:hover{background:var(--c-bg)}
+.ctools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cfind{position:relative;display:inline-flex;align-items:center}
+.cfind svg{position:absolute;left:12px;color:var(--mut);pointer-events:none}
+.cfind .inp{width:240px;padding-left:36px}
+#csort{width:auto;font-weight:600}
+.cls.hit{animation:hit 1.6s ease-out}
+@keyframes hit{0%,30%{box-shadow:0 0 0 4px var(--c-focus)}100%{box-shadow:none}}
+@media(prefers-reduced-motion:reduce){.cls.hit{animation:none;outline:3px solid var(--c-focus)}}
+.cnone{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 4px;color:var(--mut);font-size:var(--fs-md)}
+.cdlg{max-width:520px}
+.cdlg textarea.inp{padding:10px 12px;line-height:1.5;resize:vertical;min-height:112px}
+.cdlg .hint{font-size:var(--fs-sm);color:var(--mut)}
+@media(max-width:560px){.ctools{width:100%}.cfind{flex:1 1 100%}.cfind .inp{width:100%}#csort{flex:1}#newclass{flex:1}}
 .newc{border:2px dashed var(--c-control);border-radius:var(--r-xl);min-height:150px;background:transparent;font-weight:700;font-size:var(--fs-md);color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .fstack{display:flex;flex-direction:column;gap:18px}
 .fgroup{display:flex;flex-direction:column;gap:12px}
@@ -182,7 +195,14 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
  <!-- Classes: everything that is on Today today -->
  <div id="tab-classes" style="display:flex;flex-direction:column;gap:26px">
   <section class="sec">
-   <div class="lbl">Your classes</div>
+   <div class="sech" id="chead">
+    <div class="lbl">Your classes <span id="ccount" class="mut" style="font-weight:600"></span></div>
+    <div class="ctools">
+     <span class="cfind" id="cfindbox" hidden><svg data-i="search" class="sm" aria-hidden="true"></svg><input class="inp" id="cfind" type="search" placeholder="Find a class or code" aria-label="Find a class by name or code" autocomplete="off"></span>
+     <select class="inp" id="csort" aria-label="Sort classes" hidden><option value="recent">Recently used</option><option value="az">A to Z</option><option value="added">Order added</option></select>
+     <button class="b pri" id="newclass">+ New class</button>
+    </div>
+   </div>
    <div class="grid" id="classes"></div>
    <div class="mut" id="conn" style="font-size:var(--fs-sm)"></div>
   </section>
@@ -297,17 +317,40 @@ function welcomeCard(p) {
   return el('div', { className: 'card welcome', style: 'grid-column:1/-1' }, el('h2', { textContent: 'Welcome. Let’s set up your first class.' }), el('p', { className: 'mut', textContent: 'Give it a name your students will recognise.', style: 'margin:6px 0 0' }), f,
     el('div', { className: 'mut wsteps', textContent: '1 Name your class · 2 Start it · 3 Share the code' }));
 }
+// Find and sort: the list is rebuilt on every server status, so the query and the order live here, not in the cards.
+const MANY = 4; // from this many classes up, the find box and the sort menu appear
+let cQuery = '', cSort = ['recent', 'az', 'added'].includes(store.do_csort) ? store.do_csort : 'recent';
+const lastUsed = p => ((live[p.code] || {}).live ? Infinity : +store['do_day_' + p.code] || 0);
+function visibleClasses() {
+  const q = cQuery.trim().toLowerCase();
+  const list = periods.filter(p => !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q.replace(/\s+/g, '')));
+  if (cSort === 'az') list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  else if (cSort === 'recent') list.sort((a, b) => lastUsed(b) - lastUsed(a)); // stable: never-used classes keep the order they were added in
+  return list;
+}
 function renderClasses() {
   const box = $('#classes'); box.innerHTML = '';
   const fresh = periods.length === 1 && !(store.do_welcomed === '1') && !lastSet(periods[0].code) && !loadTM(periods[0].code).teams.length && !loadTM(periods[0].code).roster.length;
+  $('#chead').hidden = fresh; // the welcome card already asks for a name
   if (fresh) { box.append(welcomeCard(periods[0])); return; }
-  periods.forEach(p => {
-    const tm = loadTM(p.code), st = live[p.code] || {}, c = el('div', { className: 'card cls' + (st.live ? ' live' : '') });
+  const many = periods.length >= MANY;
+  $('#cfindbox').hidden = $('#csort').hidden = !many;
+  if (!many) cQuery = '';
+  $('#ccount').textContent = many ? (cQuery.trim() ? '· ' + visibleClasses().length + ' of ' + periods.length : '· ' + periods.length) : '';
+  const shown = visibleClasses();
+  if (!shown.length) {
+    const q = cQuery.trim();
+    box.append(el('div', { className: 'cnone' }, el('span', { textContent: 'No class matches “' + q + '”.' }),
+      el('button', { className: 'b', textContent: 'Add “' + q.slice(0, 30) + '” as a new class', onclick: () => addClass(q) }),
+      el('button', { className: 'link', textContent: 'Clear search', onclick: () => { $('#cfind').value = cQuery = ''; renderClasses(); $('#cfind').focus(); } })));
+  }
+  shown.forEach(p => {
+    const tm = loadTM(p.code), st = live[p.code] || {}, c = el('div', { className: 'card cls' + (st.live ? ' live' : ''), id: 'cls-' + p.code });
     const day = +store['do_day_' + p.code];
     const top = el('div', { className: 'row1' }, el('div', {}, el('h3', { textContent: p.name }),
       el('div', { className: 'mut', style: 'font-size:var(--fs-sm)', textContent: st.live ? st.here + ' here now' : day ? 'Last used ' + dayName(day) : 'Not used yet' })),
       el('div', { style: 'display:flex;align-items:center;gap:4px' }, ...(st.live ? [el('span', { className: 'chip live', textContent: 'Live now' })] : []),
-        el('button', { className: 'dots', title: 'Rename or remove this class', 'aria-label': 'Rename or remove this class', onclick: e => classMenu(p, c, e) }, icoEl('dots'))));
+        el('button', { className: 'dots', title: 'Rename or remove this class', 'aria-label': 'Rename or remove ' + p.name, onclick: e => classMenu(p, c, e) }, icoEl('dots'))));
     const codeChip = el('div', {}, el('span', { className: 'chip codechip' }, 'Code ', el('span', { className: 'code', textContent: p.code })));
     const icons = el('div', { className: 'ticons' });
     if (tm.teams.length) tm.teams.forEach(t => { const i = el('i', { textContent: cleanIcon(t.emoji) || '•', title: t.name }); i.style.setProperty('--tc', t.color); icons.append(i); });
@@ -315,7 +358,7 @@ function renderClasses() {
     const go = el('button', { className: 'b go ' + (st.live ? 'good' : 'pri'), textContent: st.live ? 'Go back to class' : 'Start class', onclick: () => (location.href = '/class?code=' + p.code) });
     c.append(top, codeChip, icons, go); box.append(c);
   });
-  box.append(el('button', { className: 'newc', onclick: addClass }, el('span', { textContent: '+', style: 'font-size:var(--fs-3xl);line-height:1' }), document.createTextNode('New class')));
+  if (!cQuery.trim()) box.append(el('button', { className: 'newc', onclick: () => addClass() }, el('span', { textContent: '+', style: 'font-size:var(--fs-3xl);line-height:1' }), document.createTextNode('New class')));
 }
 function classMenu(p, card, e) {
   e.stopPropagation(); const had = menu; closeMenu(); if (had && had.dataset.code === p.code) return;
@@ -331,10 +374,51 @@ function classMenu(p, card, e) {
   }, 'danger');
   card.append(menu);
 }
-function addClass() {
-  const name = (prompt('Name for the new class (for example 3rd Hour):') || '').trim(); if (!name) return;
-  const c = newPeriod(name); renderClasses(); toast('Added "' + name + '". Code ' + c + '.');
+// Add one class, or several at once (one name per line). Optionally start each with another class's teams.
+function addClass(preset) {
+  const old = document.getElementById('ncdlg'); if (old) old.remove();
+  const d = el('dialog', { id: 'ncdlg', className: 'cdlg' });
+  const names = el('textarea', { className: 'inp', id: 'ncnames', rows: 4, placeholder: '1st Hour\n2nd Hour\n3rd Hour', value: typeof preset === 'string' ? preset : '', autocomplete: 'off' });
+  names.setAttribute('aria-describedby', 'nchint');
+  const from = el('select', { className: 'inp', id: 'ncfrom' }); from.setAttribute('aria-label', 'Teams');
+  from.append(el('option', { value: '', textContent: 'Set up teams later' }));
+  periods.forEach(p => { const n = loadTM(p.code).teams.length; if (n) from.append(el('option', { value: p.code, textContent: 'Copy the ' + n + (n === 1 ? ' team' : ' teams') + ' from ' + p.name })); });
+  const close = () => { d.close(); d.remove(); };
+  const form = el('form', { className: 'nsform' },
+    el('label', { className: 'lbl', textContent: 'Class names', htmlFor: 'ncnames' }), names,
+    el('div', { className: 'hint', id: 'nchint', textContent: 'Type one name, or one per line to add several at once. Each class gets its own join code.' }),
+    ...(from.options.length > 1 ? [el('label', { className: 'lbl', textContent: 'Teams', htmlFor: 'ncfrom' }), from] : []),
+    el('div', { className: 'nsbtns' }, el('button', { type: 'button', className: 'b', textContent: 'Cancel', onclick: close }), el('button', { type: 'submit', className: 'b pri', textContent: 'Add class' })));
+  const sub = form.querySelector('button[type=submit]');
+  const parse = () => { const seen = new Set(); return names.value.split(/\n/).map(x => x.trim().replace(/\s+/g, ' ').slice(0, 40)).filter(x => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())); };
+  const sync = () => { const n = parse().length; sub.textContent = n > 1 ? 'Add ' + n + ' classes' : 'Add class'; };
+  names.oninput = sync; sync();
+  // Enter adds a single name; with several lines it makes a new line, and Ctrl/Cmd+Enter adds them all.
+  names.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && (e.ctrlKey || e.metaKey || parse().length <= 1 && !names.value.includes('\n'))) { e.preventDefault(); form.requestSubmit(); } };
+  form.onsubmit = e => {
+    e.preventDefault();
+    const all = parse(); if (!all.length) { names.focus(); return toast('Type a class name first.'); }
+    const have = new Set(periods.map(p => p.name.toLowerCase())), add = all.filter(n => !have.has(n.toLowerCase())).slice(0, 20), skipped = all.length - add.length;
+    if (!add.length) { names.focus(); return toast(all.length === 1 ? 'You already have a class called “' + all[0] + '”.' : 'You already have all of those classes.'); }
+    const src = from.value ? loadTM(from.value).teams : [];
+    const made = add.map(n => { const c = newPeriod(n); if (src.length) saveTeams(c, src, { quiet: true }); return c; });
+    close(); cQuery = ''; $('#cfind').value = ''; renderClasses();
+    const first = $('#cls-' + made[0]); if (first) { first.scrollIntoView({ block: 'center', behavior: 'smooth' }); first.classList.add('hit'); }
+    toast(add.length === 1 ? 'Added “' + add[0] + '”. Code ' + made[0] + '.' : 'Added ' + add.length + ' classes.' + (skipped ? ' Skipped ' + skipped + ' you already have.' : ''));
+  };
+  d.append(el('div', { className: 'dh' }, el('h2', { textContent: 'Add classes', style: 'font-size:var(--fs-2xl)' })), form);
+  d.addEventListener('close', () => d.remove());
+  document.body.append(d); d.showModal(); names.focus(); names.setSelectionRange(names.value.length, names.value.length);
 }
+$('#newclass').onclick = () => addClass();
+$('#cfind').oninput = e => { cQuery = e.target.value; renderClasses(); };
+// Enter opens the class when exactly one matches; Escape clears the search.
+$('#cfind').onkeydown = e => {
+  if (e.key === 'Escape' && cQuery) { e.target.value = cQuery = ''; renderClasses(); }
+  else if (e.key === 'Enter') { const v = visibleClasses(); if (v.length === 1) location.href = '/class?code=' + v[0].code; }
+};
+$('#csort').value = cSort;
+$('#csort').onchange = e => { cSort = e.target.value; try { store.do_csort = cSort; } catch {} renderClasses(); };
 
 const fcoll = () => { try { return JSON.parse(store.do_fcollapsed || '{}') || {}; } catch { return {}; } };
 function setCard(s) {

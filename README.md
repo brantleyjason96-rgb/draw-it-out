@@ -9,6 +9,8 @@ Two kinds of question:
 - Students: `/` (join with a class code)
 - Teachers: `/teacher` is **Today** (classes, question sets, starter sets, backup). From there:
   - **Classes** tab: pick a class to start; each card shows the top three teams by points.
+    - **+ New class** (top right of the list) opens one form: type a name, or paste one per line to add a whole schedule at once, and optionally start each with another class's teams.
+    - From four classes up, a **find box** (name or join code; Enter opens the only match; with no match it offers to add the text as a new class) and a **sort menu** (recently used, A to Z, order added) appear. Live classes come first under *Recently used*.
   - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. Copy the same teams into another class — buttons on the Teams tab, on each class card's ⋯ menu, and a link on the empty team list — with the points of any team that is already there kept. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
   - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle (click up to three to compare them on the projector), a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px. The top bar holds **❄ Freeze**, and each card is outlined in the student's own red/amber/green pulse.
   - `/sets?id=…` is the question editor (its own screen)
