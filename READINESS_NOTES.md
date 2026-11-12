@@ -49,3 +49,12 @@ Commits "Phase 4 / 24 (part 1)" through "Phase 4 / 26". Server tests 68 -> 79. I
 - Known limit: the Question sets tab filter shows at most 12 tags in the row; the rest are in the Tags dialog.
 - Known limit: Merge in the Tags dialog offers the 8 most used other tags as buttons (use Rename-to-an-existing-name to merge into any other tag).
 - **Process slip (Phase 4 / 26):** my commit chain ran the notes commit after the gate had failed, so the file-import code (item 26) went into the commit titled "Notes for Phase 4" (4209756) instead of its own commit, with one test assertion wrong. The next commit (7188223, titled "Phase 4 / 26 follow-up") fixes the assertion. I did not rewrite pushed history. Item 26's code is in 4209756.
+
+## Review before Phase 5 ("Not yet reviewed" in the plan)
+I exercised these in a real browser (Chromium, with touch emulation for the phone cases) against a local server. No bugs found; no code changes.
+- Sort questions: teacher sends one, two students on a 390x780 touch phone tap card then lane, hand in, teacher sees averages/mix-up/matrix, Reveal marks wrong cards with where they belong, projector shows idea percentages. 
+- Teams and class list: paste a list (header row, optional team, a duplicate pair of initials), teams created, random assignment, student picks team then initials and lands on the right team; teacher card shows "Jin L.".
+- Confidence report: three pulses over two questions give the per-question and per-team report.
+- Phone remote: teacher page in a phone viewport shows Review / Questions / Teams, Send works, the timer menu opens from the header.
+- Share links: a link made from a set with tags and a sort question opens a dialog in a fresh browser and imports with its tags and sort question intact.
+- Not covered: real touch devices (I only emulated touch), real Chromebooks, a real projector.
