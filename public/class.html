@@ -321,7 +321,7 @@ function award(s) {
 // Remove or rename one student. A class-list student's name comes from the list, so only Remove applies to them.
 function studentMenu(anchor, s) {
   const items = [];
-  if (!s.rid) items.push({ t: 'Rename', f: async () => { const v = ((await askText('New name', s.name, { title: 'Rename ' + disp(s), ok: 'Rename', max: 20 })) || '').trim(); if (v) ws.send({ t: 'rename', id: s.id, name: v }); } });
+  if (!s.rid) items.push({ t: 'Rename', f: async () => { const v = ((await askText('New name', s.name, { title: 'Rename ' + disp(s), required: 'Type a name', ok: 'Rename', max: 20 })) || '').trim(); if (v) ws.send({ t: 'rename', id: s.id, name: v }); } });
   items.push({ t: 'Remove student', danger: true, f: async () => { if (await ask('Their drawing is deleted and they go back to the join screen.', { title: 'Remove ' + disp(s) + '?', ok: 'Remove student', cancel: 'Keep', danger: true })) ws.send({ t: 'release', id: s.id }); } });
   openMenuFixed(anchor, items, 200);
 }
@@ -597,10 +597,10 @@ function openMenu(anchor, items, css) {
 $('#cpick').onclick = e => {
   e.stopPropagation();
   openMenu($('#cpick'), [...periods.map(p => ({ t: p.name, check: p.code === code, f: () => { if (p.code !== code) location.href = '/class?code=' + p.code; } })), '-',
-    { t: '+ New class', f: async () => { const n = ((await askText('Class name', '', { title: 'New class', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (n) location.href = '/class?code=' + newPeriod(n); } },
+    { t: '+ New class', f: async () => { const n = ((await askText('Class name', '', { title: 'New class', required: 'Type a class name', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (n) location.href = '/class?code=' + newPeriod(n); } },
     { t: 'Rename this class', f: renameClass }], 'top:52px;left:0;min-width:260px');
 };
-async function renameClass() { const v = ((await askText('Class name', per().name, { title: 'Rename this class', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); setCpick(v); $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
+async function renameClass() { const v = ((await askText('Class name', per().name, { title: 'Rename this class', required: 'Type a class name', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { per().name = v; savePeriods(); setCpick(v); $('#pname').textContent = v; document.title = v + ' – Draw It Out'; } }
 $('#more').onclick = e => {
   e.stopPropagation();
   openMenu($('#more'), [

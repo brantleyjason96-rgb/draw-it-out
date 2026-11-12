@@ -323,7 +323,7 @@ function classMenu(p, card, e) {
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: ev => { ev.stopPropagation(); closeMenu(); f(); } }));
   add('Team names & icons', () => goTeams(p.code));
   add('Copy teams to…', () => teamsPickMenu(p.code, card, 'top:52px;right:12px', 'to'));
-  add('Rename', async () => { const v = ((await askText('Class name', p.name, { title: 'Rename this class', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
+  add('Rename', async () => { const v = ((await askText('Class name', p.name, { title: 'Rename this class', required: 'Type a class name', ok: 'Rename', max: 40 })) || '').trim().slice(0, 40); if (v) { p.name = v; savePeriods(); renderClasses(); } });
   add('Remove class', async () => {
     if (!await ask('Its teams, class list and scores on this computer will be deleted.' + ((live[p.code] || {}).live ? '\n\nStudents currently in it will be sent back to the join screen.' : ''), { title: 'Remove "' + p.name + '"?', ok: 'Remove class', cancel: 'Keep class', danger: true })) return;
     if ((live[p.code] || {}).live) hostSend(p.code, [{ t: 'reset' }]);
@@ -332,7 +332,7 @@ function classMenu(p, card, e) {
   card.append(menu);
 }
 async function addClass() {
-  const name = ((await askText('Class name', '', { title: 'New class', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (!name) return;
+  const name = ((await askText('Class name', '', { title: 'New class', required: 'Type a class name', text: 'For example 3rd Hour.', ok: 'Create', max: 40 })) || '').trim(); if (!name) return;
   const c = newPeriod(name); renderClasses(); toast('Added "' + name + '". Code ' + c + '.');
 }
 
@@ -352,7 +352,7 @@ function folderMenu(f, anchor) {
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, fn, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); fn(); } }));
   add('New set in this folder…', () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'), f.id));
-  add('Rename folder', async () => { const v = ((await askText('Folder name', f.name, { title: 'Rename this folder', ok: 'Rename', max: 40 })) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
+  add('Rename folder', async () => { const v = ((await askText('Folder name', f.name, { title: 'Rename this folder', required: 'Type a folder name', ok: 'Rename', max: 40 })) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
   add('Delete folder', async () => {
     const n = sets.filter(x => x.folder === f.id).length;
     if (!await ask(n ? 'The ' + n + ' set' + (n === 1 ? '' : 's') + ' inside will be kept and moved out of the folder.' : '', { title: 'Delete the folder "' + f.name + '"?', ok: 'Delete folder', cancel: 'Keep folder', danger: true })) return;
@@ -407,7 +407,7 @@ function renderBackup() {
 }
 
 $('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
-$('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
+$('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
 $('#newbtn').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';
@@ -439,7 +439,7 @@ function setTab(t) {
   u.searchParams.set('tab', t);
   if (t === 'teams') u.searchParams.set('class', taCode); else u.searchParams.delete('class');
   history.replaceState(null, '', u);
-  if (t === 'teams') { loadWorking(); renderTeamsTab(); ask(); }
+  if (t === 'teams') { loadWorking(); renderTeamsTab(); askStatus(); }
 }
 function goTeams(code) {
   if (code && periodOf(code)) taCode = code;
@@ -674,7 +674,7 @@ onTeamsSaved(d => { if (d && d.code === taCode) { loadWorking(); if (tab === 'te
 
 // ask the server which classes are running (and how many students are in each)
 // With this browser's host key the answer also carries the live team names and points.
-function ask() { periods.forEach(p => ws.send({ t: 'status', code: p.code, key: store['do_key_' + p.code] || hostKey() })); }
+function askStatus() { periods.forEach(p => ws.send({ t: 'status', code: p.code, key: store['do_key_' + p.code] || hostKey() })); }
 const ws = connect(m => {
   if (m.t !== 'status') return;
   live[m.code] = m; markLive(m.code, m);
@@ -685,12 +685,12 @@ const ws = connect(m => {
     if (busy) renderPreview(); else { loadWorking(); renderTeamsTab(); }
   }
 },
-  () => { $('#conn').textContent = ''; ask(); },
+  () => { $('#conn').textContent = ''; askStatus(); },
   ok => { if (!ok) $('#conn').textContent = 'Connecting to the class server… it may be waking up, which can take up to a minute.'; });
-setInterval(ask, 15000);
+setInterval(askStatus, 15000);
 // coming back to this tab should show the current standings, not the ones from a minute ago
-window.addEventListener('focus', ask);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) ask(); });
+window.addEventListener('focus', askStatus);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) askStatus(); });
 
 renderClasses(); renderBackup();
 setTab(tab);

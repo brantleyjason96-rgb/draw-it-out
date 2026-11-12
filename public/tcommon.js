@@ -35,6 +35,9 @@ dialog.dlg p{margin:0 0 14px;white-space:pre-line;color:var(--c-ink-2,#394551)}
 dialog.dlg label{display:block;font-weight:700;margin:0 0 6px}
 dialog.dlg input,dialog.dlg textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px 12px;min-height:44px;border:2px solid var(--c-line-2,#CBD3DA);border-radius:var(--r-md,10px);margin:0 0 14px}
 dialog.dlg textarea{min-height:92px;resize:vertical}
+dialog.dlg .derr{margin:-8px 0 14px;font-weight:700;color:var(--c-bad,#B3261E)}
+dialog.dlg .derr[hidden]{display:none}
+dialog.dlg input[aria-invalid]{border-color:var(--c-bad,#B3261E)}
 dialog.dlg input:focus-visible,dialog.dlg textarea:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:1px}
 dialog.dlg .dbtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 dialog.dlg .dbtns button{min-height:44px;padding:0 18px;border-radius:var(--r-md,10px);border:2px solid var(--c-line-2,#CBD3DA);background:var(--c-surface,#fff);color:inherit;font:inherit;font-weight:700;cursor:pointer}
@@ -64,12 +67,16 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
     }
     const row = el('div', { className: 'dbtns' }); f.append(row);
     let out = cancel, firstPri = null, safe = null;
+    // a blank answer to a required box keeps the dialog open and says why, in words
+    const err = el('div', { className: 'derr', role: 'alert' }); err.hidden = true; if (inp) inp.after(err);
+    const checkReq = () => { if (!input.required || inp.value.trim()) { err.hidden = true; return true; } err.textContent = input.required; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); return false; };
+    if (inp) inp.addEventListener('input', () => { err.hidden = true; inp.removeAttribute('aria-invalid'); });
     buttons.forEach(b => {
       const bt = el('button', { type: 'button', textContent: b.label, className: b.kind || '' });
-      bt.onclick = () => { out = b.submit && inp ? inp.value : b.value; d.close(); };
+      bt.onclick = () => { if (b.submit && inp && !checkReq()) return; out = b.submit && inp ? inp.value : b.value; d.close(); };
       row.append(bt); if (b.kind === 'pri' || b.kind === 'danger') firstPri = firstPri || bt; if (b.safe) safe = bt;
     });
-    if (inp && !input.readOnly) inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !input.multiline) { e.preventDefault(); const b = buttons.find(x => x.submit); if (b) { out = inp.value; d.close(); } } });
+    if (inp && !input.readOnly) inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !input.multiline) { e.preventDefault(); const b = buttons.find(x => x.submit); if (b && checkReq()) { out = inp.value; d.close(); } } });
     d.addEventListener('close', () => { d.remove(); res(out); });
     document.body.append(d); d.showModal();
     // a destructive confirm starts on the safe button, a text box on the box, everything else on the main button
@@ -78,7 +85,7 @@ function dlgOpen({ title, text, input, buttons, cancel = null, focus }) {
   });
 }
 const ask = (text, o = {}) => dlgOpen({ title: o.title, text, cancel: false, buttons: [{ label: o.cancel || 'Cancel', value: false, safe: !!o.danger }, { label: o.ok || 'OK', value: true, kind: o.danger ? 'danger' : 'pri' }] });
-const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
+const askText = (label, value = '', o = {}) => dlgOpen({ title: o.title, text: o.text, input: { label, value, max: o.max, required: o.required }, cancel: null, buttons: [{ label: o.cancel || 'Cancel', value: null }, { label: o.ok || 'OK', kind: 'pri', submit: true }] });
 const tell = (text, o = {}) => dlgOpen({ title: o.title, text, buttons: [{ label: o.ok || 'OK', value: true, kind: 'pri' }] });
 const choose = (text, buttons, o = {}) => dlgOpen({ title: o.title, text, cancel: null, buttons });
 const showCopy = (label, text) => dlgOpen({ title: label, input: { label: 'Select the text and copy it', value: text, readOnly: true, multiline: true }, buttons: [{ label: 'Done', value: true, kind: 'pri' }] });
@@ -232,7 +239,7 @@ function newSetDialog(after, presetFolder) {
   fill(presetFolder); let last = sel.value;
   sel.onchange = async () => {
     if (sel.value !== '__new') { last = sel.value; return; }
-    const n = folders.length < MAX_FOLDERS ? ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim() : '';
+    const n = folders.length < MAX_FOLDERS ? ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim() : '';
     const f = n && addFolder(n); fill(f ? f.id : last); last = sel.value;
   };
   const close = () => { d.close(); d.remove(); };
@@ -262,7 +269,7 @@ function folderPicker(st, after) {
   folders.forEach(f => list.append(row([icoEl('folder', 'sm'), ' ' + f.name], sets.filter(x => x.folder === f.id).length, st.folder === f.id, () => choose(f.id))));
   const nb = el('button', { className: 'fpopt new', onclick: async () => {
     if (folders.length >= MAX_FOLDERS) return toast('That is the most folders.');
-    const n = ((await askText('Folder name', '', { title: 'New folder', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return;
+    const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return;
     const f = addFolder(n); if (f) choose(f.id);
   } }, el('span', { textContent: '＋ New folder…' }));
   list.append(nb);

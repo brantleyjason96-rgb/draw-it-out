@@ -339,7 +339,7 @@ $('#manage').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
-  add('Rename this set', async () => { const v = ((await askText('Set name', set.name, { title: 'Rename this set', ok: 'Rename', max: 60 })) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
+  add('Rename this set', async () => { const v = ((await askText('Set name', set.name, { title: 'Rename this set', required: 'Type a set name', ok: 'Rename', max: 60 })) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
   add('Move to a folder…', () => folderPicker(set, renderAll));
   add('Export this set as a file', () => exportSets([set]));
   add('Delete this set', async () => {
