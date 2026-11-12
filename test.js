@@ -951,6 +951,37 @@ await test('privacy: tags never reach the server, students or the projector', as
   for (const [who, c] of [['student', a], ['late student', late], ['projector', p], ['late projector', lw], ['teacher', h], ['reloaded teacher', lh]]) assert.ok(!/Secret|"tags"/.test(JSON.stringify(c.got)), who + ' never sees tags');
 });
 
+
+// ---- the AI prompt (public/aibuild.js is loaded here without a browser: only buildPrompt and examples are used) ----
+const AIB = new Function('SK', 'el', 'tagInput', 'tagUsage', 'toast', 'showCopy', 'localStorage', fs.readFileSync('public/aibuild.js', 'utf8') + '\nreturn AIB;')(SK, null, null, null, null, null, {});
+
+await test('prompt: the worked examples pass the same validator the pasted answer goes through', () => {
+  for (const type of ['draw', 'sort', 'mix']) for (const lanes of [2, 3, 4]) for (const ideas of [true, false]) for (const lang of ['none', 'frame']) for (const tags of [[], ['Rock cycle', 'MS-ESS2-1']]) {
+    const ex = AIB.examples(AIB.clampOpts({ type, lanes, ideas, lang, tags }));
+    for (const k of ['draw', 'sort']) {
+      const c = SK.checkQuestion(ex[k]); assert.deepEqual(c.problems, [], type + ' ' + k + ' lanes=' + lanes + ': ' + JSON.stringify(c.problems));
+      assert.deepEqual(c.notes, [], 'no fixes needed: ' + JSON.stringify(c.notes));
+      assert.deepEqual(c.q.tags, tags.length ? tags : ['Rock cycle']);
+    }
+    const s = ex.sort.sort; for (const l of s.lanes) assert.ok(s.cards.filter(c => c.lane === l.id).length >= 2, 'every lane in the example has 2+ cards (' + lanes + ' lanes)');
+    assert.equal(!!s.cards[0].idea, ideas);
+  }
+});
+
+await test('prompt: states the format, the limits and the options the teacher chose', () => {
+  const p = AIB.buildPrompt({ type: 'mix', goal: 'MS-ESS2-1: cycling of Earth\'s materials', tags: ['Rock cycle', 'MS-ESS2-1'], grade: '8th grade', n: 6, lang: 'frame', lanes: 4, cards: 10, ideas: true });
+  for (const re of [/REPLY WITH JSON ONLY/, /\[\{"name"/, /"bg": "blank"/, /"kind": "sort"/, /at most 2000 characters/, /<b>, <i>, <u> and <br>/, /Lane name: at most 24 characters/, /Card text: at most 60 characters/, /Idea: at most 30 characters/, /at most 5 per question, at most 30 characters/,
+    /Lanes: 2 to 6/, /Cards: 2 to 24/, /exactly 4 lanes/, /exactly 10 cards/, /"idea"/, /MS-ESS2-1: cycling of Earth's materials/, /8th grade/, /Write 3 draw questions and 3 sort questions/, /exactly these tags.*"Rock cycle", "MS-ESS2-1"/, /Sentence frame:/,
+    /misconception/, /two minutes/, /every card's lane must be|every card's lane exists/i, /multilingual/, /WORKED EXAMPLES/]) assert.match(p, re);
+  const draw = AIB.buildPrompt({ type: 'draw', goal: 'g', n: 3 }); assert.ok(!/SORT QUESTIONS/.test(draw) && !/Lane name/.test(draw) && !/sort question:/.test(draw)); assert.match(draw, /Every question is a draw question/); assert.match(draw, /1 to 3 short labels/);
+  const sort = AIB.buildPrompt({ type: 'sort', goal: 'g', n: 4, ideas: false }); assert.ok(!/DRAW QUESTIONS/.test(sort)); assert.match(sort, /Leave the "idea" field out/);
+  assert.ok(!/multilingual/.test(AIB.buildPrompt({ goal: 'g' })), 'no language block when support is off');
+  assert.match(AIB.buildPrompt({ goal: 'g', lang: 'simple' }), /Use short sentences/); assert.ok(!/Sentence frame:/.test(AIB.buildPrompt({ goal: 'g', lang: 'simple' }).split('WORKED')[0]));
+  // option limits are enforced
+  const c = AIB.clampOpts({ n: 99, lanes: 9, cards: 1, type: 'x', lang: 'y', tags: ['a', 'b', 'c', 'd', 'e', 'f'] }); assert.deepEqual([c.n, c.lanes, c.cards, c.type, c.lang, c.tags.length], [10, 4, 6, 'draw', 'none', 5]);
+  assert.equal(AIB.clampOpts({ n: 1 }).n, 3);
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

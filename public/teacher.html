@@ -193,7 +193,7 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
   <section class="sec">
    <div class="sech">
     <div class="lbl">Your question sets</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><button class="b" id="aibtn" title="Write a prompt for any AI tool, then paste its answer back here">Build with AI</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
     <input type="file" id="impfile" accept=".json,application/json" hidden><button id="newfolder" hidden></button>
    </div>
    <div class="grid" id="sets"></div>
@@ -273,6 +273,7 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
+<script src="/aibuild.js"></script>
 <script src="/emoji.js"></script>
 <script>
 if (DEMO) location.replace('/class?demo=1');
@@ -408,6 +409,7 @@ function renderBackup() {
 
 $('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
 $('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
+$('#aibtn').onclick = () => AIB.open();
 $('#newbtn').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';

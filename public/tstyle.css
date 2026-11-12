@@ -102,3 +102,47 @@ select.inp{padding-right:8px}
 #toast .toastbtn{margin-left:8px;min-height:36px;padding:4px 14px;border-radius:var(--r-pill);border:2px solid #fff;background:transparent;color:#fff;font:inherit;font-weight:800;cursor:pointer}
 #toast .toastbtn:hover{background:rgba(255,255,255,.18)}
 #toast .toastbtn:focus-visible{outline:3px solid var(--c-focus-on-dark);outline-offset:2px}
+
+/* ---- tags ---- */
+.tgbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px;min-height:46px;border:2px solid var(--c-line-2,#CBD3DA);border-radius:var(--r-md,10px);background:var(--c-surface,#fff)}
+.tgbox:focus-within{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:1px}
+.tgbox .tgin{flex:1;min-width:140px;border:0;outline:0;background:none;font:inherit;padding:6px 4px;min-height:32px}
+.tg{display:inline-flex;align-items:center;gap:2px;max-width:100%;padding:3px 4px 3px 10px;border-radius:var(--r-pill,99px);background:var(--c-primary-tint,#DCEBFB);color:var(--c-primary-strong,#0B5CAD);font-size:var(--fs-sm,14px);font-weight:700;line-height:1.2}
+.tg.none{background:var(--c-fill,#E8EDF2);color:var(--c-muted,#5B6772);padding:3px 10px;font-weight:600;border:1px dashed var(--c-line-2,#CBD3DA);cursor:pointer;font-family:inherit}
+.tg.ro{padding:3px 10px}
+.tgx{display:inline-grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;padding:0}
+.tgx:hover{background:rgba(0,0,0,.12)}
+.tgx:focus-visible{outline:2px solid var(--c-focus,#0B6BCB)}
+.tgx svg{width:14px;height:14px}
+.tgfull{font-size:var(--fs-sm,14px);color:var(--c-muted,#5B6772)}
+.tgrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- Build with AI ---- */
+dialog.aib{border:0;border-radius:var(--r-xl,16px);padding:0;width:min(96vw,760px);max-height:92vh;box-shadow:0 18px 60px rgba(10,20,40,.35);background:var(--c-surface,#fff);color:var(--c-ink,#17212B);font:var(--fs-md,16px)/1.45 var(--font-body,system-ui,sans-serif)}
+dialog.aib::backdrop{background:rgba(15,23,42,.55)}
+dialog.aib[open]{display:flex;flex-direction:column}
+.aibh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px 6px}
+.aibh h2{margin:0;font-size:var(--fs-xl,21px)}
+.aibstep{margin:0;padding:0 22px 10px;color:var(--c-muted,#5B6772);font-weight:700;border-bottom:1px solid var(--c-line,#E1E6EB)}
+.aibbody{padding:14px 22px 20px;overflow:auto;flex:1}
+.aibp{display:flex;flex-direction:column;gap:16px}
+.aibf{display:flex;flex-direction:column;gap:4px}
+.aibf>label,.aibfs legend,.aibsort label:not(.aibchk){font-weight:800}
+.aibf small,.aibopt small{display:block;color:var(--c-muted,#5B6772);font-size:var(--fs-sm,14px);font-weight:400}
+.aibin,dialog.aib select,dialog.aib textarea,dialog.aib input[type=text]{font:inherit;padding:10px 12px;min-height:44px;border:2px solid var(--c-line-2,#CBD3DA);border-radius:var(--r-md,10px);background:var(--c-surface,#fff);color:inherit;width:100%;box-sizing:border-box}
+dialog.aib textarea:focus-visible,dialog.aib select:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:1px}
+.aibtwo,.aibsort{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.aibsort{align-items:end;grid-template-columns:1fr 1fr}
+.aibsort .aibchk{grid-column:1/-1}
+.aibfs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.aibfs legend{padding:0 0 4px}
+.aibopt{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border:2px solid var(--c-line,#E1E6EB);border-radius:var(--r-md,10px);cursor:pointer}
+.aibopt:has(input:checked){border-color:var(--c-primary,#0B6BCB);background:var(--c-primary-soft,#F1F7FE)}
+.aibopt input{margin-top:5px;width:18px;height:18px;flex:none}
+.aibchk{display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:600}
+.aibchk input{width:18px;height:18px}
+.aibout{font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;min-height:200px;resize:vertical;background:var(--c-surface-2,#F8FAFB)!important}
+.aibbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.aibnote{color:var(--c-good-strong,#0A5A36);font-weight:700}
+@media(max-width:560px){.aibtwo,.aibsort{grid-template-columns:1fr}}

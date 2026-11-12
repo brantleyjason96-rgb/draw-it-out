@@ -203,6 +203,41 @@ function tagUsage() {
   });
   return [...m.values()].sort((a, b) => b.qs - a.qs || a.label.localeCompare(b.label));
 }
+// A box for tags: type a tag and press Enter or comma to make a chip; click a chip's ✕ (or Backspace on an empty box) to remove it.
+// Suggestions are tags used before, most used first. onChange(tags) gets the cleaned list (at most 5, 30 characters each).
+function tagInput({ value = [], onChange, label = 'Tags', id, placeholder = 'Type a tag, then Enter' }) {
+  id = id || 'tg' + Math.random().toString(36).slice(2, 7);
+  let tags = canonTags(value);
+  const box = el('div', { className: 'tgbox', role: 'group', ariaLabel: label, id });
+  const input = el('input', { type: 'text', id: id + 'i', className: 'tgin', placeholder, autocomplete: 'off', maxLength: SK.TAG_LEN + 10 });
+  input.setAttribute('aria-label', label + ': type a new tag'); input.setAttribute('list', id + 'l');
+  const dl = el('datalist', { id: id + 'l' });
+  const full = el('span', { className: 'tgfull', textContent: 'That is the most tags (' + SK.MAX_TAGS + ').', hidden: true });
+  const status = el('span', { className: 'sr', role: 'status' });
+  function paint() {
+    box.replaceChildren(...tags.map(t => {
+      const x = el('button', { type: 'button', className: 'tgx', title: 'Remove the tag ' + t }, icoEl('x', 'sm')); x.setAttribute('aria-label', 'Remove the tag ' + t);
+      x.onclick = () => { tags = tags.filter(y => y !== t); status.textContent = 'Removed ' + t; commit(); input.focus(); };
+      return el('span', { className: 'tg' }, t, x);
+    }), input, dl, full, status);
+    const used = new Set(tags.map(SK.tagKey)); dl.replaceChildren(...tagUsage().filter(u => !used.has(u.key)).slice(0, 30).map(u => el('option', { value: u.label })));
+    input.hidden = tags.length >= SK.MAX_TAGS; full.hidden = tags.length < SK.MAX_TAGS;
+  }
+  function commit() { paint(); onChange && onChange(tags.slice()); }
+  function add(text) {
+    String(text).split(',').forEach(part => { const t = canonTag(part); if (t && tags.length < SK.MAX_TAGS && !tags.some(y => SK.tagKey(y) === SK.tagKey(t))) { tags.push(t); status.textContent = 'Added ' + t; } });
+    input.value = ''; commit(); input.focus();
+  }
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); if (input.value.trim()) add(input.value); }
+    else if (e.key === 'Backspace' && !input.value && tags.length) { tags.pop(); commit(); input.focus(); }
+  });
+  input.addEventListener('change', () => { if (input.value.trim()) add(input.value); }); // picking a suggestion from the list
+  input.addEventListener('blur', () => { if (input.value.trim()) add(input.value); });
+  paint();
+  box.getTags = () => tags.slice(); box.setTags = v => { tags = canonTags(v); paint(); };
+  return box;
+}
 let folders = []; // unit folders for question sets: [{ id, name }]; a set points at one with set.folder
 // A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
 // (the delete has not finished), so wait for the wipe before opening: that is why the question rail used to stay empty in demo.
