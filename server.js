@@ -147,6 +147,12 @@ function cleanTeams(a) {
   }).filter(Boolean);
 }
 const cleanName = v => String(v || '').replace(/\s+/g, ' ').trim().slice(0, 20);
+// two students with the same nickname get " 2", " 3"… so the teacher can tell their cards apart
+function uniqueName(r, name, self) {
+  const used = new Set([...r.students.values()].filter(x => x !== self).map(x => String(x.name).toLowerCase()));
+  if (!used.has(name.toLowerCase())) return name;
+  for (let n = 2; ; n++) { const suf = ' ' + n, cand = Array.from(name).slice(0, 20 - suf.length).join('').trimEnd() + suf; if (!used.has(cand.toLowerCase())) return cand; }
+}
 const cleanIni = s => Array.from(String(s || '').replace(/[^\p{L}\p{N}]/gu, '').toUpperCase()).slice(0, 6).join('');
 function cleanRoster(a, teams) {
   const ids = new Set(teams.map(t => t.id)), seen = new Set();
@@ -377,9 +383,10 @@ wss.on('connection', (ws, req) => {
           if (!name && tm) name = tm.name + ' ' + ([...r.students.values()].filter(x => x.team === tm.id).length + 1);
           if (!name) return tx(ws, { t: 'err', m: 'Type a nickname' });
           if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
+          name = uniqueName(r, name);
           s = { id: randomUUID(), tok: newTok(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500, team: tm ? tm.id : null };
           r.students.set(s.id, s);
-        } else if (name) s.name = name;
+        } else if (name) s.name = uniqueName(r, name, s);
       }
       // the student's own copy is the source of truth, so a server restart or dropped connection loses nothing.
       // A freshly loaded page (have=false) with nothing drawn must not wipe the saved drawing; it gets it sent back instead.
@@ -511,7 +518,7 @@ wss.on('connection', (ws, req) => {
       } else if (m.t === 'rename') { // a nickname-joined student only: with a class list, the list decides the name
         const s = room.students.get(m.id); if (!s || s.rid) return;
         const name = cleanName(m.name); if (!name) return tx(ws, { t: 'note', m: 'Type a name.' });
-        s.name = name; toWatchers(room, { t: 'join', s: stuView(s) });
+        s.name = uniqueName(room, name, s); toWatchers(room, { t: 'join', s: stuView(s) });
       }
     }
   }

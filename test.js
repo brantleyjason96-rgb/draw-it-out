@@ -707,6 +707,21 @@ await test('undo: the window closes after UNDO_MS', async () => {
   } finally { s2.kill(); }
 });
 
+
+await test('duplicate nicknames get a number; rejoining keeps your own name', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'DUPS', key: KEY }); await h.wait('state');
+  const names = [];
+  for (const n of ['Sam', 'sam', 'Sam', ' SAM ', 'Alex']) { const c = client(); await c.ready; c.send({ t: 'join', code: 'DUPS', name: n, bw: 800, bh: 500 }); await c.wait('joined'); names.push(c); }
+  const st = client(); await st.ready; st.send({ t: 'host', code: 'DUPS', key: KEY }); const s = await st.wait('state');
+  assert.deepEqual(s.students.map(x => x.name), ['Sam', 'sam 2', 'Sam 3', 'SAM 4', 'Alex']);
+  const j = names[0].last('joined'); const again = client(); await again.ready; again.send({ t: 'join', code: 'DUPS', name: 'Sam', id: j.id, tok: j.tok, bw: 800, bh: 500 }); await again.wait('joined');
+  const st2 = client(); await st2.ready; st2.send({ t: 'host', code: 'DUPS', key: KEY }); assert.equal((await st2.wait('state')).students[0].name, 'Sam', 'not renamed to "Sam 2"');
+  const long = client(); await long.ready; long.send({ t: 'join', code: 'DUPS', name: 'Abcdefghijklmnopqrst', bw: 800, bh: 500 }); await long.wait('joined');
+  const long2 = client(); await long2.ready; long2.send({ t: 'join', code: 'DUPS', name: 'Abcdefghijklmnopqrst', bw: 800, bh: 500 }); await long2.wait('joined');
+  const st3 = client(); await st3.ready; st3.send({ t: 'host', code: 'DUPS', key: KEY }); const all = (await st3.wait('state')).students.map(x => x.name);
+  assert.ok(all.includes('Abcdefghijklmnopqr 2') && all.every(n => n.length <= 20), all.join('|'));
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
