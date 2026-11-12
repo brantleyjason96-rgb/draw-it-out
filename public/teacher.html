@@ -193,9 +193,10 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
   <section class="sec">
    <div class="sech">
     <div class="lbl">Your question sets</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><button class="b" id="aibtn" title="Write a prompt for any AI tool, then paste its answer back here">Build with AI</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><button class="b" id="aibtn" title="Write a prompt for any AI tool, then paste its answer back here">Build with AI</button><button class="b" id="tagsbtn" title="See, rename, merge or delete your tags">Tags</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
     <input type="file" id="impfile" accept=".json,application/json" hidden><button id="newfolder" hidden></button>
    </div>
+   <div id="tagfilter" class="tgfilter" hidden role="group" aria-label="Filter question sets by tag"></div>
    <div class="grid" id="sets"></div>
   </section>
   <section class="sec">
@@ -346,8 +347,56 @@ function setCard(s) {
   const mv = el('button', { className: 'b', title: 'Move to a folder', 'aria-label': 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' }, icoEl('folder'));
   mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
   const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
-  c.append(band, hd, mix, btns); return c;
+  const tg = setTagChips(s); if (tg) c.append(band, hd, mix, tg, btns); else c.append(band, hd, mix, btns);
+  if (tagFilter) { const ms = s.questions.filter(q => SK.tagsOf(q, s).some(t => SK.tagKey(t) === tagFilter)); c.classList.add('filtered'); const box = el('div', { className: 'tgmatch' }, el('b', { textContent: ms.length + ' of ' + s.questions.length + ' questions match' }), ...ms.slice(0, 3).map(q => el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' })), ...(ms.length > 3 ? [el('small', { className: 'mut', textContent: 'and ' + (ms.length - 3) + ' more' })] : [])); c.insertBefore(box, btns); }
+  return c;
 }
+// ---- tags on the Question sets tab: chips on each set, a filter, and the Tags dialog ----
+let tagFilter = ''; // a tag key, or '' for all sets
+function setTagChips(s) {
+  const n = new Map(); const bump = (t, w) => { const k = SK.tagKey(t); const o = n.get(k) || { label: tagLabel(t), c: 0 }; o.c += w; n.set(k, o); };
+  (s.tags || []).forEach(t => bump(t, 1e3)); s.questions.forEach(q => (q.tags || []).forEach(t => bump(t, 1)));
+  const untagged = s.questions.filter(q => !SK.tagsOf(q, s).length).length;
+  if (!n.size && !untagged) return null;
+  const top = [...n.entries()].sort((a, b) => b[1].c - a[1].c), row = el('div', { className: 'tgrow tgset' });
+  top.slice(0, 5).forEach(([k, o]) => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === k ? ' on' : ''), textContent: o.label, title: 'Show only sets and questions tagged ' + o.label }); b.setAttribute('aria-pressed', tagFilter === k ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === k ? '' : k; renderSets(); }; row.append(b); });
+  if (top.length > 5) row.append(el('span', { className: 'tg none', textContent: '+' + (top.length - 5) + ' more', title: top.slice(5).map(x => x[1].label).join(', ') }));
+  if (untagged) row.append(el('span', { className: 'tg none', textContent: untagged + ' with no tag', title: 'Open the set to add tags' }));
+  return row;
+}
+function renderTagFilter() {
+  const box = $('#tagfilter'), use = tagUsage(); box.hidden = !use.length; box.replaceChildren();
+  if (!use.length) return;
+  if (tagFilter && !use.some(u => u.key === tagFilter)) tagFilter = '';
+  box.append(el('span', { className: 'mut', textContent: 'Filter by tag: ' }));
+  use.slice(0, 12).forEach(u => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === u.key ? ' on' : ''), textContent: u.label + ' · ' + u.qs }); b.setAttribute('aria-pressed', tagFilter === u.key ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === u.key ? '' : u.key; renderSets(); }; box.append(b); });
+  if (use.length > 12) box.append(el('span', { className: 'mut', textContent: '+' + (use.length - 12) + ' more in Tags' }));
+  if (tagFilter) box.append(el('button', { type: 'button', className: 'b sm', textContent: 'Show all sets', onclick: () => { tagFilter = ''; renderSets(); } }));
+}
+async function tagsDialog() {
+  document.getElementById('tgdlg')?.remove();
+  const d = el('dialog', { id: 'tgdlg', className: 'aib' }); d.setAttribute('aria-labelledby', 'tgh');
+  const list = el('div', { className: 'tglist' }), live = el('div', { className: 'sr', role: 'status' });
+  const paint = () => {
+    const use = tagUsage(); list.replaceChildren();
+    if (!use.length) list.append(el('p', { className: 'mut', textContent: 'No tags yet. Add them in the question editor, or let Build with AI add them.' }));
+    use.forEach(u => {
+      const mk = (t, f, cls) => { const b = el('button', { type: 'button', className: 'b sm ' + (cls || ''), textContent: t, onclick: f }); b.setAttribute('aria-label', t + ' ' + u.label); return b; };
+      list.append(el('div', { className: 'tgrw' }, el('span', { className: 'tg ro', textContent: u.label }), el('span', { className: 'mut', textContent: u.qs + ' question' + (u.qs === 1 ? '' : 's') + (u.setIds.size ? ' · on ' + u.setIds.size + ' set' + (u.setIds.size === 1 ? '' : 's') : '') }), el('span', { style: 'flex:1' }),
+        mk('Rename', async () => { const v = await askText('New name', u.label, { title: 'Rename the tag "' + u.label + '"', text: 'It changes on every question and set that has it, and in your saved lesson history. If you type the name of another tag, the two become one.', ok: 'Rename', required: 'Type a tag name', max: SK.TAG_LEN + 10 }); if (v === null) return; const c = SK.cleanTag(v); if (!c) return; await retag(u.key, c); live.textContent = 'Renamed to ' + tagLabel(c); paint(); renderSets(); }),
+        mk('Merge', async () => {
+          const others = use.filter(x => x.key !== u.key); if (!others.length) return toast('There is no other tag to merge with.');
+          const v = await choose('Every question and set tagged "' + u.label + '" gets the tag you pick instead, and "' + u.label + '" goes away. Saved lesson history follows.', [{ label: 'Cancel', value: null }, ...others.slice(0, 8).map(x => ({ label: x.label, value: x.key }))], { title: 'Merge "' + u.label + '" into…' });
+          if (v === null) return; const target = tagLabels[v] || v; await retag(u.key, target); live.textContent = 'Merged into ' + target; paint(); renderSets();
+        }),
+        mk('Delete', async () => { if (!await ask('It is removed from ' + u.qs + ' question' + (u.qs === 1 ? '' : 's') + ' and its set tags. Lesson history keeps the results but no longer groups them under it.', { title: 'Delete the tag "' + u.label + '"?', ok: 'Delete tag', cancel: 'Keep tag', danger: true })) return; await retag(u.key, ''); live.textContent = 'Deleted ' + u.label; paint(); renderSets(); }, 'danger')));
+    });
+  };
+  d.append(el('div', { className: 'aibh' }, el('h2', { id: 'tgh', textContent: 'Your tags' }), el('button', { type: 'button', className: 'b', textContent: 'Done', onclick: () => d.close() })),
+    el('p', { className: 'aibstep', textContent: 'Tags say what a question assesses. Matching ignores capitals and extra spaces.' }), el('div', { className: 'aibbody' }, list, live));
+  d.addEventListener('close', () => d.remove()); paint(); document.body.append(d); d.showModal();
+}
+$('#tagsbtn').onclick = tagsDialog;
 function folderMenu(f, anchor) {
   if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
@@ -361,13 +410,15 @@ function folderMenu(f, anchor) {
   }, 'danger');
   anchor.append(menu);
 }
+function carries(s) { return !tagFilter || (s.tags || []).some(t => SK.tagKey(t) === tagFilter) || s.questions.some(q => SK.tagsOf(q, s).some(t => SK.tagKey(t) === tagFilter)); }
 function renderSets() {
-  closeMenu();
+  closeMenu(); renderTagFilter();
   const box = $('#sets'); box.innerHTML = ''; box.className = folders.length ? 'fstack' : 'grid';
-    if (!folders.length) { sets.forEach(s => box.append(setCard(s))); return; }
+  if (tagFilter && !sets.some(carries)) box.append(el('div', { className: 'mut', textContent: 'No set has that tag.' }));
+  if (!folders.length) { sets.filter(carries).forEach(s => box.append(setCard(s))); return; }
   const coll = fcoll();
   setGroups().forEach(g => {
-    if (!g.folder && !g.sets.length) return;
+    g = { ...g, sets: g.sets.filter(carries) }; if ((!g.folder || tagFilter) && !g.sets.length) return;
     const id = g.folder ? g.folder.id : '_none', open = !coll[id];
     const tog = el('button', { className: 'ftog', onclick: () => { const c = fcoll(); c[id] = open ? 1 : 0; try { store.do_fcollapsed = JSON.stringify(c); } catch {} renderSets(); } },
       el('span', { className: 'chev' }, icoEl('chev', 'sm')), el('span', { className: 'fn' }, ...(g.folder ? [icoEl('folder', 'sm'), ' ' + g.folder.name] : ['Not in a folder'])), el('small', { textContent: g.sets.length + ' set' + (g.sets.length === 1 ? '' : 's') }));

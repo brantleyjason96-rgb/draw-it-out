@@ -160,3 +160,14 @@ dialog.aib textarea:focus-visible,dialog.aib select:focus-visible{outline:3px so
 .aibprob{color:var(--c-bad-strong,#8C1D18);font-weight:700;display:flex;gap:4px;align-items:flex-start}
 .aibprob svg{flex:none;margin-top:3px}
 .aibfix{color:var(--c-warn-strong,#5E4300);font-size:var(--fs-sm,14px)}
+
+.tgfilter{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 4px}
+button.tg{border:0;cursor:pointer;font-family:inherit;padding:3px 10px}
+button.tg:hover{filter:brightness(.95)}
+button.tg:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:2px}
+.tg.on{background:var(--c-primary,#0B6BCB);color:#fff}
+.tgset{padding-top:2px;padding-bottom:2px}
+.tgmatch{padding:8px 10px;border-radius:var(--r-md,10px);background:var(--c-primary-soft,#F1F7FE);border:1px solid var(--c-primary-line,#BBD8F5);display:flex;flex-direction:column;gap:2px;font-size:var(--fs-sm,14px)}
+.tgmatch .x{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tglist{display:flex;flex-direction:column;gap:6px}
+.tgrw{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--c-line,#E1E6EB);border-radius:var(--r-md,10px)}

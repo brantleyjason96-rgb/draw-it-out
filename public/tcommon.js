@@ -243,6 +243,29 @@ function tagInput({ value = [], onChange, label = 'Tags', id, placeholder = 'Typ
   box.getTags = () => tags.slice(); box.setTags = v => { tags = canonTags(v); paint(); };
   return box;
 }
+// Rename, merge or delete a tag everywhere it appears: on sets, on questions, and (via tagHistoryHooks) in saved lesson history,
+// so the dashboard never splits one skill into two rows. to = '' deletes it. Renaming onto another existing tag merges the two.
+const tagHistoryHooks = [];
+function retag(fromKey, to) {
+  const toLabel = SK.cleanTag(to), toKey = SK.tagKey(toLabel), existing = toKey && tagLabels[toKey];
+  const swap = arr => {
+    const out = [], seen = new Set();
+    (arr || []).forEach(t => {
+      const k = SK.tagKey(t), lab = k === fromKey ? (toLabel ? (existing || toLabel) : null) : t;
+      if (lab && !seen.has(SK.tagKey(lab))) { seen.add(SK.tagKey(lab)); out.push(lab); }
+    });
+    return out;
+  };
+  const label = toLabel ? (existing && toKey !== fromKey ? existing : toLabel) : '';
+  if (toLabel && !(existing && toKey !== fromKey)) tagLabels[toKey] = toLabel; // a deliberate rename sets the spelling; a merge keeps the target's
+  if (toKey !== fromKey) delete tagLabels[fromKey];
+  sets.forEach(st => {
+    const a = swap(st.tags); if (a.length) st.tags = a; else delete st.tags;
+    (st.questions || []).forEach(q => { const b = swap(q.tags); if (b.length) q.tags = b; else delete q.tags; });
+  });
+  tagHistoryHooks.forEach(f => { try { f(fromKey, toKey || '', label); } catch {} });
+  return persistSets();
+}
 let folders = []; // unit folders for question sets: [{ id, name }]; a set points at one with set.folder
 // A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
 // (the delete has not finished), so wait for the wipe before opening: that is why the question rail used to stay empty in demo.
