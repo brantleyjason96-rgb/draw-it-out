@@ -591,7 +591,10 @@ function renderSet() {
       ? el('div', { className: 'live', textContent: 'Students are answering' })
       : (() => { const b = el('button', { className: 'b' + (nextUnsent ? ' pri' : ' line2'), onclick: () => go(i) }, icoEl('send', 'sm'), 'Send'); b.setAttribute('aria-label', 'Send question ' + (i + 1) + ' to students'); return b; })();
     const bs = el('div', { className: 'bs' }, main, more);
-    row.append(t, bs); box.append(row);
+    const all = SK.tagsOf(q, activeSet()), own = new Set((q.tags || []).map(SK.tagKey));
+    row.append(t, el('div', { className: 'tgrow' }, ...(all.length
+      ? all.map(x => el('span', { className: 'tg ro' + (own.has(SK.tagKey(x)) ? '' : ' set'), textContent: tagLabel(x), title: own.has(SK.tagKey(x)) ? 'Tag on this question' : 'Tag on the whole set' }))
+      : [el('a', { className: 'tg none', textContent: 'No tag', href: '/sets?id=' + activeSet().id + '&q=' + i + '&code=' + code + '&tag=1', title: 'Add a tag to this question' })])), bs); box.append(row);
   });
   if (!n) box.append(el('div', { className: 'mut', textContent: 'This set has no questions yet. Use + Add question, or Starter sets.', style: 'padding:12px 4px' }));
   $('#pos').textContent = !n ? '' : (cur < 0 ? '–' : cur + 1) + ' of ' + n;

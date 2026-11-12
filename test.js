@@ -1006,6 +1006,17 @@ await test('paste check: good questions pass, bad ones say what is wrong, per qu
   assert.equal(many[0].rows.length, 200); assert.equal(many[0].extra, 5);
 });
 
+
+await test('starter sets: every question is valid and carries tags', () => {
+  const st = JSON.parse(fs.readFileSync('public/starters.json', 'utf8'));
+  assert.ok(st.length >= 10);
+  for (const s of st) for (const [i, q] of s.questions.entries()) {
+    const c = SK.checkQuestion(q); assert.deepEqual(c.problems, [], s.name + ' question ' + (i + 1));
+    assert.ok(c.q.tags && c.q.tags.length >= 1 && c.q.tags.length <= 5, s.name + ' question ' + (i + 1) + ' has tags');
+    assert.deepEqual(c.notes, [], s.name + ' question ' + (i + 1) + ' needed no fixes: ' + c.notes.join('|'));
+  }
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
