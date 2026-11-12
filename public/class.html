@@ -933,6 +933,7 @@ onTeamsSaved(d => {
   save(); ui(); sheetUI();
 });
 $('#tedit').onclick = () => { $('#tcls').textContent = per().name; sheet.showModal(); sheetUI(); };
+if (sp.get('setup') && !DEMO) setTimeout(() => { $('#tedit').click(); history.replaceState(null, '', '/class?code=' + code); }, 500); // from the dashboard's "Teams and class list" link
 // ---- team scores panel: a column on a laptop, a slide-over on a small screen ----
 const wideScr = matchMedia('(min-width:1101px)');
 let scoresOpen = wideScr.matches ? store.do_scores !== '0' : false;

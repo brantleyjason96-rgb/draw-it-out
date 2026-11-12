@@ -167,6 +167,7 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
  <a class="logo" href="/teacher"><svg width="30" height="30" aria-hidden="true" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#1e3a8a"/><path d="M9 22.5c3-8 6-11 9-9s-1 7 5 2.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="9" r="2.4" fill="#fbbf24"/></svg>Draw It Out</a>
  <nav class="tabs" role="tablist" aria-label="Today sections">
   <button role="tab" data-tab="classes" aria-selected="true">Classes</button>
+  <button role="tab" data-tab="dash" aria-selected="false">Dashboard</button>
   <button role="tab" data-tab="sets" aria-selected="false">Question sets</button>
   <button role="tab" data-tab="teams" aria-selected="false">Teams</button>
  </nav>
@@ -187,6 +188,16 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
    <div class="mut" id="conn" style="font-size:var(--fs-sm)"></div>
   </section>
 
+ </div>
+
+ <div id="tab-dash" hidden style="display:flex;flex-direction:column;gap:18px">
+  <div class="dashbar">
+   <div class="dctl"><label for="dclass">Class</label><select id="dclass" class="inp"></select></div>
+   <div class="dctl"><span class="lbl" id="drl">Date range</span><div class="seg" id="drange" role="group" aria-labelledby="drl"><button type="button" data-r="week">This week</button><button type="button" data-r="month">Last 30 days</button><button type="button" data-r="all">All</button></div></div>
+   <span style="flex:1"></span>
+   <button type="button" class="b" id="dcsv">Save as CSV</button><button type="button" class="b" id="dcopy">Copy summary</button>
+  </div>
+  <div id="dashbody" aria-live="polite"></div>
  </div>
 
  <div id="tab-sets" hidden style="display:flex;flex-direction:column;gap:26px">
@@ -275,6 +286,8 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
 <script src="/aibuild.js"></script>
+<script src="/mastery.js"></script>
+<script src="/dashboard.js"></script>
 <script src="/emoji.js"></script>
 <script>
 if (DEMO) location.replace('/class?demo=1');
@@ -480,7 +493,7 @@ $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''
 // ---- Teams tab: names, icons, colours and order, one class at a time ----
 // Points and class lists are not edited here; the tab only changes how a team is shown.
 const startTab = new URLSearchParams(location.search);
-let tab = ['teams', 'sets'].includes(startTab.get('tab')) ? startTab.get('tab') : 'classes';
+let tab = ['teams', 'sets', 'dash'].includes(startTab.get('tab')) ? startTab.get('tab') : 'classes';
 let taCode = periodOf((startTab.get('class') || '').toUpperCase()) ? startTab.get('class').toUpperCase() : currentCode();
 let working = []; // the team list being edited for taCode, saved on every change
 let iconTarget = null, editT = 0;
@@ -488,16 +501,18 @@ let iconTarget = null, editT = 0;
 function setTab(t) {
   tab = t;
   $$('.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); });
-  $('#tab-classes').hidden = t !== 'classes'; $('#tab-sets').hidden = t !== 'sets';
+  $('#tab-classes').hidden = t !== 'classes'; $('#tab-sets').hidden = t !== 'sets'; $('#tab-dash').hidden = t !== 'dash';
   $('#tab-teams').hidden = t !== 'teams';
-  const HD = { classes: ['Today', 'Pick a class to start, or set up team names and icons.'], sets: ['Question sets', 'Your sets are ready to send. Add a starter set to get going.'], teams: ['Teams', 'Names and icons are saved on this computer.'] }[t];
+  const HD = { classes: ['Today', 'Pick a class to start, or set up team names and icons.'], dash: ['Dashboard', 'Who needs help, and where each class is on each tag.'], sets: ['Question sets', 'Your sets are ready to send. Add a starter set to get going.'], teams: ['Teams', 'Names and icons are saved on this computer.'] }[t];
   $('#pgh').textContent = HD[0]; $('#pgs').textContent = HD[1];
   const u = new URL(location.href);
   u.searchParams.set('tab', t);
   if (t === 'teams') u.searchParams.set('class', taCode); else u.searchParams.delete('class');
   history.replaceState(null, '', u);
   if (t === 'teams') { loadWorking(); renderTeamsTab(); askStatus(); }
+  if (t === 'dash') DASH.show(dashClass());
 }
+const dashClass = () => { const c = (new URLSearchParams(location.search).get('class') || '').toUpperCase(); return periodOf(c) ? c : ''; };
 function goTeams(code) {
   if (code && periodOf(code)) taCode = code;
   setTab('teams');
@@ -751,6 +766,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) askS
 
 renderClasses(); renderBackup();
 setTab(tab);
+DASH.init(); lessonsTrim();
 loadSets().then(() => { renderSets(); renderShelf(); checkShared(() => { renderSets(); renderShelf(); }); });
 </script>
 </body>
