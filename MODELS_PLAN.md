@@ -1,6 +1,6 @@
 # Draw It Out — Plan: movable models ("Place It")
 
-**Status: Phase A is built (see "Phase A: what was built" at the end). Phases B, C and D are not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+**Status: Phases A and B are built (see "Phase A: what was built" and "Phase B: what was built" at the end). Phases C and D are not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
 
 Open `mockups/place-it.html` in a browser: tab 1 is the editor, tab 2 the student page (drag, draw, keyboard, Reveal, Freeze, phone shape), tab 3 the teaching screen. Changes in tab 1 show up in tabs 2 and 3.
 
@@ -155,7 +155,27 @@ Labels and built-in pictures (no rotation, no cut-outs), the editor, the Pieces 
 
 **Known limits (Phase A)**
 - The editor's piece list has no drag-to-reorder; the order is the order added.
-- The class-wide results panel, per-piece percentages, mastery and lesson-history scores for pieces are Phase B. A pieces question is saved in lesson history like a drawing (confidence and your mark), not with a piece score.
-- The phone Questions tab and the teacher's phone remote show the board but have no piece-specific view.
+- (Done in Phase B.) The class results panel, per-piece percentages, mastery and lesson-history scores for pieces.
+- (Done in Phase B for the Review tab.) The phone Questions tab and the teacher's phone remote.
 - A teacher page that connects after the question was sent without being a host sees the pieces but no rings.
 - `roundRect` is used to draw cards and labels: it needs Chrome 99 or Safari 16 and later.
+
+
+---
+
+## Phase B: what was built
+Class results, the projector summary, CSV, and lesson history, mastery and the Dashboard for pieces. `npm test`: 106 tests (103 before; 3 new). Run in Chromium end to end: three students place pieces, the results panel, piece and student detail, the CSV download, results on the projector, the saved lesson record, two lessons into the Dashboard (Omar and Priya Not yet at 33%, Maya Secure), a backup round trip of the new fields, and the phone Review tab; no console or security-policy errors.
+
+**Choices made while building**
+- One teaching screen, two views: *Drawings* (the grid, with rings) and *Class results* (the sort-style panel). A pieces question is still a drawing, so it opens on Drawings.
+- The numbers live in `SK.modelStats` (pure, tested) so the panel, the CSV and the tests agree. The panel is `public/modelres.js`; it reuses the sort results' look (`sortres.css`).
+- **Biggest mix-up** is a piece put on another piece's answer spot (within how close counts). A wrong piece near no spot shows `?`.
+- A pieces question's lesson record is `kind: 'draw'` with `model: true` and `placeRight / placeTotal / placePlaced` per student, so old records and old backups still read. A lesson gives one data point per student: pieces first, the mark only when no piece was moved. `MK.score` takes the lesson (or, as before, just its kind).
+- The Dashboard counts pieces lessons separately from "drawings with no marks", so they never appear as unmarked.
+- Results on the projector turn off for the next pieces question (they used to carry over for sort questions, and still do).
+- Without the answer key on the screen (a teacher page that joined late without hosting) the lesson is saved as a plain drawing, not scored.
+
+**Known limits (Phase B)**
+- A piece's percent on the teacher's screen is out of the students who moved it; on the projector it is out of all students who started (the same difference Sort has).
+- The panel has no per-team piece breakdown beyond the team bar.
+- Pieces results are not in the Dashboard's CSV beyond the existing mastery numbers.

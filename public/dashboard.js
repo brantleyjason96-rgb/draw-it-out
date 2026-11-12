@@ -60,7 +60,7 @@ const DASH = (() => {
       if (!r.people.length) ppl.append(t('p', 'mut', 'No one has a score on this tag yet.'));
       r.people.forEach(p => ppl.append(el('div', { className: 'mp' }, t('span', 'mpn', p.name), t('span', 'mpv ' + (p.band || 'nodata'), p.band ? p.value + '% · ' + MK.BAND_WORD[p.band] : 'Not enough data (' + p.n + ')'), t('small', 'mut', 'last ' + fmt(p.last)))));
       const qsc = el('div', { className: 'mcol' }, t('h4', '', 'Questions behind it'));
-      r.qs.slice().reverse().forEach(q => qsc.append(el('div', { className: 'mq' }, t('span', 'mqt', q.q), t('small', 'mut', fmt(q.at) + ' · ' + (q.kind === 'sort' ? 'Sort' : 'Draw') + ' · ' + (q.avg == null ? (q.kind === 'sort' ? 'no one placed cards' : 'no marks, confidence only') : 'class average ' + q.avg + '%')))));
+      r.qs.slice().reverse().forEach(q => qsc.append(el('div', { className: 'mq' }, t('span', 'mqt', q.q), t('small', 'mut', fmt(q.at) + ' · ' + (q.kind === 'sort' ? 'Sort' : q.model ? 'Pieces' : 'Draw') + ' · ' + (q.avg == null ? (q.kind === 'sort' ? 'no one placed cards' : q.model ? 'no one moved pieces' : 'no marks, confidence only') : 'class average ' + q.avg + '%')))));
       det.append(ppl, qsc);
       if (r.ideas.length) { const id = el('div', { className: 'mcol' }, t('h4', '', 'Ideas most often missed')); r.ideas.slice(0, 6).forEach(i => id.append(el('div', { className: 'mq' }, t('span', 'mqt', i.idea), t('small', 'mut', 'missed ' + word(i.misses))))); det.append(id); }
       row.append(det);
@@ -84,12 +84,12 @@ const DASH = (() => {
     $('#dcsv').disabled = $('#dcopy').disabled = !b.lessons.length;
     // the honest limit, always in view
     const sg = b.signals, notes = [];
-    notes.push('This shows what the app measures: sort accuracy, the confidence colour each student picks, and the marks you give drawings. A drawing you did not mark counts as confidence only.');
+    notes.push('This shows what the app measures: sort accuracy, pieces placed in the right spot, the confidence colour each student picks, and the marks you give drawings. A drawing you did not mark counts as confidence only. On a question with pieces, the score is the pieces placed right; the drawing on top is not scored.');
     if (sg.drawUnmarked) notes.push(sg.drawUnmarked + ' of the ' + sg.draw + ' drawing question' + (sg.draw === 1 ? '' : 's') + ' in this range ' + (sg.drawUnmarked === 1 ? 'has' : 'have') + ' no marks, so ' + (sg.drawUnmarked === 1 ? 'it shows' : 'they show') + ' confidence only.');
     const nn = el('div', { className: 'dnote' }, ...notes.map(n => t('p', '', n)));
     if (b.nick && cls) nn.append(el('p', { className: 'nick' }, 'Students joined with nicknames, so history is matched by nickname. Add a class list for reliable tracking. ', el('a', { href: '/class?code=' + code + '&setup=1', textContent: 'Teams and class list' }), '.'));
     if (!b.lessons.length) {
-      root.append(nn, el('div', { className: 'dempty' }, t('b', '', any ? 'Nothing in this date range.' : 'Run a class and this fills in.'), t('p', 'mut', any ? 'Try “Last 30 days” or “All”. Sort questions and marked drawings count toward mastery.' : 'Sort questions and marked drawings count toward mastery.')));
+      root.append(nn, el('div', { className: 'dempty' }, t('b', '', any ? 'Nothing in this date range.' : 'Run a class and this fills in.'), t('p', 'mut', any ? 'Try “Last 30 days” or “All”. Sort questions, pieces questions and marked drawings count toward mastery.' : 'Sort questions, pieces questions and marked drawings count toward mastery.')));
       return;
     }
     // 1. who needs help

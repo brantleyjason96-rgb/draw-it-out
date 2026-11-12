@@ -86,6 +86,7 @@ function paintPieces(x, model, pl, bw, bh, o = {}) {
   if (o.tolRings) model.pieces.forEach((p, i) => { circle(p.kx, p.ky, o.tolRings, '#0B6BCB', 'rgba(11,107,203,.10)'); x.font = '700 ' + fs * .8 + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.fillStyle = '#0B5CAD'; x.fillText(String(i + 1), p.kx, p.ky - o.tolRings - 2); });
   if (o.where) model.pieces.forEach(p => {
     const k = o.where[p.id]; if (!k) return; circle(k.x, k.y, MA / 2 + 4, '#B3261E', 'rgba(179,38,30,.08)');
+    if (o.whereLabels === false) return; // the teacher's board lists where each piece belongs in words, so the labels would only crowd it
     x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = p.label + ' goes here', w = x.measureText(t).width + 10, y = k.y + MA / 2 + 12 + fs * .65;
     x.fillStyle = '#fff'; x.beginPath(); x.roundRect(k.x - w / 2, y - fs * .65, w, fs * 1.3, 6); x.fill(); x.fillStyle = '#8C1D18'; x.fillText(t, k.x, y);
   });

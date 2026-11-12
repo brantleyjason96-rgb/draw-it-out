@@ -298,7 +298,8 @@ const activeSet = () => setById(store.do_active) || sets[0];
 // { id: code@startTime, code, className, at, q (plain text), kind, tags (the question's own plus its set's, as they were when it was asked),
 //   nick (students joined with nicknames, so they are matched by nickname),
 //   students: [{ key (class-list id, or the nickname in lower case), name, pulse r|y|g|null, mark got|almost|not|null,
-//                sortRight, sortTotal, sortPlaced (sort questions), missedIdeas }] }
+//                sortRight, sortTotal, sortPlaced (sort questions), placeRight, placeTotal, placePlaced (pieces questions), missedIdeas }] }
+//   a question with movable pieces is kind 'draw' with model: true, and its students carry the place* numbers
 // Nothing here goes to the server. It is in Back up everything only when the teacher chooses to include class lists (it holds names).
 const LESSON_KEEP_MS = 365 * 864e5;
 const idbDo = (fn) => db.then(d => new Promise(ok => { try { fn(d, ok); } catch { ok(null); } })).catch(() => null);
@@ -318,9 +319,9 @@ const cleanLesson = r => {
   const n = v => (Number.isFinite(v) && v >= 0 && v <= 1000 ? v : null), s = (v, k) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, k);
   const students = (Array.isArray(r.students) ? r.students : []).slice(0, 150).map(x => x && typeof x === 'object' && s(x.key, 40) ? ({
     key: s(x.key, 40), name: s(x.name, 60), pulse: ['r', 'y', 'g'].includes(x.pulse) ? x.pulse : null, mark: ['got', 'almost', 'not'].includes(x.mark) ? x.mark : null,
-    sortRight: n(x.sortRight), sortTotal: n(x.sortTotal), sortPlaced: n(x.sortPlaced), missedIdeas: (Array.isArray(x.missedIdeas) ? x.missedIdeas : []).slice(0, 24).map(i => s(i, 30)).filter(Boolean),
+    sortRight: n(x.sortRight), sortTotal: n(x.sortTotal), sortPlaced: n(x.sortPlaced), placeRight: n(x.placeRight), placeTotal: n(x.placeTotal), placePlaced: n(x.placePlaced), missedIdeas: (Array.isArray(x.missedIdeas) ? x.missedIdeas : []).slice(0, 24).map(i => s(i, 30)).filter(Boolean),
   }) : null).filter(Boolean);
-  return { id: r.id, code: r.code, className: s(r.className, 40), at: r.at, q: s(r.q, 200), kind: r.kind === 'sort' ? 'sort' : 'draw', tags: SK.cleanTags(r.tags).tags, nick: !!r.nick, students };
+  return { id: r.id, code: r.code, className: s(r.className, 40), at: r.at, q: s(r.q, 200), kind: r.kind === 'sort' ? 'sort' : 'draw', ...(r.kind !== 'sort' && r.model === true ? { model: true } : {}), tags: SK.cleanTags(r.tags).tags, nick: !!r.nick, students };
 };
 async function lessonsMerge(list) { // restore: add records that are not already here
   const have = new Set((await lessonsAll()).map(r => r.id)); let n = 0;

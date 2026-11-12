@@ -260,7 +260,7 @@ function paint() {
   const picks = S.picks.filter(id => S.stu.get(id));
   const drawings = sort ? [] : picks; // side by side is for drawings; a sort question shows one student
   const one = picks[0] ? S.stu.get(picks[0]) : null;
-  const sum = !picks.length && sort && S.sres && S.sum && S.sum.n > 0;
+  const sum = !picks.length && (sort || !!S.q.model) && S.sres && S.sum && S.sum.n > 0;
   const lb = !picks.length && !sum && S.board && S.teams.length;
   document.body.classList.toggle('frozen', !!S.frozen);
   $('#boards').hidden = !drawings.length;

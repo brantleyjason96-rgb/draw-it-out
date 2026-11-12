@@ -1147,7 +1147,7 @@ await test('mastery: date ranges, class filter, and the honest counts of what wa
   assert.deepEqual(MK.build(L, { code: 'ABCD', ...MK.range('month', NOW) }).lessons.map(l => l.q), ['mid', 'plain', 'now']);
   assert.deepEqual(MK.build(L, { code: 'ABCD', ...MK.range('week', NOW) }).lessons.map(l => l.q), ['plain', 'now'], 'this week starts on Monday (10 Nov 2026)');
   const w = MK.range('week', Date.UTC(2026, 10, 15, 12)); assert.equal(new Date(w.from).getDay(), 1, 'a Sunday still belongs to the week that began on Monday');
-  const b = MK.build(L, { code: 'ABCD', ...MK.range('all', NOW) }); assert.deepEqual(b.signals, { sort: 0, marked: 3, draw: 4, drawUnmarked: 1 }, 'one drawing question has confidence only, no marks');
+  const b = MK.build(L, { code: 'ABCD', ...MK.range('all', NOW) }); assert.deepEqual(b.signals, { sort: 0, pieces: 0, marked: 3, draw: 4, drawUnmarked: 1 }, 'one drawing question has confidence only, no marks');
   const s = MK.strip(L, 'ABCD', NOW); assert.equal(s.help, 0, 'one Not yet is below two data points in the month'); assert.equal(MK.strip(L, 'NONE', NOW), null);
   assert.equal(MK.build([], {}).rows.length, 0);
 });
@@ -1347,6 +1347,68 @@ await test('pieces: a pasted or imported question with no start positions is sca
   assert.deepEqual(c.problems, []); assert.ok(c.notes.some(n => /scattered/.test(n))); assert.equal(c.q.model.pieces.length, 2);
   assert.ok(SK.checkQuestion({ question: 'x', model: { pieces: [{ label: 'a', kx: 1, ky: 1 }] } }).problems.some(t => /at least 2 pieces/.test(t)));
   assert.ok(SK.checkQuestion({ question: 'x', model: { pieces: [{ label: 'a', kx: 1, ky: 1 }, { label: 'b' }] } }).problems.some(t => /no answer spot/.test(t)));
+});
+
+// ---- Phase B: results, projector summary and mastery for a question with movable pieces ----
+const KEYED = () => SK.cleanModel(MODEL().model); // pieces 1 (190,312) Tilt, 2 (500,520) Equinox, 3 (810,312) Tilt; tol 60
+const pst = (id, pl, team = null) => ({ id, name: id.toUpperCase(), team, pl });
+
+await test('pieces results: right, wrong and mix-ups are worked out from the answer key', () => {
+  const m = KEYED();
+  assert.deepEqual(SK.modelMix(m, { 1: { x: 500, y: 520 }, 2: { x: 500, y: 521 }, 3: { x: 5, y: 5 } }), { 1: 2, 3: null }, 'piece 1 sits on piece 2’s spot; piece 2 is right and not listed; piece 3 is near no spot');
+  assert.deepEqual(SK.modelMix(m, { 3: { x: 5, y: 5 } }), { 3: null });
+  const D = SK.modelStats(m, [
+    pst('ann', { 1: { x: 190, y: 312 }, 2: { x: 500, y: 520 }, 3: { x: 810, y: 312 } }, { id: 'ta', name: 'Granite' }),
+    pst('bo', { 1: { x: 500, y: 520 }, 2: { x: 190, y: 312 }, 3: { x: 810, y: 312 } }, { id: 'ta', name: 'Granite' }),
+    pst('cy', { 1: { x: 190, y: 312 } }, { id: 'tb', name: 'Basalt' }),
+    pst('di', {})]);
+  assert.equal(D.started.length, 3); assert.equal(D.waiting.length, 1);
+  assert.deepEqual(D.all.map(s => s.g.right), [3, 1, 1, 0]);
+  assert.deepEqual(D.stat.map(k => [k.id, k.n, k.right, k.pct]), [[1, 3, 2, 67], [2, 2, 1, 50], [3, 2, 2, 100]], 'a piece’s percent is out of the students who moved it');
+  assert.deepEqual(D.stat[0].swaps, { 2: 1 }); assert.deepEqual(D.stat[1].swaps, { 1: 1 });
+  assert.deepEqual(D.ideas.map(i => [i.name, i.pieces, i.pct]), [['Tilt toward the Sun', 2, 84], ['Equinox', 1, 50]]);
+  assert.deepEqual(D.teams.map(t => [t.team.name, t.right, t.put, t.pct]), [['Granite', 4, 6, 67], ['Basalt', 1, 3, 33]]);
+  assert.equal(D.worst.n, 1); assert.ok([1, 2].includes(D.worst.k.id));
+  assert.equal(SK.modelStats(m, [pst('x', {})]).worst, null); assert.equal(SK.modelStats(m, []).started.length, 0);
+});
+
+await test('pieces results: the projector gets class percentages and never the key or a name', async () => {
+  const code = 'PSUM', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const pr = client(); await pr.ready; pr.send({ t: 'watch', code }); await pr.wait('state');
+  const st = [];
+  for (const n of ['Ann', 'Bo']) { const c = client(); await c.ready; c.send({ t: 'join', code, name: n, bw: 800, bh: 500 }); await c.wait('joined'); st.push(c); }
+  h.send(MODEL()); await sleep(80); h.send({ t: 'sres', on: true }); await sleep(80); pr.clear();
+  st[0].send({ t: 'place', p: { 1: { x: 190, y: 312 }, 2: { x: 500, y: 520 }, 3: { x: 810, y: 312 } } });
+  st[1].send({ t: 'place', p: { 1: { x: 500, y: 520 }, 3: { x: 810, y: 312 } } }); await sleep(900);
+  const sum = pr.last('sum'); assert.ok(sum, 'a summary was pushed');
+  assert.equal(sum.n, 2); assert.deepEqual(sum.cards.map(c => [c.text, c.pct]), [['Summer', 50], ['Autumn', 50], ['Winter', 100]]);
+  assert.deepEqual(sum.ideas.map(i => [i.name, i.pct]).sort(), [['Equinox', 50], ['Tilt toward the Sun', 75]]);
+  const txt = JSON.stringify(sum); assert.ok(!/Ann|Bo\b|"kx"|"ky"|"pos"|"tol"|190|520/.test(txt), 'no names, no key in ' + txt);
+  // switching results off, then a new model question, leaves the projector on the drawings
+  h.send({ t: 'q', question: 'Different', bg: 'blank' }); await sleep(80); h.send({ t: 'sres', on: true }); h.send(MODEL()); await sleep(100);
+  pr.clear(); h.send({ t: 'sres', on: true }); await sleep(60); h.send(MODEL()); await sleep(100);
+  assert.equal(pr.last('sres').on, false, 'results on the projector are turned off for the next pieces question');
+  const lateH = client(); await lateH.ready; lateH.send({ t: 'host', code, key: KEY }); assert.equal((await lateH.wait('state')).sres, false); lateH.ws.close();
+  [h, pr, ...st].forEach(c => c.ws.close());
+});
+
+await test('mastery: pieces right out of all pieces is the score, the mark only when nothing was moved', () => {
+  const ps = (key, right, placed = 4, o = {}) => sst(key, { placeRight: right, placeTotal: 4, placePlaced: placed, ...o });
+  const lesson = { kind: 'draw', model: true };
+  assert.equal(MK.score(ps('a', 3), lesson), 75);
+  assert.equal(MK.score(ps('a', 4, 4, { mark: 'not' }), lesson), 100, 'the pieces decide, not the mark on the drawing');
+  assert.equal(MK.score(ps('a', 0, 0, { mark: 'almost' }), lesson), 50, 'nothing moved: the mark counts');
+  assert.equal(MK.score(ps('a', 0, 0), lesson), null, 'nothing moved and no mark: no score, not 0%');
+  assert.equal(MK.score(ps('a', 3), 'draw'), null, 'a plain drawing ignores piece numbers'); assert.equal(MK.score(ps('a', 3, 4, { mark: 'got' }), { kind: 'draw' }), 100);
+  const L = [
+    les(3, { q: 'Seasons', model: true, tags: ['Seasons'], students: [ps('a', 4, 4, { missedIdeas: [] }), ps('b', 1, 4, { missedIdeas: ['Tilt toward the Sun', 'Equinox'] }), ps('c', 0, 0)] }),
+    les(1, { q: 'Seasons 2', model: true, tags: ['Seasons'], students: [ps('a', 2), ps('b', 3, 4, { missedIdeas: ['Equinox'] })] })];
+  const b = MK.build(L, { code: 'ABCD', ...MK.range('all', NOW) });
+  assert.deepEqual(b.signals, { sort: 0, pieces: 2, marked: 0, draw: 0, drawUnmarked: 0 }, 'pieces lessons are not "unmarked drawings"');
+  const row = b.rows.find(r => r.label === 'Seasons'); assert.equal(row.qs.length, 2);
+  const by = Object.fromEntries(row.people.map(p => [p.key, p.value])); assert.deepEqual(by, { a: 75, b: 50 }, 'a: (100+50)/2, b: (25+75)/2; c has no data point');
+  assert.deepEqual(row.ideas.map(i => [i.idea, i.misses]), [['Equinox', 2], ['Tilt toward the Sun', 1]], 'ideas missed come from pieces too');
+  assert.deepEqual(row.qs.map(q => [q.model, q.avg]), [[true, 63], [true, 63]], 'class average per question (62.5 twice), model flagged');
 });
 
 await test('the Figtree font file is served as woff2', async () => {

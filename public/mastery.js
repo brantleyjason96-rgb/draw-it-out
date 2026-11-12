@@ -2,6 +2,9 @@
 // The honest limit: the app can only show what it measures. Three signals exist:
 //   sort accuracy (right or wrong per card), confidence (the student's own red / amber / green) and the teacher's marks on drawings.
 // A drawing has no right answer the app can score, so a drawing counts toward mastery only when the teacher marked it.
+// A drawing with movable pieces is different: where the pieces went can be scored (pieces right out of all pieces, like Sort cards), so that
+// is its score. The drawing on top is still marked by the teacher, but a lesson gives one data point per student: pieces first, the mark only
+// when the student moved no piece.
 const MK = (() => {
   const MARK_SCORE = { got: 100, almost: 50, not: 0 };
   const CONF = { g: 3, y: 2, r: 1 };
@@ -10,8 +13,11 @@ const MK = (() => {
   const BAND_WORD = { not: 'Not yet', getting: 'Getting there', secure: 'Secure' };
 
   // One lesson's score for one student, 0 to 100, or null when there is nothing to score.
-  function score(st, kind) {
+  // `how` is the lesson record, or just its kind ('sort' | 'draw') for a lesson without pieces.
+  function score(st, how) {
+    const kind = typeof how === 'string' ? how : how && how.kind, model = !!(how && typeof how === 'object' && how.model);
     if (kind === 'sort') return st.sortPlaced > 0 && st.sortTotal > 0 ? 100 * st.sortRight / st.sortTotal : null; // a student who placed nothing has no score, not a zero
+    if (model && st.placePlaced > 0 && st.placeTotal > 0) return 100 * st.placeRight / st.placeTotal;
     return st.mark && st.mark in MARK_SCORE ? MARK_SCORE[st.mark] : null;
   }
   // Average of a student's data points on one tag, the most recent three counted double. pts = [{ at, score }].
@@ -42,20 +48,20 @@ const MK = (() => {
     const students = new Map();                         // key -> { key, name, tags: Map(tagKey -> { label, pts }), red: [at], conf: [{ at, pulse, score, q }] }
     const tags = new Map();                             // tagKey -> { key, label, lessons:[], ... }
     const stu = (k, name) => { let s = students.get(k); if (!s) { s = { key: k, name, tags: new Map(), red: [], conf: [] }; students.set(k, s); } if (name) s.name = name; return s; };
-    const sig = { sort: 0, marked: 0, draw: 0, drawUnmarked: 0 };
+    const sig = { sort: 0, pieces: 0, marked: 0, draw: 0, drawUnmarked: 0 };
     ls.forEach(l => {
       const keys = keysOf(l);
       keys.forEach(k => { let t = tags.get(k); if (!t) { t = { key: k, label: labelOf(l, k), lessons: [] }; tags.set(k, t); } t.lessons.push(l); });
       let anyMark = false;
       l.students.forEach(st => {
-        const s = stu(st.key, st.name), sc = score(st, l.kind);
+        const s = stu(st.key, st.name), sc = score(st, l);
         if (st.mark) anyMark = true;
         if (st.pulse === 'r') s.red.push(l.at);
         if (st.pulse) s.conf.push({ at: l.at, pulse: st.pulse, score: sc, q: l.q, tags: keys.map(k => labelOf(l, k)) });
         if (sc == null) return;
         keys.forEach(k => { let e = s.tags.get(k); if (!e) { e = { label: labelOf(l, k), pts: [] }; s.tags.set(k, e); } e.pts.push({ at: l.at, score: sc, q: l.q }); });
       });
-      if (l.kind === 'sort') sig.sort++; else { sig.draw++; if (anyMark) sig.marked++; else sig.drawUnmarked++; }
+      if (l.kind === 'sort') sig.sort++; else if (l.model) sig.pieces++; else { sig.draw++; if (anyMark) sig.marked++; else sig.drawUnmarked++; }
     });
     // per tag: each student's number and band, the questions behind it, the ideas most often missed
     const rows = [...tags.values()].map(t => {
@@ -64,9 +70,9 @@ const MK = (() => {
       const counts = { not: 0, getting: 0, secure: 0, nodata: 0 };
       people.forEach(p => { counts[p.band || 'nodata']++; });
       const asked = new Map();                          // idea -> { misses, of }
-      t.lessons.filter(l => l.kind === 'sort').forEach(l => l.students.forEach(st => { if (!(st.sortPlaced > 0)) return; (st.missedIdeas || []).forEach(i => { const o = asked.get(i) || { idea: i, misses: 0 }; o.misses++; asked.set(i, o); }); }));
+      t.lessons.filter(l => l.kind === 'sort' || l.model).forEach(l => l.students.forEach(st => { if (!(st.sortPlaced > 0 || st.placePlaced > 0)) return; (st.missedIdeas || []).forEach(i => { const o = asked.get(i) || { idea: i, misses: 0 }; o.misses++; asked.set(i, o); }); }));
       const ideas = [...asked.values()].sort((a, b) => b.misses - a.misses || a.idea.localeCompare(b.idea));
-      const qs = t.lessons.map(l => { const sc = l.students.map(st => score(st, l.kind)).filter(x => x != null); return { id: l.id, q: l.q, at: l.at, kind: l.kind, n: sc.length, avg: sc.length ? Math.round(sc.reduce((a, b) => a + b, 0) / sc.length) : null }; });
+      const qs = t.lessons.map(l => { const sc = l.students.map(st => score(st, l)).filter(x => x != null); return { id: l.id, q: l.q, at: l.at, kind: l.kind, model: !!l.model, n: sc.length, avg: sc.length ? Math.round(sc.reduce((a, b) => a + b, 0) / sc.length) : null }; });
       return { key: t.key, label: t.label, people: people.sort((a, b) => (a.value ?? 1e3) - (b.value ?? 1e3) || a.name.localeCompare(b.name)), counts, ideas, qs };
     }).sort((a, b) => (a.key === NOTAG) - (b.key === NOTAG) || b.qs.length - a.qs.length || a.label.localeCompare(b.label));
     // who needs help: Not yet on any tag, or red twice or more

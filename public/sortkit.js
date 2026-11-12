@@ -80,6 +80,36 @@ const SK = {
     m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol; if (ok[p.id]) right++; });
     return { ok, right, put, total: m.pieces.length };
   },
+  // For each wrong piece a student placed: the piece whose answer spot it sits on (within "how close counts"), or null when it is nowhere near
+  // any spot. { pieceId: otherPieceId | null }; right and unplaced pieces are not in it. This is the "biggest mix-up" the results panel shows.
+  modelMix(m, pl) {
+    const out = {};
+    m.pieces.forEach(p => {
+      const q = pl && pl[p.id]; if (!q || Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol) return;
+      let best = null, bd = m.tol;
+      m.pieces.forEach(o => { if (o.id === p.id) return; const d = Math.hypot(q.x - o.kx, q.y - o.ky); if (d <= bd) { bd = d; best = o.id; } });
+      out[p.id] = best;
+    });
+    return out;
+  },
+  // Everything the class results panel shows, from the full model (with the key) and the students: [{ id, name, team, pl, ... }].
+  // A piece's percent is out of the students who moved it (as with Sort cards); a student's score is pieces right out of all pieces.
+  modelStats(m, students) {
+    const all = students.map(s => ({ ...s, pl: s.pl || {}, g: SK.modelCheck(m, s.pl), mix: SK.modelMix(m, s.pl) }));
+    const started = all.filter(s => s.g.put > 0), waiting = all.filter(s => !s.g.put);
+    const stat = m.pieces.map(p => {
+      const ans = started.filter(s => s.pl[p.id]), right = ans.filter(s => s.g.ok[p.id]).length, swaps = {};
+      ans.forEach(s => { if (s.mix[p.id] != null) swaps[s.mix[p.id]] = (swaps[s.mix[p.id]] || 0) + 1; });
+      return { ...p, idea: p.idea || '', n: ans.length, right, pct: ans.length ? Math.round(100 * right / ans.length) : null, swaps };
+    });
+    const names = [...new Set(stat.map(k => k.idea).filter(Boolean))];
+    const ideas = names.map(n => { const ks = stat.filter(k => k.idea === n && k.pct != null); return { name: n, pieces: stat.filter(k => k.idea === n).length, pct: ks.length ? Math.round(ks.reduce((a, k) => a + k.pct, 0) / ks.length) : null }; });
+    const seen = new Map();
+    started.forEach(s => { if (!s.team) return; let t = seen.get(s.team.id); if (!t) seen.set(s.team.id, (t = { team: s.team, right: 0, put: 0, n: 0 })); t.right += s.g.right; t.put += s.g.total; t.n++; });
+    const teams = [...seen.values()].map(t => ({ ...t, pct: Math.round(100 * t.right / t.put) }));
+    let worst = null; stat.forEach(k => Object.entries(k.swaps).forEach(([id, n]) => { if (!worst || n > worst.n) worst = { k, other: +id, n }; }));
+    return { pieces: m.pieces, all, started, waiting, stat, ideas, teams, worst };
+  },
   // ---- one validator for every way a question can arrive (editor, file import, "Build with AI" paste) ----
   // These are client copies of the server's cleanHtml / cleanSort limits, plus the tag rules. Problems are written in plain words
   // for a teacher; "notes" are small fixes that were made on the way in (a long name shortened, a sixth tag left out).

@@ -235,10 +235,20 @@ function sortSummary(r) {
   const by = {}; sq.cards.forEach(c => { const i = r.sk.idea[c.id]; if (i) (by[i] = by[i] || []).push(cards.find(x => x.id === c.id).pct); });
   return { t: 'sum', n: list.length, cards, ideas: Object.entries(by).map(([name, a]) => ({ name, pct: Math.round(a.reduce((x, y) => x + y, 0) / a.length) })) };
 }
+// the same numbers for a pieces question: % of the students who moved a piece that have it within reach of its spot (no names, no key)
+function modelSummary(r) {
+  const mq = modelOf(r); if (!mq || !r.sk) return null;
+  const list = [...r.students.values()].filter(s => s.pl && Object.keys(s.pl).length);
+  const right = (s, id) => { const p = s.pl[id], k = r.sk.pos[id]; return !!p && !!k && Math.hypot(p.x - k.x, p.y - k.y) <= r.sk.tol; };
+  const cards = mq.pieces.map(c => ({ id: c.id, text: c.label, pct: list.length ? Math.round(100 * list.filter(s => right(s, c.id)).length / list.length) : 0 }));
+  const by = {}; mq.pieces.forEach(c => { const i = r.sk.idea[c.id]; if (i) (by[i] = by[i] || []).push(cards.find(x => x.id === c.id).pct); });
+  return { t: 'sum', n: list.length, cards, ideas: Object.entries(by).map(([name, a]) => ({ name, pct: Math.round(a.reduce((x, y) => x + y, 0) / a.length) })) };
+}
+const classSummary = r => (modelOf(r) ? modelSummary(r) : sortSummary(r));
 let sumTimer = new Map();
 function pushSummary(r) { // at most twice a second, and only while the teacher has results on the projector
   if (!r.sres || sumTimer.get(r)) return;
-  sumTimer.set(r, setTimeout(() => { sumTimer.delete(r); const o = sortSummary(r); if (o) toPublic(r, o); }, 500));
+  sumTimer.set(r, setTimeout(() => { sumTimer.delete(r); const o = classSummary(r); if (o) toPublic(r, o); }, 500));
 }
 // ---- teams and roster ----
 // The roster only ever holds initials and a team. Real names stay in the teacher's browser and are never sent here.
@@ -576,7 +586,7 @@ wss.on('connection', (ws, req) => {
       } else if (m.t === 'place') { // a model question: the student's moved pieces, one small map
         if (!modelOf(room)) return;
         me.pl = cleanPl(room, m.p);
-        toWatchers(room, { t: 'pl', id: me.id, p: me.pl }); sendFb(room, me);
+        toWatchers(room, { t: 'pl', id: me.id, p: me.pl }); sendFb(room, me); pushSummary(room);
       } else if (m.t === 'set') { // add a new object or replace one with the same id
         const o = cleanObj(m.o, dm(me)); if (!o) return;
         const i = me.objs.findIndex(x => x.id === o.id);
@@ -598,6 +608,7 @@ wss.on('connection', (ws, req) => {
         room.undoT = setTimeout(() => { room.undo = null; }, UNDO_MS);
         snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
+        if (room.sres && (nq.model || room.undo.q.model)) { room.sres = false; toWatchers(room, { t: 'sres', on: false }); } // class results on the projector stay with the question they were turned on for
         room.marks = {}; // the teacher's marks belong to the question that just ended
         room.qn++; room.qat = Date.now(); // when this question started: the teacher page files its lesson record under this time
         // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
@@ -675,7 +686,7 @@ wss.on('connection', (ws, req) => {
         s.done = false; tx(s.ws, { t: 'sorted', p: s.sort || {}, done: false }); toWatchers(room, { t: 'sort', id: s.id, p: s.sort || {}, done: false });
       } else if (m.t === 'sres') { // class-wide sort results on the projector
         room.sres = !!m.on; toWatchers(room, { t: 'sres', on: room.sres });
-        const o = room.sres && sortSummary(room); if (o) toPublic(room, o);
+        const o = room.sres && classSummary(room); if (o) toPublic(room, o);
       } else if (m.t === 'resetscores') {
         room.scores = cleanScores({}, room.teams); room.students.forEach(s => (s.aw = null)); pushScores(room);
       } else if (m.t === 'board') { // projector shows the leaderboard when no one's work is up

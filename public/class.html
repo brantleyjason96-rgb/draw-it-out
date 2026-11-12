@@ -70,6 +70,7 @@
    </div>
    <div class="toolrow">
     <div id="pulsesum" hidden></div>
+    <span class="seg" id="mview" role="group" aria-label="What to look at" hidden><button data-v="draw" aria-pressed="true">Drawings</button><button data-v="res" aria-pressed="false">Class results</button></span>
     <div id="sctlhost" class="row" hidden></div>
     <span class="sp"></span>
     <span class="seg" role="group" aria-label="Card size" id="csize"><button data-z="170" aria-pressed="false" title="Small cards">S</button><button data-z="230" aria-pressed="true" title="Medium cards">M</button><button data-z="320" aria-pressed="false" title="Large cards">L</button></span>
@@ -187,6 +188,7 @@
 <script src="/timerkit.js"></script>
 <script src="/tcommon.js"></script>
 <script src="/sortres.js"></script>
+<script src="/modelres.js"></script>
 <script>
 const sp = new URLSearchParams(location.search);
 // Pairing: the computer's "Use my phone as a remote" QR opens /class?code=ABCD#k=<secret>&n=<name>. The secret stays in the
@@ -206,7 +208,7 @@ const link = location.origin + '/?code=' + code;
 document.title = (DEMO ? 'Demo' : per().name) + ' – Draw It Out';
 setCpick(per().name); $('#code').textContent = code; $('#pname').textContent = per().name; $('#pcode').textContent = code;
 
-const S = { q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, phist: [], stu: new Map(), conn: false };
+const S = { mview: 'draw', q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, phist: [], stu: new Map(), conn: false };
 let TM = loadTM(code); TM.scores = TM.scores || {};
 const save = () => saveTM(code, TM);
 const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: withScores ? TM.scores : undefined });
@@ -315,7 +317,7 @@ function onmsg(m) {
       if (m.fresh && !DEMO) restoreQ(); // a brand-new class: put back the question this page last sent
       ui(); break;
     }
-    case 'restore': startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; SR.reset(); ui(); break;
+    case 'restore': startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; SR.reset(); MR.reset(); ui(); break;
     case 'score': // team names/icons are always adopted (a rename must show here too); scores wait while the sheet is open
       TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap;
       if (editing()) TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
@@ -330,16 +332,16 @@ function onmsg(m) {
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.dirty = true; subSoon(); } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.dirty = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.dirty = true; subSoon(); } break;
-    case 'pl': if (s) { s.pl = m.p || {}; s.dirty = true; modelChip(s); subSoon(); } break; // a student moved a piece
+    case 'pl': if (s) { s.pl = m.p || {}; s.dirty = true; modelChip(s); subSoon(); if (S.mview === 'res' && S.q.model && !ph.matches) MR.update(); } break; // a student moved a piece
     case 'all': if (s) { s.objs = m.objs; s.dirty = true; subSoon(); } break;
-    case 'q': saveLesson(); S.marks = {}; startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
+    case 'q': saveLesson(); S.marks = {}; startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; S.revealed = false; SR.reset(); MR.reset(); if (Array.isArray(m.phist)) S.phist = m.phist;
       S.stu.forEach(x => { x.objs = []; x.sort = {}; x.pl = {}; x.done = false; x.aw = false; x.pulse = null; x.dirty = true; });
       // the server has already taken everyone off the projector; do the same here so no card stays outlined
       S.picks = []; S.spot = null; S.frozen = false;
       ui(); break;
     case 'sort': if (s) { s.sort = m.p; s.done = m.done; SR.update(); ui(); } break;
     case 'reveal': S.revealed = m.on; ui(); break;
-    case 'sres': S.projSum = m.on; SR.update(); break;
+    case 'sres': S.projSum = m.on; if (S.q.model) MR.update(); else SR.update(); break;
     case 'mode': S.simple = !!m.simple; ui(); break;
     case 'spot': S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; ui(); break;
     case 'pulse': if (s) { s.pulse = m.c; pulseCard(s); pulseSummary(); if ($('#rep').open) drawReport(); } break;
@@ -481,16 +483,18 @@ function lessonRecord() {
   const q = S.q; if (DEMO || store['do_remote_' + code] || !qAt || !q || !(q.question || q.img)) return null;
   const sort = q.kind === 'sort', sk = S.sk, cards = sort && q.sort ? q.sort.cards : [];
   if (sort && !sk) return null; // the answer key comes with the question; without it there is nothing to score
+  const placing = !!q.model && hasKey(), full = placing ? modelFull() : null; // pieces are scored like cards, when the key is here
   const students = [...S.stu.values()].map(s => {
     const e = rosterOf(s), key = e ? e.rid : String(s.name || '').toLowerCase().trim(), name = e ? (e.first + ' ' + e.last).replace(/\s+/g, ' ').trim() : s.name;
     const mine = s.sort || {}, wrong = cards.filter(c => mine[c.id] !== (sk && sk.lane[c.id]));
-    const r = { key, name, pulse: pulseOf(s.pulse) ? s.pulse : null, mark: (S.marks || {})[s.id] || null, sortRight: null, sortTotal: null, sortPlaced: null, missedIdeas: [] };
+    const r = { key, name, pulse: pulseOf(s.pulse) ? s.pulse : null, mark: (S.marks || {})[s.id] || null, sortRight: null, sortTotal: null, sortPlaced: null, missedIdeas: [], placeRight: null, placeTotal: null, placePlaced: null };
+    if (placing) { const g = SK.modelCheck(full, s.pl || {}); r.placePlaced = g.put; r.placeTotal = full.pieces.length; r.placeRight = g.right; r.missedIdeas = [...new Set(full.pieces.filter(p => (s.pl || {})[p.id] && !g.ok[p.id]).map(p => p.idea).filter(Boolean))]; }
     if (sort) { r.sortPlaced = cards.filter(c => mine[c.id]).length; r.sortTotal = cards.length; r.sortRight = cards.length - wrong.length; r.missedIdeas = [...new Set(wrong.map(c => sk.idea[c.id]).filter(Boolean))]; }
     const worked = sort ? r.sortPlaced > 0 : !!((s.objs && s.objs.length) || Object.keys(s.pl || {}).length);
     return worked || r.pulse || r.mark ? r : null;
   }).filter(Boolean);
   if (!students.length) return null;
-  return { id: code + '@' + qAt, code, className: per() ? per().name : '', at: qAt, q: plain(q.question || '').replace(/\s+/g, ' ').trim().slice(0, 200) || (sort ? 'Sort question' : 'Picture question'), kind: sort ? 'sort' : 'draw', tags: qTags || tagsFor(q), nick: !TM.roster.length, students };
+  return { id: code + '@' + qAt, code, className: per() ? per().name : '', at: qAt, q: plain(q.question || '').replace(/\s+/g, ' ').trim().slice(0, 200) || (sort ? 'Sort question' : 'Picture question'), kind: sort ? 'sort' : 'draw', ...(placing ? { model: true } : {}), tags: qTags || tagsFor(q), nick: !TM.roster.length, students };
 }
 function saveLesson() { const r = lessonRecord(); if (r) lessonPut(r); }
 addEventListener('pagehide', saveLesson);
@@ -560,8 +564,9 @@ function ui() {
   if (S.conn) $('#cnt').textContent = nLive + (tot ? ' of ' + tot : '') + ' ha' + (nLive === 1 && !tot ? 's' : 've') + ' joined';
   $('#qtag').hidden = !S.simple;
   $('#curq').innerHTML = S.q.question || (S.q.img ? '(picture)' : 'Nothing sent yet. Pick a question on the left.'); // server-sanitized: only b/i/u/br
-  const isSort = S.q.kind === 'sort';
-  $('#grid').hidden = isSort; $('#sres').hidden = !isSort; $('#sctlhost').hidden = !isSort; $('#csize').hidden = isSort;
+  const isSort = S.q.kind === 'sort', isModel = !!S.q.model, res = isSort || (isModel && S.mview === 'res'); // a pieces question has two views: the drawings, or the class results
+  $('#mview').hidden = !isModel; $$('#mview button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.mview ? 'true' : 'false'));
+  $('#grid').hidden = res; $('#sres').hidden = !res; $('#sctlhost').hidden = !res; $('#csize').hidden = res;
   const rb = $('#revbtn'); rb.replaceChildren(...(S.revealed ? [icoEl('check'), ' Answers revealed (hide)'] : ['Reveal answers to students'])); rb.classList.toggle('revd', S.revealed);
   paintSub();
   $('#hide').classList.toggle('on', !S.hide); $('#hide').setAttribute('role', 'switch'); $('#hide').setAttribute('aria-checked', S.hide ? 'false' : 'true');
@@ -590,7 +595,7 @@ function ui() {
   if (sp) { ab.replaceChildren(icoEl('check'), sp.aw ? ' Point given (undo)' : ' Give ' + (teamNm(sp.team) || 'a team') + ' a point'); ab.onclick = () => award(sp); }
   qActions(); renderScores(); renderRailHead(); if ($('#rep').open) drawReport();
   paintMarks();
-  if (ph.matches) renderPhone(); else if (isSort) SR.update();
+  if (ph.matches) renderPhone(); else if (isSort) SR.update(); else if (res) MR.update();
 }
 function qActions() {
   const isSort = S.q.kind === 'sort', sp = S.stu.get(S.spot), set = typeof activeSet === 'function' && activeSet(), n = set && set.questions ? set.questions.length : 0;
@@ -806,6 +811,13 @@ document.querySelectorAll('#csize button').forEach(b => (b.onclick = () => setCa
 try { setCardSize(['170', '230', '320'].includes(store.do_csize) ? store.do_csize : '230', true); } catch (e) { setCardSize('230', true); }
 $('#hide').onclick = () => ws.send({ t: 'spot', ids: S.picks, hide: !S.hide });
 SR.mount($('#sres'), sortCtx);
+// class results for a pieces question: the same numbers as the projector, plus names (they stay on this screen)
+const modelCtx = () => ({ q: S.q, sk: S.sk, full: hasKey() ? modelFull() : null, bg: S.q.bg, im: S.im, projSum: S.projSum, spotId: S.spot, toast, revealed: S.revealed,
+  students: [...S.stu.values()].map(s => ({ id: s.id, name: disp(s), team: teamOf(s.team) || null, pl: s.pl || {}, objs: s.objs || [], bw: s.bw, bh: s.bh, aw: !!s.aw })),
+  award: s => { const t = S.stu.get(s.id); if (t) award(t); }, spot: s => pick(s.id),
+  ctlHost: () => $('#sctlhost'), setProjSum: on => ws.send({ t: 'sres', on }) });
+MR.mount($('#sres'), modelCtx);
+$$('#mview button').forEach(b => (b.onclick = () => { S.mview = b.dataset.v; ui(); if (S.mview === 'res' && !ph.matches) MR.now(); }));
 $('#lbproj').onclick = () => ws.send({ t: 'board', on: !S.board });
 function savePng() { // a contact sheet of everyone's work (initials only, as the server knows them)
   const list = [...S.stu.values()], cols = 4, w = 400, h = 280;
@@ -1097,11 +1109,16 @@ function renderPhone() {
   if (tab === 'review') phoneReview(box); else if (tab === 'questions') phoneQuestions(box); else phoneTeams(box);
   box.scrollTop = keepScroll;
 }
+let phoneRes = false; // is the pieces results panel open on the phone's Review tab
 function phoneReview(box) {
   if (S.q.kind === 'sort') { const q = el('div', { className: 'ph-q' }); const qt = el('div', {}); qt.innerHTML = S.q.question; q.append(el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' }), qt); box.append(q); return SR.phone(box, { ...sortCtx(), revealed: S.revealed, reveal: () => ws.send({ t: 'reveal', on: !S.revealed }) }); }
   const list = phoneList(); if (pi >= list.length) pi = Math.max(0, list.length - 1);
   const q = el('div', { className: 'ph-q' }); const lab = el('div', { className: 'lbl', textContent: cur >= 0 ? 'Question ' + (cur + 1) + ' of ' + qs().length : 'Students are answering', style: 'margin-bottom:2px' });
   const qt = el('div', {}); qt.innerHTML = S.q.question || 'Nothing sent yet. Open the Questions tab.'; q.append(lab, qt); box.append(q);
+  if (S.q.model) { // pieces: the class numbers sit above the drawing
+    const d = el('details', { className: 'card', style: 'margin:0 12px 8px' }, el('summary', { textContent: 'Class results', style: 'font-weight:700;padding:12px;cursor:pointer;min-height:44px' }));
+    d.open = phoneRes; d.ontoggle = () => { phoneRes = d.open; }; MR.phone(d, modelCtx()); box.append(d);
+  }
   const s = list[pi];
   if (!s) return box.append(el('div', { className: 'ph-pad mut', textContent: 'Waiting for students to join. Class code ' + code + '.', style: 'font-size:var(--fs-lg)' }));
   const rev = el('div', { className: 'ph-rev' });
