@@ -42,6 +42,15 @@ body:has(#join:not([hidden])){background:var(--bg) linear-gradient(180deg,var(--
 #pick button:not(:disabled):hover{transform:translateY(-2px)}
 #err{color:var(--c-bad);min-height:1.4em;margin:0 0 10px;font-weight:600}
 @media(prefers-reduced-motion:reduce){#join *{transition:none!important}#pick button:hover,#join .btn:active{transform:none!important}}
+/* movable pieces: the Pieces tool, a counter with Reset, and a hidden list of buttons so a keyboard can reach every piece */
+.tool[hidden],.qt[hidden]{display:none!important}
+#mpbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#mpbar[hidden]{display:none}
+#mpbar b{font-size:var(--fs-md);white-space:nowrap}
+#mpbar .btn{min-height:44px;padding:0 14px;background:#fff;color:var(--ink);border:1px solid var(--c-control)}
+#mpbar .btn:disabled{opacity:.5}
+#mpnote{font-size:var(--fs-sm);color:var(--c-ink-2);max-width:260px}
+#pcl,#mplive{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* sort questions: lanes to fill with sticky notes, a pile of cards below */
 body.sorting #stage,body.sorting #toolsbtn,body.sorting #drawer,body.sorting #ur,body.sorting #zoom,body.sorting #quick,body.sorting #mini,body.sorting #selbar{display:none!important}
 #sortview{position:fixed;left:12px;right:12px;top:96px;bottom:12px;z-index:5;display:flex;flex-direction:column;gap:10px}
@@ -365,6 +374,7 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
   <div id="mid">
    <div id="rail" class="lockable">
     <div id="tools">
+     <button class="tool" data-t="move" aria-label="Move pieces" title="Move the pieces" hidden><b><svg data-i="move"></svg></b>Pieces</button>
      <button class="tool" data-t="pen" aria-label="Draw" title="Draw"><b><svg data-i="pen"></svg></b>Draw</button>
      <button class="tool" data-t="eraser" aria-label="Eraser" title="Eraser"><b><svg data-i="eraser"></svg></b>Eraser</button>
      <button class="tool" data-t="text" aria-label="Text" title="Text"><b><svg data-i="text"></svg></b>Text</button>
@@ -374,9 +384,11 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
     <div class="rsep"></div>
     <button class="rtool" id="colorbtn" type="button" aria-label="Color" title="Color" aria-haspopup="true"><span class="cur"></span>Color</button>
    </div>
-  <div id="quick" class="lockable"><button class="qt" data-qt="pen" aria-label="Pen" title="Pen"><svg data-i="pen"></svg></button><button class="qt" data-qt="eraser" aria-label="Eraser" title="Eraser"><svg data-i="eraser"></svg></button><button class="qt" data-qt="text" aria-label="Text" title="Text"><svg data-i="text"></svg></button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
+  <div id="quick" class="lockable"><button class="qt" data-qt="move" aria-label="Move pieces" title="Move the pieces" hidden><svg data-i="move"></svg></button><button class="qt" data-qt="pen" aria-label="Pen" title="Pen"><svg data-i="pen"></svg></button><button class="qt" data-qt="eraser" aria-label="Eraser" title="Eraser"><svg data-i="eraser"></svg></button><button class="qt" data-qt="text" aria-label="Text" title="Text"><svg data-i="text"></svg></button><span class="qsep"></span><button class="swb" style="background:#111111" data-qc="#111111" aria-label="Black"></button><button class="swb" style="background:#2563eb" data-qc="#2563eb" aria-label="Blue"></button><button class="swb" style="background:#dc2626" data-qc="#dc2626" aria-label="Red"></button><button class="swb" style="background:#059669" data-qc="#059669" aria-label="Green"></button></div>
    <aside id="drawer" aria-label="Options"><div class="card lockable" id="opts"></div></aside>
    <div id="stage">
+   <div id="pcl" role="group" aria-label="Pieces to place. Use the arrow keys to move the piece you are on."></div>
+   <div id="mplive" role="status" aria-live="polite"></div>
    <canvas id="cv"></canvas>
    <textarea id="ed" maxlength="300" aria-label="Type your text"></textarea>
    <div class="ov lockable" id="selbar" hidden><button class="del" data-a="del" aria-label="Delete" title="Delete"><svg data-i="trash"></svg></button><button data-a="dup" aria-label="Duplicate" title="Duplicate"><svg data-i="dup"></svg></button><button data-a="front" aria-label="Bring to front" title="Bring to front"><svg data-i="front"></svg></button></div>
@@ -385,6 +397,7 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
   </div>
   <div id="bbar">
   <div class="ov lockable" id="ur"><button id="undo" aria-label="Undo" title="Undo"><svg data-i="undo"></svg><span class="lb"> Undo</span></button><button id="redo" aria-label="Redo" title="Redo"><svg data-i="redo"></svg><span class="lb"> Redo</span></button></div>
+ <div id="mpbar" class="lockable" hidden><b id="mpn"></b><button type="button" class="btn" id="mpreset">Reset pieces</button><span id="mpnote"></span></div>
    <div id="pulse" class="lockable" role="group" aria-label="How is your work?">
     <span class="plb">How is your work?</span>
    <div id="pbtns">
@@ -409,6 +422,7 @@ body.locked #qbox #qt{background:rgba(255,255,255,.2)}
 <script src="/common.js"></script>
 <script src="/sortkit.js"></script>
 <script src="/sortstu.js"></script>
+<script src="/modelstu.js"></script>
 <script src="/timerkit.js"></script>
 <script>
 let target = null, id = null;
@@ -548,7 +562,7 @@ function setQ(nq) {
   im = loadImg(q.img, draw); draw();
 }
 function applyLock(proj) { // work on the projector can't be changed
-  locked = proj; if (proj) { commitEdit(true); sel = null; cur = null; g = null; }
+  locked = proj; if (proj) { if (MP.dragging()) MP.drop(); commitEdit(true); sel = null; cur = null; g = null; }
   document.body.classList.toggle('locked', proj); $('#qbox').classList.toggle('proj', proj); $('#projnote').hidden = !proj; if (proj) openDrawer(false); all();
 }
 
@@ -587,10 +601,11 @@ function applyFreeze(on) {
   frozen = !!on;
   document.body.classList.toggle('frozen', frozen);
   $('#frz').setAttribute('aria-hidden', frozen ? 'false' : 'true');
-  if (frozen) { if (editing) commitEdit(true); sel = null; cur = null; g = null; openDrawer(false); makeFlakes(); all(); }
+  if (frozen) { if (MP.dragging()) MP.drop(); if (editing) commitEdit(true); sel = null; cur = null; g = null; openDrawer(false); makeFlakes(); all(); }
 }
 
 function onmsg(m) {
+  if (MP.msg(m)) return;
   if (SS.msg(m)) return;
   if (m.t === 'peek') {
     if (!m.roster) { quick = m.teams || []; renderQuick(); jshow('name'); } else renderPick(m);
@@ -612,19 +627,19 @@ function onmsg(m) {
     else if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
     tmList = m.teams || []; tmSc = m.scores || {}; tmMy = m.team; tmIni = m.ini; renderTeam();
     TK.set(m.timer); // a late joiner or a refreshed page picks up what is left
-    SS.joined(m);
+    SS.joined(m); MP.joined(m);
     loaded = true; resuming = false; applyLock(!!m.proj); applySimple(!!m.simple); applyFreeze(!!m.frozen); setPulse(m.pulse || null, false);
   } else if (m.t === 'lock') applyLock(!!m.proj);
   else if (m.t === 'freeze') applyFreeze(!!m.on);
   else if (m.t === 'mode') applySimple(!!m.simple);
   else if (m.t === 'kicked') { // teacher cleared the class
     sessionStorage.removeItem('do_id_' + target.code); sessionStorage.removeItem('do_tok_' + target.code); sessionStorage.removeItem('do_rid_' + target.code); resuming = false;
-    target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
+    target = id = null; loaded = false; resetDoc([]); SS.newQ(null); MP.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'This class has ended. Your teacher will tell you when to join again.' : m.why;
-  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
+  } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); MP.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick
   else if (m.t === 'size') { W = m.bw; H = m.bh; V = { z: 1, ox: 0, oy: 0 }; layout(); } // the server accepted the new page shape
   else if (m.t === 'timer') TK.handle(m);
-  else if (m.t === 'restore') { setQ(m.q); SS.restore(m.q); } // the teacher's page put the question back after a server restart: nothing is wiped
+  else if (m.t === 'restore') { setQ(m.q); SS.restore(m.q); MP.restore(m.q); } // the teacher's page put the question back after a server restart: nothing is wiped
 }
 
 
@@ -682,14 +697,14 @@ function world(x,d,k){x.setTransform(k,0,0,k,(PAD.l-V.ox*sc())*d,(PAD.t-V.oy*sc(
 function render(){
  raf=0;if(!cv.clientWidth||!cv.clientHeight)return; // a canvas with no size cannot be drawn into
  const d=devicePixelRatio||1,k=sc()*d,live=g&&(g.type==='mv'||g.type==='rs')?sel:null;
- const key=[rev,objs.length,V.z,V.ox,V.oy,cv.width,cv.height,PAD.l,q.bg,im&&im.complete,editing&&editing.id,live&&live.id].join();
+ const key=[rev,objs.length,V.z,V.ox,V.oy,cv.width,cv.height,PAD.l,q.bg,im&&im.complete,editing&&editing.id,live&&live.id,MP.rev()].join();
  if(key!==baseKey){
   baseKey=key;if(cache.width!==cv.width||cache.height!==cv.height){cache.width=cv.width;cache.height=cv.height}
   bx.setTransform(1,0,0,1,0,0);bx.fillStyle='#d1d5db';bx.fillRect(0,0,cache.width,cache.height);
-  world(bx,d,k);paintBg(bx,q.bg,im);objs.forEach(o=>{if(o!==editing&&o!==live)paint(o,bx)});bx.restore();
+  world(bx,d,k);if(MP.active()){paintModelBg(bx,MP.model(),q.bg,im,W,H);MP.paint(bx)}else paintBg(bx,q.bg,im);objs.forEach(o=>{if(o!==editing&&o!==live)paint(o,bx)});bx.restore();
  }
  cx.setTransform(1,0,0,1,0,0);cx.drawImage(cache,0,0);
- world(cx,d,k);if(live)paint(live);if(cur)paint(cur);cx.restore();
+ world(cx,d,k);MP.paintLive(cx);if(live)paint(live);if(cur)paint(cur);cx.restore();
  cx.setTransform(d,0,0,d,0,0);
  if(S.tool==='eraser'&&S.erase==='part'&&ptrCss&&!cantEdit()){cx.beginPath();cx.arc(ptrCss[0],ptrCss[1],S.esize,0,7);cx.fillStyle='#ffffff99';cx.fill();cx.lineWidth=2;cx.strokeStyle='#111';cx.stroke()}
  if(sel&&!cantEdit()){
@@ -731,7 +746,7 @@ const ptrs=new Map();let pinch=null;
 cv.onpointerdown=e=>{
  if(cantEdit())return;commitEdit();try{cv.setPointerCapture(e.pointerId)}catch{}ptrs.set(e.pointerId,[e.clientX,e.clientY]);
  if(ptrs.size===2){const[a,b]=[...ptrs.values()],m=css({clientX:(a[0]+b[0])/2,clientY:(a[1]+b[1])/2});
-  if(cur){ws.send({t:'del',oid:cur.id});pend=[]}g=null;cur=null;pinch={d0:Math.hypot(a[0]-b[0],a[1]-b[1]),z0:V.z,w:[(m[0]-PAD.l)/sc()+V.ox,(m[1]-PAD.t)/sc()+V.oy]};return}
+  if(MP.dragging())MP.drop();if(cur){ws.send({t:'del',oid:cur.id});pend=[]}g=null;cur=null;pinch={d0:Math.hypot(a[0]-b[0],a[1]-b[1]),z0:V.z,w:[(m[0]-PAD.l)/sc()+V.ox,(m[1]-PAD.t)/sc()+V.oy]};return}
  if(ptrs.size>2)return;down(e);
 };
 let ptrCss=null; // pointer position, for the partial-eraser ring
@@ -754,6 +769,7 @@ cv.addEventListener('wheel',e=>{
 function down(e){
  const c=css(e),p=toWorld(c),t=S.tool;
  if(t==='hand'){g={type:'pan',x:e.clientX,y:e.clientY,ox:V.ox,oy:V.oy};return}
+ if(t==='move'){if(MP.down(p,10/sc())){g={type:'pc'};return}if(V.z>1)g={type:'pan',x:e.clientX,y:e.clientY,ox:V.ox,oy:V.oy};return} // the Pieces tool: grab a piece, or move the page when zoomed in
  if(t==='select'||t==='text'){
   if(t==='select'&&sel){const h=handleList(sel).find(h=>Math.hypot(h.x-c[0],h.y-c[1])<=24);
    if(h){g={type:'rs',h:h.id,s:clone(sel),ob:bbox(sel)};all(true);return}}
@@ -811,6 +827,7 @@ function mk(p0,p1,tiny){
 function move(e){
  if(!g)return;const c=css(e),p=toWorld(c);
  if(g.type==='pan'){V.ox=g.ox-(e.clientX-g.x)/sc();V.oy=g.oy-(e.clientY-g.y)/sc();clampView();ui()}
+ else if(g.type==='pc')MP.move(p);
  else if(g.type==='draw'){const l=cur.pts[cur.pts.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])>1.5/sc()){cur.pts.push(p);streamPts(cur,p)}}
  else if(g.type==='erase'){const l=g.last||p,st=S.erase==='part'?S.esize/sc()/2:1e9,n=Math.max(1,Math.ceil(Math.hypot(p[0]-l[0],p[1]-l[1])/st));for(let i=1;i<=n;i++)erase([l[0]+(p[0]-l[0])*i/n,l[1]+(p[1]-l[1])*i/n]);g.last=p}
  else if(g.type==='make')cur=Math.hypot(p[0]-g.p0[0],p[1]-g.p0[1])>6/V.z?mk(g.p0,p,false):null;
@@ -830,7 +847,8 @@ function move(e){
 function up(){
  if(editing&&document.activeElement!==ed){ed.focus();ed.setSelectionRange(ed.value.length,ed.value.length)}
  const t=g;g=null;if(!t)return;
- if(t.type==='draw'&&cur){objs.push(cur);cur=null;commit()}
+ if(t.type==='pc')MP.drop();
+ else if(t.type==='draw'&&cur){objs.push(cur);cur=null;commit()}
  else if(t.type==='erase'&&t.n)commit();
  else if(t.type==='make'){const p=t.p0,o=cur||mk(p,p,true);cur=null;objs.push(o);sel=o;S.tool='select';commit()}
  else if((t.type==='mv'&&t.moved)||t.type==='rs')commit();
@@ -850,7 +868,8 @@ function ui(){
  $('#undo').disabled=hi<1;$('#redo').disabled=hi>=hist.length-1;
  $('#zs').value=Math.round(V.z*100);$('#zv').textContent=Math.round(V.z*100)+'%';
  mini.hidden=V.z<=1.001;$('#colorbtn .cur').style.background=sel?sel.c:S.color;
- cv.style.cursor={select:'default',hand:'grab',pen:'crosshair',eraser:'cell',text:'text',shape:'crosshair'}[S.tool];
+ MP.ui();
+ cv.style.cursor={move:'grab',select:'default',hand:'grab',pen:'crosshair',eraser:'cell',text:'text',shape:'crosshair'}[S.tool];
  selBar();if(editing)posEd();
 }
 function all(keepOpts){draw();if(!keepOpts)renderOpts();ui()}
@@ -920,6 +939,7 @@ function setProp(k,v,quiet){
 function setColor(hex){setProp('color',hex,true);const h=$('#hex'),c=$('#chip');if(h)h.value=hex;if(c)c.style.background=hex;drawWheel()}
 function renderOpts(){
  const o=sel,m=o?o.k:S.tool;let h='';const co=S.cpanel;
+ if(m==='move'&&!co)return opts.innerHTML=hint(ico('move','sm')+' Pieces','Drag a piece to where you think it goes. Choose Draw or Shapes to draw on top of the pieces.');
  if(m==='hand'&&!co)return opts.innerHTML=hint(ico('hand','sm')+' Move view','Drag to move the page. Use two fingers to move and zoom at any time.');
  if(m==='eraser'&&!co)return opts.innerHTML=`<div class="sec"><h4>Eraser mode</h4><div class="grid">
   <button class="opt${S.erase==='part'?' on':''}" data-k="erase" data-v="part"><b>◐</b>Part</button>
@@ -982,6 +1002,7 @@ function resetDoc(list){
 }
 
 new ResizeObserver(()=>{const d=devicePixelRatio||1;if(!cv.clientWidth||!cv.clientHeight)return;cv.width=Math.max(1,cv.clientWidth*d);cv.height=Math.max(1,cv.clientHeight*d);PAD.t=innerHeight<=480&&innerWidth>700?12:76;PAD.b=innerHeight<=480&&innerWidth>700?12:64;clampView();all(true)}).observe(cv);
+MP.init({send:o=>ws.send(o),bump,draw,W:()=>W,H:()=>H,cantEdit,tool:()=>S.tool,setTool});
 renderOpts();
 </script>
 </body>

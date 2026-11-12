@@ -123,7 +123,7 @@ const AIB = (() => {
       const ul = el('ul', { className: 'aiblist' });
       s.rows.forEach(r => {
         const id = 'aibq' + si + '-' + r.n, cb = el('input', { type: 'checkbox', id, checked: r.on, disabled: !r.q }); cb.onchange = () => { r.on = cb.checked; onChange(); };
-        const kind = r.q ? (r.q.kind === 'sort' ? 'Sort' : 'Draw') : '';
+        const kind = r.q ? (r.q.kind === 'sort' ? 'Sort' : r.q.model ? 'Draw + pieces' : 'Draw') : '';
         const txt = r.q ? SK.plain(r.q.question) : '';
         const li = el('li', { className: 'aibrow' + (r.q ? '' : ' bad') },
           cb, el('div', { className: 'aibrowb' },

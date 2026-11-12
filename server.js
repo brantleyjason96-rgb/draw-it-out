@@ -167,16 +167,65 @@ function cleanPlace(r, p) {
   sq.cards.forEach(c => { if (sq.lanes.some(l => l.id === p[c.id])) out[c.id] = p[c.id]; });
   return out;
 }
+// ---- movable pieces on a draw question: the student drags pieces on a stage, then draws on top ----
+// Positions are stage units (wide 1000x625, tall 625x1000), the centre of the piece. The answer key (where each piece belongs, its idea, and
+// how close counts) is kept in r.sk = { pos, idea, tol } and is only ever sent to hosts. Students and the projector get the pieces and their
+// start spots. Only when the teacher chose "show outlines" (spots: 'shown') are the answer spots public, on purpose.
+const MAX_PIECES = 12, PIECE_A = 108, PIECE_ARTS = ['earth', 'sun', 'moon', 'arrow', 'card'];
+const STAGES = { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } };
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+function cleanModel(m) {
+  if (!m || typeof m !== 'object') return null;
+  const stage = m.stage === 'tall' ? 'tall' : 'wide', st = STAGES[stage], lo = PIECE_A / 2;
+  const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
+  const pieces = [], seen = new Set(), pos = {}, idea = {};
+  (Array.isArray(m.pieces) ? m.pieces : []).slice(0, MAX_PIECES).forEach(p => {
+    if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
+    const label = cstr(p.label, 24); if (!label || !isNum(p.x) || !isNum(p.y) || !isNum(p.kx) || !isNum(p.ky)) return;
+    seen.add(p.id); pieces.push({ id: p.id, label, art: PIECE_ARTS.includes(p.art) ? p.art : 'card', x: cx(p.x), y: cy(p.y) });
+    pos[p.id] = { x: cx(p.kx), y: cy(p.ky) };
+    const i = cstr(p.idea, 30); if (i) idea[p.id] = i;
+  });
+  if (pieces.length < 2) return null;
+  const spots = m.spots === 'shown' ? 'shown' : 'hidden', tol = isNum(m.tol) ? Math.round(Math.min(150, Math.max(20, m.tol))) : 60;
+  if (spots === 'shown') pieces.forEach(p => { p.kx = pos[p.id].x; p.ky = pos[p.id].y; });
+  return { pub: { stage, spots, fb: m.fb === 'now' ? 'now' : 'reveal', pieces }, key: { pos, idea, tol } };
+}
+// one door for every question that arrives: { nq, nk } or null when it is not complete
+function cleanQuestion(m) {
+  if (m.kind === 'sort') { const c = cleanSort(m); return c && { nq: c.pub, nk: c.key }; }
+  const nq = cleanQ(m);
+  if (m.model !== undefined && m.model !== null) { const c = cleanModel(m.model); if (!c) return null; nq.model = c.pub; return { nq, nk: c.key }; }
+  return { nq, nk: null };
+}
+const modelOf = r => r.q.model || null;
+// a student's moved pieces, rebuilt against the live question: { pieceId: { x, y } } (a piece the student has not moved is not in it)
+function cleanPl(r, p) {
+  const mq = modelOf(r), out = {}; if (!mq || !p || typeof p !== 'object') return out;
+  const st = STAGES[mq.stage], lo = PIECE_A / 2;
+  mq.pieces.forEach(c => {
+    const v = p[c.id]; if (!v || typeof v !== 'object' || !isNum(v.x) || !isNum(v.y)) return;
+    out[c.id] = { x: Math.round(Math.min(st.w - lo, Math.max(lo, v.x))), y: Math.round(Math.min(st.h - lo, Math.max(lo, v.y))) };
+  });
+  return out;
+}
 const placedAll = (r, s) => { const sq = sortOf(r); return !!sq && sq.cards.every(c => s.sort && s.sort[c.id]); };
 // right/wrong for a student: only when the question gives feedback right away, or the teacher pressed Reveal
 function fbOf(r, s) {
+  const mq = modelOf(r);
+  if (mq) { // pieces: right when the centre is within the teacher's distance of its spot; a wrong piece also learns where it belongs, on Reveal
+    if (!r.sk || !(r.revealed || mq.fb === 'now')) return null;
+    const ok = {}, where = {};
+    Object.keys(s.pl || {}).forEach(id => { const k = r.sk.pos[id], p = s.pl[id]; if (!k) return; ok[id] = Math.hypot(p.x - k.x, p.y - k.y) <= r.sk.tol; if (r.revealed && !ok[id]) where[id] = k; });
+    return { t: 'fb', ok, where };
+  }
   const sq = sortOf(r); if (!sq || !r.sk || !(r.revealed || sq.fb === 'now')) return null;
   const ok = {}, where = {};
   Object.keys(s.sort || {}).forEach(id => { ok[id] = s.sort[id] === r.sk.lane[id]; if (r.revealed && !ok[id]) where[id] = r.sk.lane[id]; });
   return { t: 'fb', ok, where };
 }
 // everything a student's page needs to (re)build itself: used on join, on rejoin, and when the teacher undoes a question
-const joinedMsg = (r, s) => ({ t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, timer: timerView(r), host: [...r.watchers].some(w => w.isHost && w.readyState === 1), teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+const joinedMsg = (r, s) => ({ t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, pl: s.pl || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, timer: timerView(r), host: [...r.watchers].some(w => w.isHost && w.readyState === 1), teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
 const sendFb = (r, s) => { const f = fbOf(r, s); if (f) tx(s.ws, f); };
 // class-wide numbers for the projector: % right per card and per idea (no names, no key)
 function sortSummary(r) {
@@ -225,7 +274,7 @@ const live = s => !!(s && s.ws && s.ws.readyState === 1);
 const entryOf = (r, rid) => r.roster.find(e => e.rid === rid);
 const pubRoster = r => r.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
 // pulse = the student's own red / amber / green confidence on the current drawing: 'r' | 'y' | 'g' | null
-const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
+const stuView = s => ({ id: s.id, name: s.name, objs: s.objs, bw: s.bw, bh: s.bh, team: s.team || null, rid: s.rid || null, aw: !!s.aw, sort: s.sort || {}, pl: s.pl || {}, done: !!s.done, pulse: s.pulse || null, live: live(s) });
 // picks = the drawings on the projector (up to 3, side by side). spot is kept as the first pick for older screens.
 const stateMsg = (r, host) => ({ t: 'state', fresh: !r.qn && !r.restored, qat: r.qat, marks: host ? r.marks : undefined, timer: timerView(r), q: r.q, sk: host ? r.sk : undefined, revealed: !!r.revealed, sres: !!r.sres, simple: r.simple, spot: r.spot, picks: [...r.picks], hide: r.hide, board: r.board, frozen: !!r.frozen, phist: host ? r.phist : undefined, teams: r.teams, roster: pubRoster(r), scores: r.scores, cap: r.cap, students: [...r.students.values()].map(stuView) });
 // a point belongs to the team the student is on; if the student moves teams the point moves with them
@@ -524,6 +573,10 @@ wss.on('connection', (ws, req) => {
         if (m.done === true && placedAll(room, me)) me.done = true;
         toWatchers(room, { t: 'sort', id: me.id, p: me.sort, done: !!me.done });
         tx(me.ws, { t: 'sorted', p: me.sort, done: !!me.done }); sendFb(room, me); pushSummary(room);
+      } else if (m.t === 'place') { // a model question: the student's moved pieces, one small map
+        if (!modelOf(room)) return;
+        me.pl = cleanPl(room, m.p);
+        toWatchers(room, { t: 'pl', id: me.id, p: me.pl }); sendFb(room, me);
       } else if (m.t === 'set') { // add a new object or replace one with the same id
         const o = cleanObj(m.o, dm(me)); if (!o) return;
         const i = me.objs.findIndex(x => x.id === o.id);
@@ -536,18 +589,19 @@ wss.on('connection', (ws, req) => {
       else if (m.t === 'all') { me.objs = cleanList(m.objs, dm(me)); toWatchers(room, { t: 'all', id: me.id, objs: me.objs }); } // undo/redo/reorder
     } else if (role === 'host') {
       if (m.t === 'q') {
-        let nq, nk = null;
-        if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return tx(ws, { t: 'note', m: 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' }); nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        const c = cleanQuestion(m);
+        if (!c) return tx(ws, { t: 'note', m: m.kind === 'sort' ? 'That sort question is not complete: it needs 2 lanes, and 2 cards that each belong in a lane.' : 'That question with movable pieces is not complete: it needs 2 pieces, each with a label and an answer spot.' });
+        const nq = c.nq, nk = c.nk;
         // keep the question that is ending, with every student's work, for 15 seconds so the teacher can undo a misclick
         clearTimeout(room.undoT);
-        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, qat: room.qat, marks: { ...room.marks }, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, done: s.done, aw: s.aw, pulse: s.pulse }])) };
+        room.undo = { q: room.q, sk: room.sk, revealed: room.revealed, qn: room.qn, qat: room.qat, marks: { ...room.marks }, phist: room.phist.length, stu: new Map([...room.students].map(([id, s]) => [id, { objs: s.objs, sort: s.sort, pl: s.pl, done: s.done, aw: s.aw, pulse: s.pulse }])) };
         room.undoT = setTimeout(() => { room.undo = null; }, UNDO_MS);
         snapshotPulse(room); // the colours for the question that just ended go in the report
         room.q = nq; room.sk = nk; room.revealed = false;
         room.marks = {}; // the teacher's marks belong to the question that just ended
         room.qn++; room.qat = Date.now(); // when this question started: the teacher page files its lesson record under this time
         // A new question starts with nobody on the projector: the students who were up get their page back so they can draw.
-        room.students.forEach(s => { s.objs = []; s.sort = {}; s.done = false; s.aw = null; s.pulse = null; });
+        room.students.forEach(s => { s.objs = []; s.sort = {}; s.pl = {}; s.done = false; s.aw = null; s.pulse = null; });
         setPicks(room, []);
         stopTimer(room); // a new question starts with no timer (the teacher page can start one with the question)
         if (room.frozen) setFreeze(room, false); // new question = work time
@@ -556,8 +610,8 @@ wss.on('connection', (ws, req) => {
         pushScores(room);
       } else if (m.t === 'restore') { // a teacher page coming back to a brand-new class (the server restarted): put its last question back without touching any drawing
         if (room.qn || room.restored) return;
-        let nq, nk = null;
-        if (m.kind === 'sort') { const c = cleanSort(m); if (!c) return; nq = c.pub; nk = c.key; } else nq = cleanQ(m);
+        const c = cleanQuestion(m); if (!c) return;
+        const nq = c.nq, nk = c.nk;
         room.q = nq; room.sk = nk; room.restored = true;
         if (Number.isFinite(m.at) && m.at > 1.6e12 && m.at <= Date.now()) room.qat = Math.round(m.at); // the original start time, so the lesson record stays one record
         room.students.forEach(s => tx(s.ws, { t: 'restore', q: room.q }));
@@ -566,7 +620,7 @@ wss.on('connection', (ws, req) => {
         const u = room.undo; if (!u) return tx(ws, { t: 'note', m: 'Too late to undo. Send the question again from the list.' });
         clearTimeout(room.undoT); room.undo = null;
         room.q = u.q; room.sk = u.sk; room.revealed = u.revealed; room.qn = u.qn; room.qat = u.qat; room.marks = { ...u.marks }; room.phist.length = Math.min(room.phist.length, u.phist);
-        room.students.forEach((s, id) => { const o = u.stu.get(id); if (o) Object.assign(s, { objs: o.objs, sort: o.sort, done: o.done, aw: o.aw, pulse: o.pulse }); });
+        room.students.forEach((s, id) => { const o = u.stu.get(id); if (o) Object.assign(s, { objs: o.objs, sort: o.sort, pl: o.pl, done: o.done, aw: o.aw, pulse: o.pulse }); });
         broadcastState(room); // teacher screen and projector rebuild from the room
         room.students.forEach(s => tx(s.ws, { ...joinedMsg(room, s), undo: true })); // each student page re-seeds from the server's copy
         pushScores(room);
@@ -612,8 +666,8 @@ wss.on('connection', (ws, req) => {
         }
       } else if (m.t === 'adj') { // manual +/- on a team
         if (room.teams.some(t => t.id === m.team) && [1, -1, 5, -5].includes(m.d)) { room.scores[m.team] = Math.min(9999, Math.max(0, room.scores[m.team] + m.d)); pushScores(room); }
-      } else if (m.t === 'reveal') { // show students which of their cards were right (and where the wrong ones belong)
-        if (!sortOf(room)) return;
+      } else if (m.t === 'reveal') { // show students which of their cards (or pieces) were right, and where the wrong ones belong
+        if (!sortOf(room) && !modelOf(room)) return;
         room.revealed = !!m.on; toWatchers(room, { t: 'reveal', on: room.revealed });
         room.students.forEach(s => { if (room.revealed) sendFb(room, s); else tx(s.ws, { t: 'fb', ok: {}, where: {}, off: true }); });
       } else if (m.t === 'reopen') { // let one student change their sort again

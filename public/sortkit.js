@@ -23,6 +23,63 @@ const SK = {
     if (lanes.length < 2 || cards.length < 2) return null;
     return { lanes, cards, ideas: [...new Set(cards.map(c => c.idea).filter(Boolean))], shuffle: s.shuffle !== false, fb: s.fb === 'now' ? 'now' : 'reveal' };
   },
+  // ---- movable pieces on a Draw question (see MODELS_PLAN.md) ----
+  // The teacher's copy of a model: { stage:'wide'|'tall', spots:'hidden'|'shown', fb:'reveal'|'now', tol,
+  //   pieces:[{ id, label, art, x, y (where students find it), kx, ky (where it belongs), idea }] }.
+  // Positions are in stage units (wide 1000 x 625, tall 625 x 1000), centre of the piece, so every screen shape agrees.
+  // The server keeps kx, ky, idea and tol away from students unless spots is 'shown'.
+  MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card'], A: 108, TOL: [20, 150], STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
+  stageOf: m => SK.MODEL.STAGES[m && m.stage === 'tall' ? 'tall' : 'wide'],
+  // exact rules of the server's cleanModel. Returns null unless there are 2+ pieces with a label and an answer spot.
+  cleanModel(m) {
+    if (!m || typeof m !== 'object') return null;
+    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, num = v => typeof v === 'number' && isFinite(v);
+    const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
+    const pieces = [], seen = new Set();
+    (Array.isArray(m.pieces) ? m.pieces : []).slice(0, M.PIECES).forEach(p => {
+      if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
+      const label = SK.str(p.label, 24); if (!label || !num(p.x) || !num(p.y) || !num(p.kx) || !num(p.ky)) return;
+      seen.add(p.id); pieces.push({ id: p.id, label, art: M.ARTS.includes(p.art) ? p.art : 'card', x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) });
+    });
+    if (pieces.length < 2) return null;
+    return { stage: m.stage === 'tall' ? 'tall' : 'wide', spots: m.spots === 'shown' ? 'shown' : 'hidden', fb: m.fb === 'now' ? 'now' : 'reveal', tol: num(m.tol) ? Math.round(Math.min(M.TOL[1], Math.max(M.TOL[0], m.tol))) : 60, pieces };
+  },
+  // A tidy starting scatter: free spots on the stage that are well away from every answer spot, handed out in a shuffled order.
+  // Used by the editor's Scatter button and for imported pieces that have no start position.
+  scatter(m) {
+    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, P = m.pieces, far = M.A * 1.3, gap = M.A * 1.15, cand = [];
+    for (let x = lo + 10; x <= st.w - lo - 10; x += 60) for (let y = lo + 10; y <= st.h - lo - 10; y += 60) {
+      const d = Math.min(...P.map(p => Math.hypot(x - p.kx, y - p.ky)));
+      if (d >= far) cand.push({ x, y, d });
+    }
+    cand.sort((a, b) => b.d - a.d);
+    const pick = [];
+    cand.forEach(c => { if (pick.length < P.length && pick.every(q => Math.hypot(c.x - q.x, c.y - q.y) >= gap)) pick.push(c); });
+    while (pick.length < P.length) pick.push({ x: lo + 10 + pick.length * 20, y: st.h - lo - 10 }); // a crowded stage: stack along the bottom rather than fail
+    const ord = SK.order(P.map(p => ({ id: p.id })), 'scatter' + P.length, true).map(c => c.id);
+    P.forEach((p, i) => { const c = pick[ord.indexOf(p.id)]; p.x = Math.round(c.x); p.y = Math.round(c.y); });
+    return m;
+  },
+  // plain-language problems with a draft model, shown in the editor; an empty list means it can be saved
+  modelIssues(m) {
+    const out = [], P = m.pieces, A = SK.MODEL.A;
+    if (P.length < 2) out.push('Add at least 2 pieces.');
+    if (P.some(p => !p.label.trim())) out.push('A piece has no label.');
+    const nm = p => '“' + (p.label.trim() || 'A piece') + '”';
+    outer: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < A * .9) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' sit on top of each other at the start. Drag one in Student start, or press Scatter.'); break outer; }
+    }
+    outer2: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < m.tol) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”. Move one, or choose Tight.'); break outer2; }
+    }
+    return out;
+  },
+  // Is each placed piece within tol of its answer spot? m = full model; pl = { pieceId: { x, y } } (only pieces the student moved).
+  modelCheck(m, pl) {
+    const ok = {}; let right = 0, put = 0;
+    m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol; if (ok[p.id]) right++; });
+    return { ok, right, put, total: m.pieces.length };
+  },
   // ---- one validator for every way a question can arrive (editor, file import, "Build with AI" paste) ----
   // These are client copies of the server's cleanHtml / cleanSort limits, plus the tag rules. Problems are written in plain words
   // for a teacher; "notes" are small fixes that were made on the way in (a long name shortened, a sixth tag left out).
@@ -111,7 +168,35 @@ const SK = {
       let bg = ['graph', 'lined', 'blank', 'photo'].includes(raw.bg) ? raw.bg : null;
       if (!bg) { bg = 'blank'; if (raw.bg != null && raw.bg !== '') notes.push('the background "' + SK.str(raw.bg, 20) + '" is not blank, graph or lined, so it was set to blank'); }
       if (bg === 'photo' && !img) { bg = 'blank'; }
-      if (!problems.length) q = { question: text, bg, img: bg === 'photo' ? img : null };
+      let model = null;
+      if (raw.model != null) {
+        const m = raw.model, M = SK.MODEL;
+        if (typeof m !== 'object' || Array.isArray(m)) problems.push('has a "model" that is not an object');
+        else {
+          const pin = Array.isArray(m.pieces) ? m.pieces : [], st = SK.stageOf(m);
+          if (pin.length < 2) problems.push('needs at least 2 pieces (it has ' + pin.length + ')');
+          if (pin.length > M.PIECES) problems.push('has ' + pin.length + ' pieces, and the most is ' + M.PIECES);
+          const num = v => typeof v === 'number' && isFinite(v);
+          const valid = c => c && Number.isInteger(c.id) && c.id >= 1 && c.id <= 1e6;
+          const useIds = pin.every(valid) && new Set(pin.map(c => c.id)).size === pin.length; // otherwise pieces are simply numbered 1, 2, 3…
+          let noStart = 0; const pieces = [];
+          pin.slice(0, M.PIECES).forEach((p, i) => {
+            const lb = p && SK.str(p.label, 100);
+            if (!p || typeof p !== 'object' || !lb) return problems.push('piece ' + (i + 1) + ' has no label');
+            if (lb.length > 24) notes.push('the piece "' + lb.slice(0, 24) + '…" was shortened to 24 characters');
+            if (!num(p.kx) || !num(p.ky)) return problems.push('the piece "' + lb.slice(0, 24) + '" has no answer spot (it needs "kx" and "ky", from 0 to ' + st.w + ' across and 0 to ' + st.h + ' down)');
+            if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.join(', ') + ', so the piece became a text card');
+            if (!num(p.x) || !num(p.y)) noStart++;
+            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
+          });
+          if (!problems.length) {
+            model = SK.cleanModel({ ...m, pieces });
+            if (!model) problems.push('is not a complete model');
+            else { if (noStart) { SK.scatter(model); notes.push('the pieces had no start positions, so they were scattered'); } }
+          }
+        }
+      }
+      if (!problems.length) { q = { question: text, bg, img: bg === 'photo' ? img : null }; if (model) q.model = model; }
     }
     if (q && tg.tags.length) q.tags = tg.tags;
     return { q: problems.length ? null : q, problems, notes };

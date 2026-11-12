@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import WebSocket from 'ws';
 
 const PORT = 4100 + Math.floor(Math.random() * 500);
-const srv = spawn('node', ['server.js'], { env: { ...process.env, PORT }, stdio: 'ignore' });
+const srv = spawn('node', ['server.js'], { env: { ...process.env, PORT, MAX_PER_IP: '1000' }, stdio: 'ignore' }); // the suite opens more sockets than one school would; the limit itself is tested on its own server below
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 await sleep(600);
 
@@ -1205,6 +1205,148 @@ await test('security headers: HSTS only when behind an HTTPS proxy', async () =>
     const a = await fetch('http://localhost:' + P2 + '/class', { headers: { 'x-forwarded-proto': 'https' } }); assert.match(a.headers.get('strict-transport-security'), /max-age=15552000/);
     const b = await fetch('http://localhost:' + P2 + '/class', { headers: { 'x-forwarded-proto': 'http' } }); assert.equal(b.headers.get('strict-transport-security'), null);
   } finally { s2.kill(); }
+});
+
+// ---- Phase A: movable pieces on a draw question (see MODELS_PLAN.md) ----
+const MODEL = (extra = {}) => ({
+  t: 'q', question: 'Place the seasons', bg: 'blank',
+  model: { stage: 'wide', spots: 'hidden', fb: 'reveal', tol: 60, pieces: [
+    { id: 1, label: 'Summer', art: 'earth', x: 860, y: 105, kx: 190, ky: 312, idea: 'Tilt toward the Sun' },
+    { id: 2, label: 'Autumn', art: 'earth', x: 130, y: 120, kx: 500, ky: 520, idea: 'Equinox' },
+    { id: 3, label: 'Winter', art: 'card', x: 140, y: 500, kx: 810, ky: 312, idea: 'Tilt toward the Sun' }], ...extra }
+});
+const MP_CODE = 'PIECE';
+const mh = client(); await mh.ready; mh.send({ t: 'host', code: MP_CODE, key: KEY }); await mh.wait('state');
+const mproj = client(); await mproj.ready; mproj.send({ t: 'watch', code: MP_CODE }); await mproj.wait('state');
+const ma = client(); await ma.ready; ma.send({ t: 'join', code: MP_CODE, name: 'Pia', bw: 800, bh: 500 }); const maJ = await ma.wait('joined');
+const mb = client(); await mb.ready; mb.send({ t: 'join', code: MP_CODE, name: 'Quin', bw: 400, bh: 800 }); await mb.wait('joined');
+// a rejoin with the student's token takes over the connection, so a test that rejoins puts the student's own socket back afterwards
+const reattach = async () => { ma.clear(); ma.send({ t: 'join', code: MP_CODE, id: maJ.id, tok: maJ.tok, bw: 800, bh: 500 }); await ma.wait('joined'); ma.clear(); };
+
+await test('pieces: the answer key goes to the teacher only', async () => {
+  mh.clear(); mproj.clear(); ma.clear();
+  mh.send(MODEL()); await sleep(100);
+  const hq = mh.last('q'); assert.deepEqual(hq.sk.pos[1], { x: 190, y: 312 }); assert.equal(hq.sk.idea[2], 'Equinox'); assert.equal(hq.sk.tol, 60);
+  assert.equal(hq.q.model.pieces.length, 3);
+  for (const q of [ma.last('q').q, mproj.last('q').q]) {
+    const txt = JSON.stringify(q); assert.equal(q.model.pieces.length, 3);
+    assert.ok(!('kx' in q.model.pieces[0]) && !txt.includes('Equinox') && !txt.includes('"tol"') && !txt.includes('190'), 'no key in ' + txt);
+    assert.deepEqual([q.model.pieces[0].x, q.model.pieces[0].y], [860, 105], 'the start spot is public');
+  }
+  assert.equal(ma.last('sk'), undefined); assert.equal(mproj.last('sk'), undefined);
+  const late = client(); await late.ready; late.send({ t: 'watch', code: MP_CODE }); const ls = await late.wait('state');
+  assert.equal(ls.sk, undefined); assert.ok(!JSON.stringify(ls).includes('Equinox') && !JSON.stringify(ls).includes('"kx"'));
+  const rj = client(); await rj.ready; rj.send({ t: 'join', code: MP_CODE, id: maJ.id, tok: maJ.tok, bw: 800, bh: 500 }); const j = await rj.wait('joined');
+  assert.ok(!JSON.stringify(j).includes('Equinox') && !JSON.stringify(j).includes('"kx"'), 'a rejoining student gets no key either'); rj.ws.close(); await reattach();
+  const hs = client(); await hs.ready; hs.send({ t: 'host', code: MP_CODE, key: KEY }); assert.deepEqual((await hs.wait('state')).sk.pos[3], { x: 810, y: 312 }); hs.ws.close();
+});
+
+await test('pieces: with "show outlines" the answer spots are public on purpose (the ideas still are not)', async () => {
+  ma.clear(); mh.send(MODEL({ spots: 'shown' })); await sleep(100);
+  const q = ma.last('q').q; assert.deepEqual([q.model.pieces[0].kx, q.model.pieces[0].ky], [190, 312]); assert.ok(!JSON.stringify(q).includes('Equinox'));
+  mh.send(MODEL()); await sleep(80);
+});
+
+await test('pieces: a model that is not complete is refused', async () => {
+  mh.clear(); mh.send({ t: 'q', question: 'x', bg: 'blank', model: { pieces: [{ id: 1, label: 'Only one', x: 100, y: 100, kx: 300, ky: 300 }] } }); await sleep(80);
+  assert.match(mh.last('note').m, /not complete/); assert.equal(mh.last('q'), undefined);
+  mh.clear(); mh.send({ t: 'q', question: 'x', bg: 'blank', model: { pieces: [{ id: 1, label: 'A', x: 100, y: 100 }, { id: 2, label: 'B', x: 200, y: 100 }] } }); await sleep(80);
+  assert.equal(mh.last('q'), undefined, 'a piece with no answer spot is dropped, leaving fewer than two');
+});
+
+await test('pieces: placements are cleaned and relayed, and nothing is judged until Reveal', async () => {
+  mh.send(MODEL()); await sleep(80); mh.clear(); mproj.clear(); ma.clear();
+  ma.send({ t: 'place', p: { 1: { x: 195, y: 320 }, 2: { x: 5000, y: -40 }, 3: { x: 'a', y: 1 }, 99: { x: 1, y: 1 }, x: { x: 1, y: 1 } } }); await sleep(100);
+  const pl = mh.last('pl'); assert.equal(pl.id, maJ.id); assert.deepEqual(Object.keys(pl.p).sort(), ['1', '2']);
+  assert.deepEqual(pl.p[2], { x: 946, y: 54 }, 'clamped to the stage, centre kept 54 units from the edge');
+  assert.deepEqual(mproj.last('pl').p, pl.p); assert.equal(ma.last('fb'), undefined, 'no right or wrong before Reveal');
+  mh.clear(); ma.send({ t: 'place', p: { 1: { x: 195, y: 320 }, 2: { x: 500, y: 300 }, 3: { x: 805, y: 300 } } }); await sleep(80);
+  assert.deepEqual(Object.keys(mh.last('pl').p).sort(), ['1', '2', '3']);
+});
+
+await test('pieces: Reveal tells each student which pieces are right and where the wrong ones go', async () => {
+  ma.clear(); mh.clear(); mh.send({ t: 'reveal', on: true }); await sleep(100);
+  const fb = ma.last('fb'); assert.deepEqual(fb.ok, { 1: true, 2: false, 3: true }); assert.deepEqual(fb.where, { 2: { x: 500, y: 520 } });
+  assert.equal(mh.last('reveal').on, true);
+  ma.send({ t: 'place', p: { 1: { x: 195, y: 320 }, 2: { x: 500, y: 515 }, 3: { x: 805, y: 300 } } }); await sleep(80);
+  assert.deepEqual(ma.last('fb').ok, { 1: true, 2: true, 3: true }); assert.deepEqual(ma.last('fb').where, {});
+  ma.clear(); mh.send({ t: 'reveal', on: false }); await sleep(80); assert.equal(ma.last('fb').off, true);
+  const late = client(); await late.ready; late.send({ t: 'join', code: MP_CODE, id: maJ.id, tok: maJ.tok, bw: 800, bh: 500 }); assert.equal((await late.wait('joined')).fb, null, 'hidden again for a rejoin'); late.ws.close(); await reattach();
+});
+
+await test('pieces: "right away" gives right and wrong as each piece is placed, without the answer spot', async () => {
+  mh.send(MODEL({ fb: 'now' })); await sleep(80); ma.clear();
+  ma.send({ t: 'place', p: { 2: { x: 500, y: 300 }, 1: { x: 195, y: 320 } } }); await sleep(80);
+  const fb = ma.last('fb'); assert.deepEqual(fb.ok, { 1: true, 2: false }); assert.deepEqual(fb.where, {}, 'where only comes with Reveal');
+  mh.send(MODEL()); await sleep(80);
+});
+
+await test('pieces: a refresh keeps the placements, a new question clears them, Undo brings them back', async () => {
+  ma.send({ t: 'place', p: { 1: { x: 400, y: 300 } } }); await sleep(60);
+  const rj = client(); await rj.ready; rj.send({ t: 'join', code: MP_CODE, id: maJ.id, tok: maJ.tok, bw: 800, bh: 500 });
+  assert.deepEqual((await rj.wait('joined')).pl, { 1: { x: 400, y: 300 } }); rj.ws.close(); await reattach();
+  mh.clear(); mh.send({ t: 'q', question: 'Next', bg: 'blank' }); await sleep(100);
+  const st = client(); await st.ready; st.send({ t: 'watch', code: MP_CODE }); assert.deepEqual((await st.wait('state')).students.find(x => x.id === maJ.id).pl, {}); st.ws.close();
+  ma.clear(); ma.send({ t: 'place', p: { 1: { x: 400, y: 300 } } }); await sleep(60); assert.equal(mh.last('pl'), undefined, 'not a model question: placements are ignored');
+  mh.send(MODEL()); await sleep(80); ma.send({ t: 'place', p: { 1: { x: 410, y: 310 } } }); await sleep(60);
+  mh.send({ t: 'q', question: 'Different', bg: 'blank' }); await sleep(80); mh.clear(); ma.clear(); mh.send({ t: 'undoq' }); await sleep(120);
+  assert.deepEqual(ma.last('joined').pl, { 1: { x: 410, y: 310 } }); assert.equal(ma.last('joined').undo, true);
+  assert.deepEqual(mh.last('state').students.find(x => x.id === maJ.id).pl, { 1: { x: 410, y: 310 } });
+});
+
+await test('pieces: frozen, or on the projector, nothing is accepted', async () => {
+  mh.send({ t: 'freeze', on: true }); await sleep(60); mh.clear();
+  ma.send({ t: 'place', p: { 1: { x: 100, y: 100 } } }); await sleep(80);
+  assert.equal(mh.last('pl'), undefined); assert.equal(ma.last('freeze').on, true);
+  mh.send({ t: 'freeze', on: false }); await sleep(60);
+  mh.send({ t: 'spot', ids: [maJ.id], hide: false }); await sleep(60); mh.clear();
+  ma.send({ t: 'place', p: { 1: { x: 100, y: 100 } } }); await sleep(80); assert.equal(mh.last('pl'), undefined); assert.equal(ma.last('lock').proj, true);
+  mh.send({ t: 'spot', ids: [] }); await sleep(60);
+});
+
+await test('pieces: a pen drawing still works on a model question (pieces do not get in the way of ink)', async () => {
+  mh.clear(); ma.send({ t: 'set', o: { id: 1, k: 'line', s: 'arrow', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [200, 120]] } }); await sleep(80);
+  assert.equal(mh.last('set').o.s, 'arrow');
+});
+
+await test('pieces: the browser validator agrees with the server', async () => {
+  const raw = { id: 1, label: 'S'.repeat(40), art: 'earth', x: 5000, y: -9, kx: 190.6, ky: 312.2, idea: 'I'.repeat(50) };
+  const input = { question: 'Seasons', bg: 'blank', model: { stage: 'tall', tol: 500, spots: 'shown', fb: 'now', pieces: [raw, { id: 2, label: 'B', art: 'nope', x: 10, y: 10, kx: -300, ky: 9999 }] } };
+  mh.clear(); mh.send({ t: 'q', ...input }); await sleep(100);
+  const srv = mh.last('q'), mine = okQ(input).model;
+  assert.equal(mine.stage, srv.q.model.stage); assert.equal(mine.tol, srv.sk.tol); assert.equal(mine.spots, srv.q.model.spots); assert.equal(mine.fb, srv.q.model.fb);
+  assert.deepEqual(mine.pieces.map(p => [p.id, p.label, p.art, p.x, p.y]), srv.q.model.pieces.map(p => [p.id, p.label, p.art, p.x, p.y]));
+  assert.deepEqual(Object.fromEntries(mine.pieces.map(p => [p.id, { x: p.kx, y: p.ky }])), srv.sk.pos);
+  assert.deepEqual(Object.fromEntries(mine.pieces.map(p => [p.id, p.idea]).filter(x => x[1])), srv.sk.idea);
+  mh.send(MODEL()); await sleep(80);
+});
+
+await test('pieces: the checker works at the edge of "how close counts"', async () => {
+  const m = SK.cleanModel(MODEL().model), edge = (dx, dy) => SK.modelCheck(m, { 1: { x: 190 + dx, y: 312 + dy } });
+  assert.equal(edge(60, 0).ok[1], true, 'exactly the distance'); assert.equal(edge(61, 0).ok[1], false);
+  assert.equal(edge(42, 42).ok[1], true); assert.equal(edge(43, 43).ok[1], false);
+  const r = SK.modelCheck(m, {}); assert.deepEqual([r.right, r.put, r.total, r.ok], [0, 0, 3, {}], 'nothing moved, nothing judged');
+});
+
+await test('pieces: the scatter puts every piece on the stage, apart, and away from every answer spot', async () => {
+  for (const stage of ['wide', 'tall']) {
+    const m = SK.cleanModel({ ...MODEL().model, stage }); SK.scatter(m); const st = SK.stageOf(m);
+    m.pieces.forEach((p, i) => {
+      assert.ok(p.x >= 54 && p.x <= st.w - 54 && p.y >= 54 && p.y <= st.h - 54, stage + ': on the stage');
+      m.pieces.forEach(q => assert.ok(Math.hypot(p.x - q.kx, p.y - q.ky) >= 108 * 1.3 - 1, stage + ': clear of every answer spot'));
+      m.pieces.slice(i + 1).forEach(q => assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= 108 * 1.1, stage + ': clear of each other'));
+    });
+    assert.deepEqual(SK.modelIssues(m), [], stage + ': no problems listed');
+  }
+  const m = SK.cleanModel(MODEL().model); m.pieces[1].x = m.pieces[0].x; m.pieces[1].y = m.pieces[0].y; m.pieces[2].label = ' ';
+  assert.ok(SK.modelIssues(m).some(t => /on top of each other/.test(t)));
+});
+
+await test('pieces: a pasted or imported question with no start positions is scattered and says so', async () => {
+  const c = SK.checkQuestion({ question: 'Seasons', bg: 'blank', model: { pieces: [{ label: 'Summer', art: 'earth', kx: 190, ky: 312 }, { label: 'Winter', art: 'moon', kx: 810, ky: 312 }] } });
+  assert.deepEqual(c.problems, []); assert.ok(c.notes.some(n => /scattered/.test(n))); assert.equal(c.q.model.pieces.length, 2);
+  assert.ok(SK.checkQuestion({ question: 'x', model: { pieces: [{ label: 'a', kx: 1, ky: 1 }] } }).problems.some(t => /at least 2 pieces/.test(t)));
+  assert.ok(SK.checkQuestion({ question: 'x', model: { pieces: [{ label: 'a', kx: 1, ky: 1 }, { label: 'b' }] } }).problems.some(t => /no answer spot/.test(t)));
 });
 
 await test('the Figtree font file is served as woff2', async () => {

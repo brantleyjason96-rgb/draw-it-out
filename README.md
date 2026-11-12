@@ -3,7 +3,7 @@
 Teachers ask a question, every student draws the answer live, the teacher sees all drawings, puts one on the projector, and awards team points.
 
 Two kinds of question:
-- **Draw**: students draw the answer.
+- **Draw**: students draw the answer. A Draw question can also carry **movable pieces** (see below).
 - **Sort**: students drop sticky-note cards into lanes (rock types, parts of speech, branches of government, rational or irrational). The teacher builds the lanes and cards in the question editor and drags each card into its correct lane to make the answer key. Cards can carry an *idea* tag, so the class results show which ideas to reteach, not just who is behind.
 
 - Students: `/` (join with a class code)
@@ -15,6 +15,16 @@ Two kinds of question:
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
 - Landing page: `/start`
 - Projector: opened from the teaching screen. Shows one student's work, or up to three side by side, or the leaderboard, and the frozen screen while the class is frozen.
+
+### Movable pieces on a Draw question: how they work
+- In the question editor, **Movable pieces → Add pieces students move**. Add 2 to 12 pieces (a label, plus a picture: Earth, Sun, Moon, Arrow or a text card), drag each one to where it **belongs** (the answer key), and choose how it looks to students. Press **Scatter** (or drag them yourself in *Student start*) to set where pieces begin. Students move them with the **Pieces** tool, then draw on top with the normal tools; the pen never grabs a piece.
+- **Board shape**: *Wide* (Chromebook) or *Tall* (phone held upright). Pieces are the same size in both, so a tall board is easier on a phone.
+- **Students find the spot** (default): the answer spots, how close counts and the idea tags stay on the server and go to teachers only, as with Sort. **Show outlines**: faint outlines appear on every student's page and pieces slip into them. The spots are public by design in that mode.
+- **How close counts**: Tight, Normal or Loose (35, 60 or 90 units on a 1000-wide board; a piece is 108 wide). **Show students if they are right**: only on **Reveal answers**, or right away as each piece is placed. A wrong piece also shows a dashed ghost where it belongs, on Reveal.
+- A student's answer is one small map of the pieces they moved. It is saved on the server (a refresh loses nothing), is refused while the class is frozen or their work is on the projector, and goes back with **Undo** on a question. **Reset pieces** puts their pieces back at the start.
+- The teaching screen shows each student's board with the pieces in place, green or red rings (only on your screen) and a chip like *2 of 3 right*. The projector shows the pieces without rings or key. Everything Draw has (Pulse, Freeze, marks, Compare, lesson history) works as before.
+- Keyboard and screen readers: Tab to a piece (a hidden list of buttons), arrow keys move it (Shift for bigger steps); a live region says what moved. In the editor, click a piece then use the arrow keys.
+- Sets with pieces export, import, back up and share by link like any other. Code: `public/modelstu.js` (student), `modeledit.js` (editor), `paintPieces` / `stageRect` in `common.js` (drawing, shared), `SK.cleanModel` / `modelCheck` / `scatter` in `sortkit.js` (rules, a copy of the server's), "movable pieces" section of `server.js`. Plan and mock-up: `MODELS_PLAN.md`, `mockups/place-it.html`.
 
 ### Sort questions: how they work
 - The **answer key stays on the server** and goes to teachers only. Students and the projector get lane names and card text, never which lane is right.

@@ -159,6 +159,15 @@ body{min-height:100vh;display:flex;flex-direction:column}
      <input type="file" id="file" accept="image/*" hidden>
      <span class="mut" style="font-size:var(--fs-sm);flex:1;min-width:140px">Or paste a screenshot with Ctrl+V.</span>
     </div>
+    <div class="sec" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+     <div style="font-weight:700">Movable pieces <span class="mut" style="font-weight:400;font-size:var(--fs-sm)">students drag them into place, then draw on top</span></div>
+     <button class="tog" id="modeltog" type="button" aria-pressed="false" style="width:100%;justify-content:space-between"><span>Add pieces students move</span><i></i></button>
+     <div id="modelbody" class="sec" hidden style="gap:14px">
+      <div id="mrows"></div>
+      <div id="mopts" class="sec" style="gap:14px"></div>
+      <div id="missues" class="sec"></div>
+     </div>
+    </div>
    </div>
    <div id="sortopts" class="sec" hidden style="gap:14px">
     <div class="sec"><div style="font-weight:700">Lanes <span class="mut" style="font-weight:400;font-size:var(--fs-sm)">the boxes students drop cards into</span></div><div id="slanes"></div></div>
@@ -185,6 +194,11 @@ body{min-height:100vh;display:flex;flex-direction:column}
    <div id="skey"><div class="mut" style="font-size:var(--fs-md);margin-bottom:10px">Drag each sticky note into the lane where it belongs. Students never see this.</div><div id="skeyb"></div></div>
    <div id="sstu" hidden></div>
   </div>
+  <div id="modelprev" hidden style="align-self:stretch;display:flex;flex-direction:column;gap:12px">
+   <div class="seg" id="mtabs" role="group" aria-label="Board view" style="max-width:340px"><button data-v="key" class="on">Answer key</button><button data-v="start">Student start</button></div>
+   <div class="dev" style="max-width:none"><div class="qb"><span id="mq" style="flex:1;min-width:0"></span></div><div id="mcanvas" style="background:var(--c-desk);padding:12px"></div></div>
+   <div class="mut" style="font-size:var(--fs-md)" id="mhint"></div>
+  </div>
   <div class="dev" id="drawprev">
    <div class="devsw"><div class="seg" id="devseg" role="group" aria-label="Preview device"><button data-d="cb" class="on">Chromebook</button><button data-d="ph">Phone</button></div></div>
    <div class="qb"><span class="tmchip">Granite · 0 pts</span><span id="pq" style="flex:1;min-width:0"></span><span class="hidech">Hide</span></div>
@@ -203,6 +217,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <script src="/sortkit.js"></script>
 <script src="/tcommon.js"></script>
 <script src="/sortedit.js"></script>
+<script src="/modeledit.js"></script>
 <script>
 const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
 let set = null, sel = -1, draft = null, dirty = false, pim = null;
@@ -225,7 +240,7 @@ loadSets().then(() => {
 const blank = () => ({ question: '', bg: 'graph', img: null });
 async function pick(i, force) {
   if (!force && dirty && !await ask('You have unsaved changes to this question.', { title: 'Leave without saving?', ok: 'Leave without saving', cancel: 'Stay and keep editing', danger: true })) return;
-  sel = i; draft = i === -1 ? blank() : JSON.parse(JSON.stringify(set.questions[i])); dirty = false; loadDraft(); renderAll();
+  sel = i; draft = i === -1 ? blank() : JSON.parse(JSON.stringify(set.questions[i])); dirty = false; modelStash = null; loadDraft(); renderAll();
 }
 function loadDraft() { $('#qin').innerHTML = clean(draft.question); tagbox.setTags(draft.tags || []); }
 function readDraft() { draft.question = clean($('#qin').innerHTML); }
@@ -280,7 +295,7 @@ function renderList() {
     const row = el('div', { className: 'q' + (i === sel ? ' on' : '') }); row.tabIndex = 0; row.setAttribute('role', 'button');
     row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
     const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }), el('span', { className: 'qtype', title: q.kind === 'sort' ? 'Sort question' : 'Draw question' }, icoEl(q.kind === 'sort' ? 'shapes' : 'pen', 'sm')));
-    const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
+    const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : q.model ? el('span', { className: 'chip proj', textContent: 'Draw · ' + q.model.pieces.length + ' pieces' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
     const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ter ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
     m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
     const tick = el('input', { type: 'checkbox', className: 'tick', checked: picked.has(q) }); tick.setAttribute('aria-label', 'Select question ' + (i + 1) + ' to tag');
@@ -321,13 +336,15 @@ function applyKind() {
   const sort = isSort();
   $$('#kindseg button').forEach(b => b.classList.toggle('on', (b.dataset.k === 'sort') === sort));
   $('#drawopts').hidden = sort; $('#sortopts').hidden = !sort;
-  $('#drawprev').hidden = sort; $('#sortprev').hidden = !sort; $('#prevcol').classList.toggle('sort', sort);
-  $('#prevhint').hidden = sort; $('#prevlbl').textContent = sort ? 'Answer key and student view' : "How it looks on a student's screen";
-  if (sort) { if (!draft.sort) draft.sort = SE.blank(); SE.render(); } else refreshSave();
+  const model = !sort && !!draft.model;
+  $('#drawprev').hidden = sort || model; $('#sortprev').hidden = !sort; $('#modelprev').hidden = !model; $('#prevcol').classList.toggle('sort', sort || model);
+  $('#prevhint').hidden = sort || model; $('#prevlbl').textContent = sort ? 'Answer key and student view' : model ? 'Answer key and student start' : "How it looks on a student's screen";
+  $('#modeltog').classList.toggle('on', model); $('#modeltog').setAttribute('aria-pressed', model); $('#modelbody').hidden = !model; $('#modeltog').hidden = sort;
+  if (sort) { if (!draft.sort) draft.sort = SE.blank(); SE.render(); } else if (model) { ME.render(); } else refreshSave();
 }
 $$('#kindseg button').forEach(b => (b.onclick = () => {
   const sort = b.dataset.k === 'sort'; if (sort === isSort()) return;
-  if (sort) { draft.kind = 'sort'; draft.bg = 'blank'; draft.img = null; if (!draft.sort) draft.sort = SE.blank(); } else draft.kind = undefined;
+  if (sort) { draft.kind = 'sort'; draft.bg = 'blank'; draft.img = null; delete draft.model; if (!draft.sort) draft.sort = SE.blank(); } else draft.kind = undefined;
   markDirty(); renderAll();
 }));
 SE.mount({
@@ -341,10 +358,15 @@ SE.mount({
   el: { lanes: $('#slanes'), cards: $('#scards'), ideas: $('#sideas'), opts: $('#sopts'), key: $('#skeyb'), stu: $('#sstu'), tabs: $('#stabs') }
 });
 // Save and Send now wait until a sort question is complete
-function refreshSave() { const bad = isSort() && (sortIssues.length || !plain(draft.question || '').trim()); $('#save').disabled = $('#sendnow').disabled = !!bad; }
+let modelIssues = [];
+function refreshSave() { const bad = (isSort() && (sortIssues.length || !plain(draft.question || '').trim())) || (hasModel() && modelIssues.length); $('#save').disabled = $('#sendnow').disabled = !!bad; }
+// the draft's photo, loaded once per picture; `after` repaints whatever is showing it
+function ensureImg(after) { if (draft.bg === 'photo' && draft.img && (!pim || pim.dataset.src !== draft.img)) { pim = loadImg(draft.img, after); pim.dataset.src = draft.img; } }
+const hasModel = () => !isSort() && !!draft.model;
 function preview() {
   readDraft();
   if (isSort()) { SE.preview(); refreshSave(); return; }
+  if (hasModel()) { $('#mq').innerHTML = draft.question || '<span style="opacity:.6">Your question appears here…</span>'; ensureImg(() => ME.preview()); ME.preview(); refreshSave(); return; }
   $('#pq').innerHTML = draft.question || '<span style="opacity:.6">Your question appears here…</span>'; // cleaned: only b/i/u/br
   const cv = $('#pc'), x = cv.getContext('2d'), phn = $('#drawprev').classList.contains('phone');
   if (cv.width !== (phn ? 420 : 900)) { cv.width = phn ? 420 : 900; cv.height = phn ? 640 : 460; }
@@ -377,13 +399,31 @@ $('#file').onchange = e => { gotPhoto(e.target.files[0]); e.target.value = ''; }
 $('#rmimg').onclick = () => { draft.img = null; if (draft.bg === 'photo') draft.bg = 'graph'; markDirty(); renderAll(); };
 document.addEventListener('paste', e => { const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(f => f.type.startsWith('image/')); if (f) gotPhoto(f); });
 
+// "Add pieces students move": a Draw question can carry a model. Switching it off keeps the pieces for this editing session.
+let modelStash = null;
+$('#modeltog').onclick = () => {
+  if (draft.model) { modelStash = draft.model; delete draft.model; } else draft.model = modelStash || ME.blank();
+  markDirty(); renderAll();
+};
+ME.mount({
+  get: () => draft.model, changed: markDirty, bg: () => ({ bg: draft.bg, im: pim }),
+  issues: list => {
+    modelIssues = list; const box = $('#missues'); box.innerHTML = '';
+    if (list.length) list.forEach(t => box.append(el('div', { className: 'issue', textContent: t })));
+    else if (draft.model) box.append(el('div', { className: 'okmsg', textContent: 'Ready. ' + draft.model.pieces.length + ' pieces, each with an answer spot.' }));
+    refreshSave();
+  },
+  el: { rows: $('#mrows'), opts: $('#mopts'), canvas: $('#mcanvas'), tabs: $('#mtabs'), hint: $('#mhint') }
+});
 const finished = () => {
   readDraft();
   const tg = o => { const t = canonTags(draft.tags); return t.length ? { ...o, tags: t } : o; };
   if (isSort()) { const sort = SK.clean(draft.sort); return sort ? tg({ question: draft.question, bg: 'blank', img: null, kind: 'sort', sort }) : null; }
-  const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg; return tg({ question: draft.question, bg, img: bg === 'photo' ? draft.img : null }); };
+  const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg, o = { question: draft.question, bg, img: bg === 'photo' ? draft.img : null };
+  if (draft.model) { const model = SK.cleanModel(draft.model); if (!model) return null; o.model = model; }
+  return tg(o); };
 $('#save').onclick = () => {
-  const q = finished(); if (!q) return tell('See the notes under the lanes and cards.', { title: 'This sort question is not finished yet' });
+  const q = finished(); if (!q) return tell(isSort() ? 'See the notes under the lanes and cards.' : 'See the notes under the pieces.', { title: isSort() ? 'This sort question is not finished yet' : 'This question with pieces is not finished yet' });
   if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
   if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
   persistSets(); draft = JSON.parse(JSON.stringify(q)); dirty = false; renderAll(); toast('Saved.');
@@ -392,9 +432,9 @@ $('#save').onclick = () => {
 $('#cancel').onclick = async () => { if (dirty && !await ask('', { title: 'Discard your changes to this question?', ok: 'Discard changes', cancel: 'Keep editing', danger: true })) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
 $('#add').onclick = () => pick(-1);
 $('#sendnow').onclick = () => {
-  const q = finished(); if (!q) return tell('See the notes under the lanes and cards.', { title: 'This sort question is not finished yet' });
+  const q = finished(); if (!q) return tell(isSort() ? 'See the notes under the lanes and cards.' : 'See the notes under the pieces.', { title: isSort() ? 'This sort question is not finished yet' : 'This question with pieces is not finished yet' });
   if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
-  hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
+  hostSend(classCode, [{ t: 'q', question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort, model: q.model }]); toast('Sent to ' + ((periodOf(classCode) || {}).name || 'the class') + '.');
 };
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 

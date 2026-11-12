@@ -139,14 +139,15 @@ function onmsg(m) {
   switch (m.t) {
     case 'err': $('#who').textContent = m.m; setTimeout(() => ws.send({ t: 'watch', code }), 3000); return;
     case 'state': S.stu.clear(); S.picks = m.picks || (m.spot ? [m.spot] : []); S.spot = S.picks[0] || null; S.hide = m.hide; S.board = !!m.board; S.teams = m.teams || []; S.scores = m.scores || {}; S.frozen = !!m.frozen; setQ(m.q);
-      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {}, pulse: d.pulse || null, d: true })); S.sres = !!m.sres; S.sum = null; TK.set(m.timer); if (S.frozen) makeFlakes(); break;
-    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {}, pulse: m.s.pulse || null, d: true }); break;
+      m.students.forEach(d => S.stu.set(d.id, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, sort: d.sort || {}, pl: d.pl || {}, pulse: d.pulse || null, d: true })); S.sres = !!m.sres; S.sum = null; TK.set(m.timer); if (S.frozen) makeFlakes(); break;
+    case 'join': S.stu.set(m.s.id, { name: m.s.name, objs: m.s.objs, bw: m.s.bw, bh: m.s.bh, sort: m.s.sort || {}, pl: m.s.pl || {}, pulse: m.s.pulse || null, d: true }); break;
     case 'set': if (s) { const i = s.objs.findIndex(o => o.id === m.o.id); if (i >= 0) s.objs[i] = m.o; else s.objs.push(m.o); s.d = true; } break;
     case 'pts': if (s) { const o = s.objs.find(o => o.id === m.oid); if (o) { o.pts.push(...m.p); s.d = true; } } break;
     case 'del': if (s) { s.objs = s.objs.filter(o => o.id !== m.oid); s.d = true; } break;
     case 'all': if (s) { s.objs = m.objs; s.d = true; } break;
+    case 'pl': if (s) { s.pl = m.p || {}; s.d = true; } break; // a student moved a piece
     case 'restore': setQ(m.q); break;
-    case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; x.d = true; }); break;
+    case 'q': setQ(m.q); S.sum = null; S.stu.forEach(x => { x.objs = []; x.sort = {}; x.pl = {}; x.d = true; }); break;
     case 'sort': if (s) s.sort = m.p; break;
     case 'sres': S.sres = m.on; break;
     case 'sum': S.sum = m; break;
@@ -321,7 +322,7 @@ function paintBoards(ids) {
     if (resized === null) { s.d = true; setTimeout(draw, 90); return; } // no layout yet (a panel that is still being shown)
     if (!s.d && !resized) return;
     s.d = false;
-    paintBoard(b.cv, s.objs, S.q.bg, S.im, s.bw, s.bh);
+    paintBoard(b.cv, s.objs, S.q.bg, S.im, s.bw, s.bh, S.q.model ? { model: S.q.model, pl: s.pl || {} } : undefined);
   });
 }
 </script>

@@ -441,7 +441,8 @@ const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
   if (q.kind === 'sort') { const sort = SK.clean(q.sort); return sort && plain(text).trim() ? tg({ question: text, bg: 'blank', img: null, kind: 'sort', sort }) : null; }
   const img = typeof q.img === 'string' && q.img.startsWith(JPG) ? q.img : null;
   let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'blank'; if (bg === 'photo' && !img) bg = 'blank';
-  return plain(text).trim() || img ? tg({ question: text, bg, img: bg === 'photo' ? img : null }) : null;
+  const model = q.model ? SK.cleanModel(q.model) : null; // movable pieces (the same rules the server applies)
+  return plain(text).trim() || img ? tg({ question: text, bg, img: bg === 'photo' ? img : null, ...(model ? { model } : {}) }) : null;
 }).filter(Boolean);
 function addSet(name, questions, folder, tags) {
   const st = { id: crypto.randomUUID(), name: String(name || 'New set').slice(0, 60), questions: cleanQs(questions) };
@@ -492,7 +493,7 @@ async function showStarters(onAdd) {
 const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 async function packSet(st) {
-  const json = JSON.stringify({ n: st.name, t: st.tags || undefined, q: st.questions.map(q => { const a = q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg]; if (q.tags && q.tags.length) { if (a.length < 3) a.push(null); a.push(q.tags); } return a; }) });
+  const json = JSON.stringify({ n: st.name, t: st.tags || undefined, q: st.questions.map(q => { const a = q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg, ...(q.model ? [q.model] : [])]; if (q.tags && q.tags.length) { if (a.length < 3) a.push(null); a.push(q.tags); } return a; }) });
   if (window.CompressionStream) return 'z.' + b64u(new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
   return 'r.' + b64u(new TextEncoder().encode(json));
 }
@@ -500,7 +501,7 @@ async function unpackSet(t) {
   const u8 = unb64u(t.slice(2));
   const json = t[0] === 'z' ? await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(u8);
   const o = JSON.parse(json); if (!o || !Array.isArray(o.q)) throw 0;
-  return { name: String(o.n || 'Shared set').slice(0, 60), tags: o.t, questions: cleanQs(o.q.map(x => ({ ...(x[2] ? { question: x[0], kind: 'sort', sort: x[2] } : { question: x[0], bg: x[1] }), tags: x[3] }))) };
+  return { name: String(o.n || 'Shared set').slice(0, 60), tags: o.t, questions: cleanQs(o.q.map(x => ({ ...(x[2] && x[2].pieces ? { question: x[0], bg: x[1], model: x[2] } : x[2] ? { question: x[0], kind: 'sort', sort: x[2] } : { question: x[0], bg: x[1] }), tags: x[3] }))) };
 }
 async function copyShareLink(st) {
   const photos = st.questions.filter(q => q.bg === 'photo' || q.img).length;

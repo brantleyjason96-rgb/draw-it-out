@@ -1,6 +1,6 @@
 # Draw It Out — Plan: movable models ("Place It")
 
-**Status: decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
+**Status: Phase A is built (see "Phase A: what was built" at the end). Phases B, C and D are not.** Decisions M1–M5 accepted (all recommendations). A clickable mock-up is in `mockups/place-it.html`; no app file in `public/` or `server.js` has changed.** A question you can build in the editor where students drag pieces of a model into the right spots, then draw on top of it.
 
 Open `mockups/place-it.html` in a browser: tab 1 is the editor, tab 2 the student page (drag, draw, keyboard, Reveal, Freeze, phone shape), tab 3 the teaching screen. Changes in tab 1 show up in tabs 2 and 3.
 
@@ -137,3 +137,25 @@ The prompt writes model questions (pieces, spots, ideas) and the shared validato
 
 ## Smallest first step I'd suggest
 Phase A with **label pieces only** and the *hidden* mode, to put in front of one real class before building pictures, rotation or results panels. A clickable mock-up in `mockups/` (like the Sort one) can come first if you want to see the editor and student screen before any code.
+
+
+---
+
+## Phase A: what was built
+Labels and built-in pictures (no rotation, no cut-outs), the editor, the Pieces tool, the server key and check, Reveal, thumbnails and projector, and the validator, import, export, share link and backup. `npm test`: 103 tests (90 before; 13 new for pieces). Also run in Chromium end to end: build a question in the editor, send it, place pieces as a student with mouse, touch and keyboard, draw over pieces, Reveal, Freeze, refresh, Undo, reload of saved sets, share-link round trip; no console or security-policy errors on the editor, student, teaching or projector pages.
+
+**Choices made while building**
+- The board shape (Wide / Tall) from the mock-up findings is in. Switching it scales every piece's position.
+- Piece start spots and answer spots are rounded whole numbers, clamped so the whole picture stays on the board.
+- The key is `room.sk = { pos, idea, tol }` for model questions (a sort question uses `{ lane, idea }`); the browser tells them apart by the question's `model`.
+- Pieces are painted between the background and the ink; the piece being dragged is painted on top until it lands.
+- With the pen (or any other tool) selected, pieces are inert and the bottom bar says so.
+- A text-card piece is a sticky note with its label inside; the other pictures show the label under them.
+- The Build with AI prompt is not changed (Phase D), but pasted or imported questions with a `model` are checked by the shared validator, and pieces without start positions are scattered.
+
+**Known limits (Phase A)**
+- The editor's piece list has no drag-to-reorder; the order is the order added.
+- The class-wide results panel, per-piece percentages, mastery and lesson-history scores for pieces are Phase B. A pieces question is saved in lesson history like a drawing (confidence and your mark), not with a piece score.
+- The phone Questions tab and the teacher's phone remote show the board but have no piece-specific view.
+- A teacher page that connects after the question was sent without being a host sees the pieces but no rings.
+- `roundRect` is used to draw cards and labels: it needs Chrome 99 or Safari 16 and later.
