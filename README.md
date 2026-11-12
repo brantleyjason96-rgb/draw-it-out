@@ -66,6 +66,13 @@ Draw It Out is one small Node process (HTTP + WebSocket) with **no database**. C
 3. Put it behind HTTPS (the hosts above do this for you). WebSockets must be allowed.
 4. **Run exactly one instance.** Rooms are held in memory.
 
+### Before you share it with other teachers (a checklist)
+1. **Plan:** `render.yaml` uses the starter plan (always on). Free sleeps and drops live classes when it restarts.
+2. **A short address students can type.** On Render: the service → *Settings → Custom Domains → Add*, then create the DNS record Render shows (a `CNAME`, or an `ALIAS`/`ANAME` for a bare domain) at your registrar; Render issues the HTTPS certificate on its own. Pick a name that is short and has no look-alike letters (students type it on a phone). Nothing in the app needs changing: the join links, the QR code on the projector and the teacher's "student link" all use whatever address the page was opened on. Tell teachers to share the short address, not the `onrender.com` one.
+3. **An uptime monitor** on `https://YOUR-ADDRESS/healthz`. It answers `ok` (GET or HEAD, never cached). With UptimeRobot (free): *Add New Monitor → HTTP(s)*, URL as above, interval 5 minutes, alert contact your email; for a stricter check choose *Keyword* and look for `ok`. Render's own health check (`healthCheckPath: /healthz` in `render.yaml`) restarts the service if it stops answering, but only a monitor outside Render tells you when the whole thing is down.
+4. **Check a school network** with the *Test this network* button on `/start`, from a student device on the school wifi.
+5. **Know the limits:** one instance (rooms are in memory), 60 students per class, 150 connections per address by default (`MAX_PER_IP`; a whole school shares one address, so raise it for a big school), 300 classes (`MAX_ROOMS`).
+
 Environment variables: `PORT` (default 3000), `MAX_ROOMS` (default 200), `MAX_PER_IP` (sockets per address, default 150; a whole school shares one address), `TRUST_PROXY=1` (behind Render or another proxy: use the address the proxy added to `X-Forwarded-For`; `render.yaml` sets it).
 
 ## Class timer
