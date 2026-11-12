@@ -200,7 +200,7 @@ $('#sendnow').hidden = !classCode;
 loadSets().then(() => {
   set = setById(sp.get('id'));
   if (!set) return (location.href = backUrl);
-  store.do_active = set.id;
+  store.do_active = set.id; if (classCode) { try { store['do_active_' + classCode] = set.id; } catch {} } // the class page comes back to the set that was just edited
   const q = sp.get('q');
   if (q === 'new' || !set.questions.length) pick(-1, true);
   else pick(q !== null && +q >= 0 && +q < set.questions.length ? +q : 0, true);

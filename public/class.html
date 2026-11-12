@@ -508,7 +508,12 @@ function renderScores() {
 }
 
 // ---- question rail ----
-let cur = +store.do_cur; const qs = () => activeSet().questions;
+// The open question set and the current question are remembered per class, so reloading (or switching classes) comes back to the same place.
+const KACT = 'do_active_' + code, KCUR = 'do_cur_' + code;
+const setActiveId = id => { store.do_active = id; try { store[KACT] = id; } catch {} };
+const setCurIdx = i => { store.do_cur = i; try { store[KCUR] = i; } catch {} };
+// (a class with nothing saved yet starts with no question marked as sent)
+let cur = store[KCUR] != null ? +store[KCUR] : -1; const qs = () => activeSet().questions;
 const qPayload = q => ({ question: q.question, bg: q.bg, img: q.bg === 'photo' ? q.img : null, kind: q.kind, sort: q.sort });
 const sendQ = q => { ws.send({ t: 'q', ...qPayload(q) }); rememberQ(q); };
 // The last question sent is kept in this browser, so a server restart (which empties the class) can be put right.
@@ -522,9 +527,9 @@ function restoreQ() {
 function go(i) {
   if (i < 0 || i >= qs().length) return; demoStep(0); foldRail(true);
   const prev = cur, prevQ = S.q, hadWork = [...S.stu.values()].some(s => (s.objs && s.objs.length) || Object.keys(s.sort || {}).length);
-  cur = i; store.do_cur = i; store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet();
+  cur = i; setCurIdx(i); store['do_last_' + code] = activeSet().name; try { store['do_day_' + code] = String(Date.now()); } catch (e) { } sendQ(qs()[i]); renderSet();
   // a new question wipes every drawing, so for 15 seconds the teacher can take it back (the server keeps the old work that long)
-  if (hadWork) toast('Question sent. Everyone\u2019s drawings were cleared.', { label: 'Undo', ms: 15000, f: () => { ws.send({ t: 'undoq' }); cur = prev; store.do_cur = prev; if (prev >= 0 && qs()[prev]) rememberQ(qs()[prev]); renderSet(); } });
+  if (hadWork) toast('Question sent. Everyone\u2019s drawings were cleared.', { label: 'Undo', ms: 15000, f: () => { ws.send({ t: 'undoq' }); cur = prev; setCurIdx(prev); if (prev >= 0 && qs()[prev]) rememberQ(qs()[prev]); renderSet(); } });
 }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
@@ -555,14 +560,14 @@ function renderSet() {
 function mv(i, d) {
   const j = i + d, a = qs(); if (j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; if (cur === i) cur = j; else if (cur === j) cur = i;
-  store.do_cur = cur; persistSets(); renderSet();
+  setCurIdx(cur); persistSets(); renderSet();
 }
 async function rm(i) {
   if (!await ask('It is removed from this set.', { title: 'Delete this question?', ok: 'Delete', cancel: 'Keep', danger: true })) return;
   qs().splice(i, 1); if (i < cur) cur--; else if (i === cur) cur = -1;
-  store.do_cur = cur; persistSets(); renderSet();
+  setCurIdx(cur); persistSets(); renderSet();
 }
-$('#setsel').onchange = e => { store.do_active = e.target.value; cur = -1; store.do_cur = -1; renderSet(); };
+$('#setsel').onchange = e => { setActiveId(e.target.value); cur = -1; setCurIdx(-1); renderSet(); };
 function foldRail(on) { $('#rail').classList.toggle('shut', on); try { store.do_qfold = on ? '1' : '0'; } catch (e) { } }
 try { if (store.do_qfold === '1') $('#rail').classList.add('shut'); } catch (e) { }
 $('#qopen').onclick = () => foldRail(false); $('#qshut').onclick = () => foldRail(true);
@@ -570,7 +575,7 @@ $('#sendnext').onclick = () => go(cur + 1);
 $('#prev').onclick = () => go(cur - 1);
 $('#next').onclick = () => go(cur + 1);
 $('#addq').onclick = () => (location.href = '/sets?id=' + activeSet().id + '&q=new&code=' + code);
-$('#starter').onclick = () => showStarters(s => { store.do_active = s.id; cur = -1; store.do_cur = -1; renderSet(); });
+$('#starter').onclick = () => showStarters(s => { setActiveId(s.id); cur = -1; setCurIdx(-1); renderSet(); });
 document.addEventListener('keydown', e => { // clicker / keyboard: right arrow or Page Down = next, left arrow or Page Up = previous
   if (e.target.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || document.querySelector('dialog[open]')) return;
   if (e.key === 'ArrowRight' || e.key === 'PageDown') go(cur + 1);
@@ -1046,9 +1051,10 @@ function bot(nm, i) {
 
 // ---- start ----
 loadSets().then(() => {
-  const set = activeSet(); store.do_active = set.id;
+  if (setById(store[KACT])) store.do_active = store[KACT]; // this class's own set wins over whatever another class last had open
+  const set = activeSet(); setActiveId(set.id);
   if (!(cur >= 0 && cur < set.questions.length)) cur = -1;
-  if (DEMO) loadStarters().then(l => { if (!sets.some(x => x.name === l[0].name)) { const s = addSet(l[0].name, l[0].questions); store.do_active = s.id; cur = -1; renderSet(); } });
+  if (DEMO) loadStarters().then(l => { if (!sets.some(x => x.name === l[0].name)) { const s = addSet(l[0].name, l[0].questions); setActiveId(s.id); cur = -1; renderSet(); } });
   renderSet(); ui();
 });
 ui();
