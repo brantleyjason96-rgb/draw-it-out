@@ -71,6 +71,16 @@ h2.sec{font-size:var(--fs-3xl);margin:56px 0 18px}
 .priv .note p{margin:0 0 10px;color:var(--c-ink-2)}
 @media(max-width:860px){.priv{grid-template-columns:1fr}}
 
+/* network check */
+.nettest{display:grid;grid-template-columns:minmax(0,1.4fr) auto;gap:16px 24px;align-items:center;background:#fff;border:1px solid var(--c-line);border-radius:var(--r-xl);padding:24px 28px}
+.netres{grid-column:1/-1;padding:14px 18px;border-radius:var(--r-lg);border:2px solid var(--c-line-2);background:var(--c-surface-2);font-weight:600}
+.netres.ok{border-color:#9bd3b4;background:var(--c-good-soft);color:var(--c-good-strong)}
+.netres.bad{border-color:var(--c-bad-line);background:var(--c-bad-soft);color:var(--c-bad-strong)}
+.netres.warn{border-color:var(--c-warn-line);background:var(--c-warn-soft);color:var(--c-warn-strong)}
+.netres p{margin:0 0 4px}.netres p:last-child{margin:0}
+.netres small{display:block;font-weight:400;color:inherit;opacity:.9}
+@media(max-width:860px){.nettest{grid-template-columns:1fr}}
+
 /* closing call to action and footer */
 .close{text-align:center;margin:56px 0 0;padding:40px 24px;border-radius:var(--r-2xl);background:var(--c-question);color:#fff}
 .close h2{font-size:var(--fs-3xl);margin-bottom:16px;color:#fff}
@@ -137,6 +147,16 @@ footer nav a{display:inline-block;padding:12px 0;font-weight:600}
   <div class="note"><h3>Check with your school</h3><p>Every school has its own approval process. Please check with your school’s data-privacy contact before using any tool with students.</p></div>
  </section>
 
+ <h2 class="sec" id="nethead">Can my school network run this?</h2>
+ <section class="nettest" aria-labelledby="nethead">
+  <div>
+   <p style="margin:0;font-size:var(--fs-lg);font-weight:600">Find out in a few seconds, before class.</p>
+   <p class="mut" style="margin:6px 0 0">Draw It Out needs a live connection (a WebSocket) between each device and this site. Some school filters block it. Press the button on a <b>student</b> device, on the school wifi, because that is the network that matters.</p>
+  </div>
+  <div class="nt-act"><button type="button" class="b pri big" id="nettest">Test this network</button></div>
+  <div id="netres" class="netres" role="status" aria-live="polite" hidden></div>
+ </section>
+
  <section class="close" aria-label="Get started"><h2>Try it with your next class.</h2><div class="cta" style="justify-content:center"><a class="b pri big" href="/teacher">Start a class</a><a class="b big" href="/class?demo=1">Try the demo</a></div></section>
 </main>
 
@@ -146,5 +166,36 @@ footer nav a{display:inline-block;padding:12px 0;font-weight:600}
   <nav aria-label="Footer"><a href="/class?demo=1">Try the demo</a><a href="/">Join a class</a><a href="/teacher">Start a class</a></nav>
  </div>
 </footer>
+<script>
+// "Can my school network run this?": loads a small file, then opens the same live connection a class uses and asks the server one question.
+(function () {
+  const btn = document.getElementById('nettest'), out = document.getElementById('netres'), host = location.host;
+  const show = (cls, lines) => { out.hidden = false; out.className = 'netres ' + cls; out.replaceChildren(...lines.map(l => { const p = document.createElement('p'); p.textContent = l; return p; })); };
+  const TIMEOUT = 8000;
+  function socketTest() {
+    return new Promise(res => {
+      let ws, done = false, t0 = 0;
+      const end = (r) => { if (done) return; done = true; clearTimeout(timer); try { ws && ws.close(); } catch (e) {} res(r); };
+      const timer = setTimeout(() => end({ ok: false, why: 'timeout' }), TIMEOUT);
+      try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host); } catch (e) { return end({ ok: false, why: 'blocked' }); }
+      ws.onopen = () => { t0 = performance.now(); ws.send(JSON.stringify({ t: 'status', code: 'NETCHECK' })); };
+      ws.onmessage = e => { try { if (JSON.parse(e.data).t === 'status') end({ ok: true, ms: Math.round(performance.now() - t0) }); } catch (err) {} };
+      ws.onerror = () => end({ ok: false, why: 'blocked' });
+      ws.onclose = () => end({ ok: false, why: 'closed' });
+    });
+  }
+  btn.onclick = async () => {
+    btn.disabled = true; show('', ['Testing… this takes a few seconds.']);
+    let page = false;
+    try { const c = new AbortController(), t = setTimeout(() => c.abort(), TIMEOUT); const r = await fetch('/healthz', { cache: 'no-store', signal: c.signal }); clearTimeout(t); page = r.ok; } catch (e) {}
+    if (!page) { show('bad', ['This device could not reach ' + host + '.', 'Check that the device is on the internet, then try again. If it is, ask your IT team whether this address is blocked.']); btn.disabled = false; return; }
+    const r = await socketTest();
+    if (r.ok && r.ms > 1500) show('warn', ['It works, but this network is slow (' + r.ms + ' ms to answer).', 'Drawings may lag when a whole class is on at once. Try again, or try a different wifi.']);
+    else if (r.ok) show('ok', ['Yes. This network can run Draw It Out.', 'The live connection worked (' + r.ms + ' ms to answer). Test again on a student device if you have only tried a teacher laptop.']);
+    else show('bad', ['The page loaded, but the live connection did not work' + (r.why === 'timeout' ? ' (it timed out)' : '') + '.', 'Draw It Out needs WebSocket connections to ' + host + ' (wss, port 443). Ask your IT team to allow them, and send them this address.']);
+    btn.disabled = false;
+  };
+})();
+</script>
 </body>
 </html>
