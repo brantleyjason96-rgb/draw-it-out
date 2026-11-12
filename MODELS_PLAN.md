@@ -219,3 +219,25 @@ A teacher building a continents jigsaw could not save it (“the pieces are too 
 - Outlines for a picture piece are a box, not the shape of the continent (the piece's size and shape are known, its outline is not). A jigsaw with *Show outlines* therefore shows boxes that overlap where the continents touch.
 - Closeness is a distance in board units, the same for a small piece and a huge one. A very big piece with *Very tight* is hard to place exactly; *Tight* is usually right for a jigsaw.
 - Answer spots can overlap; a student can't tell from the outlines which one is which, only from the labels.
+
+
+---
+
+## After sizes: an answer area for each piece, and marks that give points
+Two requests from a teacher using the continents question and the Got it / Almost / Not yet marks. `npm test`: 125 tests (120 before; 5 new). Run in Chromium end to end: two continent pictures made bigger, *Very loose*, the Area slider and dragging the ring handle, saved, sent, one continent placed far from its centre but inside its area (counts), Reveal showing the area, then the three mark buttons moving a team's score 0 → 2 → 1 → 0, the settings (Got it +4, off, on), and the chip and toast.
+
+**Answer area**
+- A piece may have its own area `tl` (20 to 400); otherwise it uses the question's `tol` (now up to *Very loose*, 150). One rule, `SK.tolOf` in the browser and `tolOf` on the server, is used for the check, the mix-up in results, the warning about close spots, and the results board.
+- The area is a key (teachers only), like the answer spot. Reveal sends the area (`r`) for an area bigger than the piece, and the painter draws it as an area with “belongs in this area”.
+- Choosing a setting for the whole question resets every piece to it.
+
+**Marks give points**
+- The server awards the points when a mark changes (`applyMark`), so every teacher screen agrees and a changed mark takes back the old points. Defaults Got it 2, Almost 1, Not yet 0, whole points 0 to 5, on by default (`mpts` on the room, kept with the class like the teams).
+- It is teacher-only: the point values and each student's earned points are sent to teacher screens only. A test checks students and the projector never receive them.
+- It reuses the team-change fix (`fixAwards`), so points follow a student who moves team, and a student marked before being put on a team gets them then.
+- Not changed: the +1 button, the one-point-per-team rule (it applies to +1 only), Reset all scores, Undo of a question (it does not change the score).
+
+**Known limits**
+- While the teams sheet is open the screen holds the scores it shows (existing behaviour), so a change made in that sheet shows when it closes; the card chip updates at once.
+- Marks are points to the *team*; there is no per-student total.
+- On Reveal, a large area label can sit partly off the board for a spot near an edge.

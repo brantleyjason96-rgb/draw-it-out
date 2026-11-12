@@ -132,13 +132,17 @@ function paintPieces(x, model, pl, bw, bh, o = {}) {
     if (p.kx == null) return; const taken = model.pieces.some(q => pl && pl[q.id] && Math.hypot(pl[q.id].x - p.kx, pl[q.id].y - p.ky) < 20);
     shape(p, p.kx, p.ky, 8, '#0B6BCB', taken ? 'rgba(11,107,203,.22)' : 'rgba(11,107,203,.07)');
   });
-  if (o.tolRings) model.pieces.forEach((p, i) => { circle(p.kx, p.ky, o.tolRings, '#0B6BCB', 'rgba(11,107,203,.10)'); x.font = '700 ' + fs * .8 + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.fillStyle = '#0B5CAD'; x.fillText(String(i + 1), p.kx, p.ky - o.tolRings - 2); });
+  if (o.tolRings) model.pieces.forEach((p, i) => { // the area where a piece counts as right: the question's setting, or the piece's own
+    const rad = p.tl || o.tolRings; circle(p.kx, p.ky, rad, '#0B6BCB', 'rgba(11,107,203,.10)'); x.font = '700 ' + fs * .8 + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.fillStyle = '#0B5CAD'; x.fillText(String(i + 1), p.kx, p.ky - rad - 2);
+    if (o.zoneHandle === p.id) { x.beginPath(); x.arc(p.kx + rad, p.ky, 15, 0, 7); x.fillStyle = '#0B6BCB'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke(); x.fillStyle = '#fff'; x.font = '800 20px ' + FONT; x.textBaseline = 'middle'; x.fillText('↔', p.kx + rad, p.ky + 1); }
+  });
   if (o.where) model.pieces.forEach(p => {
-    const k = o.where[p.id]; if (!k) return; shape(p, k.x, k.y, 4, '#B3261E', 'rgba(179,38,30,.08)');
+    const k = o.where[p.id]; if (!k) return;
+    if (k.r) circle(k.x, k.y, k.r, '#B3261E', 'rgba(179,38,30,.08)'); else shape(p, k.x, k.y, 4, '#B3261E', 'rgba(179,38,30,.08)'); // a big area is drawn as an area
     if (p.turn && k.a != null) drawPiece(x, p, { x: k.x, y: k.y, a: k.a }, { fs, alpha: .38, noLabel: true }); // a faint copy of the piece, facing the right way
     if (pl && pl[p.id] && Math.hypot(pl[p.id].x - k.x, pl[p.id].y - k.y) < MA) return; // already in the right place (only the angle is wrong): the faint copy says which way, a label on top of the piece would only crowd it
     if (o.whereLabels === false) return; // the teacher's board lists where each piece belongs in words, so the labels would only crowd it
-    x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = p.label + ' goes here', w = x.measureText(t).width + 10, y = k.y + pieceBox(p).h / 2 + 12 + fs * .65;
+    x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = p.label + (k.r ? ' belongs in this area' : ' goes here'), w = x.measureText(t).width + 10, y = k.y + (k.r || pieceBox(p).h / 2) + 12 + fs * .65;
     x.fillStyle = '#fff'; x.beginPath(); x.roundRect(k.x - w / 2, y - fs * .65, w, fs * 1.3, 6); x.fill(); x.fillStyle = '#8C1D18'; x.fillText(t, k.x, y);
   });
   model.pieces.forEach(p => {
@@ -162,6 +166,12 @@ function handleAt(model, pl, id, bw, bh, px, py, pad = 0) {
   const p = model.pieces.find(q => q.id === id); if (!p || !p.turn) return false;
   const r = stageRect(model, bw, bh), pos = pl && pl[id] ? pl[id] : { x: p.x, y: p.y }, h = handlePos(pos, pos.a != null ? pos.a : p.a || 0, handleR(p));
   return Math.hypot((px - r.x) / r.k - h.x, (py - r.y) / r.k - h.y) <= 24 + pad / r.k;
+}
+// is a point on the handle on the edge of piece `id`'s answer area? (page units; the editor's answer view only)
+function zoneAt(model, id, bw, bh, px, py, pad = 0) {
+  const p = model.pieces.find(q => q.id === id); if (!p) return false;
+  const r = stageRect(model, bw, bh), rad = p.tl || model.tol;
+  return Math.hypot((px - r.x) / r.k - (p.kx + rad), (py - r.y) / r.k - p.ky) <= 22 + pad / r.k;
 }
 // is a point on the size handle (the bottom-right corner) of piece `id`? (page units; the editor only)
 function resizeAt(model, pl, id, bw, bh, px, py, pad = 0) {

@@ -111,10 +111,12 @@ const hostKey = () => store.do_tkey || (store.do_tkey = crypto.randomUUID());
 
 // ---- teams, class list and scores, one set per class period ----
 const TKEY = c => 'do_team_' + c;
+// what the marks Got it / Almost / Not yet are worth to the student's team (the server has the same rule)
+const cleanMp = o => { const n = (v, d) => (Number.isInteger(v) && v >= 0 && v <= 5 ? v : d), x = o && typeof o === 'object' ? o : {}; return { on: x.on !== false, got: n(x.got, 2), almost: n(x.almost, 1), not: n(x.not, 0) }; };
 function loadTM(c) {
   let t; try { t = JSON.parse(store[TKEY(c)]); } catch {}
   if (!t || !Array.isArray(t.teams) || !Array.isArray(t.roster)) t = { teams: [], roster: [], cap: false, scores: {} };
-  t.scores = t.scores || {}; return t;
+  t.scores = t.scores || {}; t.mpts = cleanMp(t.mpts); return t;
 }
 const saveTM = (c, t) => { try { store[TKEY(c)] = JSON.stringify(t); } catch {} };
 const pubRoster = t => t.roster.map(e => ({ rid: e.rid, ini: e.ini, team: e.team }));
@@ -132,7 +134,7 @@ const cleanTM = t => {
   const teams = (Array.isArray(t.teams) ? t.teams : []).slice(0, 12).filter(x => x && /^[a-z0-9]{1,8}$/.test(x.id)).map(x => (ids.add(x.id), { id: x.id, name: str(x.name, 20) || 'Team', color: /^#[0-9a-fA-F]{6}$/.test(x.color) ? x.color : '#2563eb', emoji: str(x.emoji, 8) }));
   const roster = (Array.isArray(t.roster) ? t.roster : []).slice(0, 100).filter(x => x && /^[a-z0-9]{4,12}$/.test(x.rid)).map(x => ({ rid: x.rid, first: str(x.first, 40), last: str(x.last, 40), ini: str(x.ini, 6), team: ids.has(x.team) ? x.team : null }));
   const scores = {}; teams.forEach(x => (scores[x.id] = Number.isInteger(t.scores && t.scores[x.id]) ? Math.max(0, Math.min(9999, t.scores[x.id])) : 0));
-  return { teams, roster, cap: !!t.cap, scores };
+  return { teams, roster, cap: !!t.cap, scores, mpts: cleanMp(t.mpts) };
 };
 // two students on one team can't share initials: JD, JD2, JD3...  Returns a list of "Name -> JD2" changes.
 function dedupeInitials(roster) {
@@ -582,5 +584,5 @@ function hostSend(code, msgs) {
   const lq = msgs.find(x => x.t === 'q'); // remembered, so a server restart can be put right (see rememberQ in class.html)
   if (lq) { const { t, ...p } = lq; try { localStorage['do_lastq_' + code] = JSON.stringify(p); } catch { try { localStorage['do_lastq_' + code] = JSON.stringify({ ...p, img: null }); } catch {} } }
   const w = connect(m => { if (m.t === 'state' && !sent) { sent = true; msgs.forEach(x => w.send(x)); setTimeout(() => w.close(), 600); } },
-    () => w.send({ t: 'host', code, key: hostKey(), setup: { teams: tm.teams, roster: pubRoster(tm), cap: tm.cap, scores: tm.scores } }));
+    () => w.send({ t: 'host', code, key: hostKey(), setup: { teams: tm.teams, roster: pubRoster(tm), cap: tm.cap, scores: tm.scores, mpts: tm.mpts } }));
 }

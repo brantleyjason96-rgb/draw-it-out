@@ -31,12 +31,14 @@ const SK = {
   // ARTS: built-in pictures ('img' is the teacher's own picture, a data: image kept with the piece). The moon phases are as seen from Earth,
   // lit on the right (or on the left with -l). Angles are degrees, clockwise, 0 = the picture as drawn (an arrow points right).
   MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'],
-    A: 108, SIZE: [0.5, 4], AR: [0.2, 5], TOL: [20, 150], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
+    A: 108, SIZE: [0.5, 4], AR: [0.2, 5], TOL: [20, 150], ZONE: [20, 400], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
   BGS: ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates'], // page backgrounds; the last four are drawn diagrams (common.js)
   ang: v => ((Math.round(v) % 360) + 360) % 360,
   angDiff: (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); },
   imgOk: s => typeof s === 'string' && s.length <= SK.MODEL.IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s),
   stageOf: m => SK.MODEL.STAGES[m && m.stage === 'tall' ? 'tall' : 'wide'],
+  // how far from its answer spot a piece may be and still count: the piece's own zone `tl` (20 to 400) if the teacher set one, else the question's `tol`
+  tolOf: (m, p) => (typeof p.tl === 'number' && isFinite(p.tl) ? p.tl : m.tol),
   // The size of a piece on the board, in stage units: its picture size (108) times its own size setting `s` (0.5 to 4). A text card is a wider
   // note; a picture of your own takes its own shape (`ar` = width / height) with its long side at that size. The server has the same rule.
   boxOf(p) {
@@ -60,6 +62,7 @@ const SK = {
       const bx = SK.boxOf({ art, s, ar }), cx = v => Math.round(cl(v, bx.w / 2, st.w - bx.w / 2)), cy = v => Math.round(cl(v, bx.h / 2, st.h - bx.h / 2));
       const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) };
       if (s !== 1) o.s = s;
+      if (num(p.tl)) o.tl = Math.round(cl(p.tl, M.ZONE[0], M.ZONE[1]));
       if (img) { o.img = img; if (ar) o.ar = ar; }
       if (p.turn === true) { o.turn = true; o.a = SK.ang(num(p.a) ? p.a : 0); o.ka = SK.ang(num(p.ka) ? p.ka : 0); }
       pieces.push(o);
@@ -113,7 +116,7 @@ const SK = {
       if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < .9 * (big(P[i]) + big(P[j])) / 2) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' overlap at the start, so one hides the other. Drag one in Student start, or press Scatter.'); break outer; }
     }
     outer2: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < m.tol) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”, so a piece put on the other’s spot would also count as right. That is fine for a jigsaw; choose Tight or Very tight to be stricter.'); break outer2; }
+      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < Math.max(SK.tolOf(m, P[i]), SK.tolOf(m, P[j]))) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”, so a piece put on the other’s spot would also count as right. That is fine for a jigsaw; choose Tight or Very tight to be stricter.'); break outer2; }
     }
     const atol = m.atol || 30, face = P.find(p => p.turn && SK.angDiff(p.a || 0, p.ka || 0) <= atol);
     if (face) out.push(nm(face) + ' already faces the right way at the start. Turn it in Student start.');
@@ -122,7 +125,7 @@ const SK = {
   // Is each placed piece within tol of its answer spot (and, for a piece that turns, facing within atol of the answer)? m = full model; pl = { pieceId: { x, y, a? } } (only pieces the student moved).
   modelCheck(m, pl) {
     const ok = {}; let right = 0, put = 0;
-    m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol && (!p.turn || SK.angDiff(q.a == null ? (p.a || 0) : q.a, p.ka || 0) <= (m.atol || 30)); if (ok[p.id]) right++; });
+    m.pieces.forEach(p => { const q = pl && pl[p.id]; if (!q) return; put++; ok[p.id] = Math.hypot(q.x - p.kx, q.y - p.ky) <= SK.tolOf(m, p) && (!p.turn || SK.angDiff(q.a == null ? (p.a || 0) : q.a, p.ka || 0) <= (m.atol || 30)); if (ok[p.id]) right++; });
     return { ok, right, put, total: m.pieces.length };
   },
   // For each wrong piece a student placed: the piece whose answer spot it sits on (within "how close counts"), or null when it is nowhere near
@@ -133,9 +136,9 @@ const SK = {
     const out = {}, ok = SK.modelCheck(m, pl).ok;
     m.pieces.forEach(p => {
       const q = pl && pl[p.id]; if (!q || ok[p.id]) return;
-      if (Math.hypot(q.x - p.kx, q.y - p.ky) <= m.tol) { out[p.id] = SK.TURN; return; }
-      let best = null, bd = m.tol;
-      m.pieces.forEach(o => { if (o.id === p.id) return; const d = Math.hypot(q.x - o.kx, q.y - o.ky); if (d <= bd) { bd = d; best = o.id; } });
+      if (Math.hypot(q.x - p.kx, q.y - p.ky) <= SK.tolOf(m, p)) { out[p.id] = SK.TURN; return; }
+      let best = null, bd = Infinity;
+      m.pieces.forEach(o => { if (o.id === p.id) return; const d = Math.hypot(q.x - o.kx, q.y - o.ky); if (d <= SK.tolOf(m, o) && d < bd) { bd = d; best = o.id; } });
       out[p.id] = best;
     });
     return out;
@@ -266,7 +269,7 @@ const SK = {
             if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.filter(a => a !== 'img').join(', ') + ', so the piece became a text card');
             if (p.art === 'img' && !SK.imgOk(p.img)) notes.push('the own picture for "' + lb.slice(0, 24) + '" is not a PNG, JPEG or WebP under ' + Math.round(M.IMG_MAX / 1000) + ' KB, so the piece became a text card');
             if (!num(p.x) || !num(p.y) || (p.turn === true && !num(p.a))) noStart++;
-            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, img: p.img, ar: p.ar, s: p.s, turn: p.turn, a: p.a, ka: p.ka, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
+            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, img: p.img, ar: p.ar, s: p.s, tl: p.tl, turn: p.turn, a: p.a, ka: p.ka, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
           });
           if (!problems.length) {
             model = SK.cleanModel({ ...m, pieces });

@@ -1589,6 +1589,92 @@ await test('sizes: a pasted or imported question keeps the size and shape of its
   assert.deepEqual([c.problems, c.q.model.pieces[0].s, c.q.model.pieces[0].ar, c.q.model.pieces[1].s], [[], 3, 0.85, 0.8]);
 });
 
+// ---- the teacher's marks give points to the student's team ----
+await test('marks give points: Got it 2, Almost 1, Not yet 0 by default, and a changed mark takes back the old points', async () => {
+  const code = 'MPTS1', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); const st0 = await h.wait('state');
+  assert.deepEqual(st0.mpts, { on: true, got: 2, almost: 1, not: 0 });
+  const mkS = async (name, team) => { const c = client(); await c.ready; c.send({ t: 'join', code, name, team, bw: 800, bh: 500 }); const j = await c.wait('joined'); return { c, id: j.id }; };
+  const a = await mkS('Ann', 'ta'), b = await mkS('Bo', 'ta'), z = await mkS('Cy', 'tb'), none = await mkS('Di', null);
+  const pr = client(); await pr.ready; pr.send({ t: 'watch', code }); await pr.wait('state');
+  const score = (t = 'ta') => h.last('score').scores[t];
+  const base = score(); h.clear();
+  h.send({ t: 'mark', id: a.id, m: 'got' }); await sleep(80); assert.equal(score(), base + 2, 'Got it is worth 2');
+  h.send({ t: 'mark', id: a.id, m: 'almost' }); await sleep(80); assert.equal(score(), base + 1, 'changing to Almost takes 1 back');
+  h.send({ t: 'mark', id: b.id, m: 'got' }); await sleep(80); assert.equal(score(), base + 3, 'two students on one team add up (no one-point-per-team limit for marks)');
+  h.send({ t: 'mark', id: a.id, m: 'not' }); await sleep(80); assert.equal(score(), base + 2, 'Not yet gives nothing and takes the old points back');
+  h.send({ t: 'mark', id: a.id, m: null }); h.send({ t: 'mark', id: b.id, m: null }); await sleep(100); assert.equal(score(), base, 'taking the marks off takes every point back');
+  h.send({ t: 'mark', id: z.id, m: 'got' }); await sleep(80); assert.equal(score('tb'), 2 + (st0.scores.tb || 0) + 0, 'the other team'); assert.equal(score(), base);
+  h.clear(); h.send({ t: 'mark', id: none.id, m: 'got' }); await sleep(80); assert.match(h.last('note').m, /Put this student on a team/); assert.equal(h.last('mark').m, 'got', 'the mark itself is still saved');
+  // students and the projector never learn what a mark is worth or who earned what
+  for (const c of [a.c, pr]) { const txt = JSON.stringify(c.got); assert.ok(!/"mpts"|"mp"/.test(txt), 'no mark points in what this screen received'); }
+  const h3 = client(); await h3.ready; h3.send({ t: 'host', code, key: KEY }); const hs = await h3.wait('state'); assert.equal(hs.students.find(x => x.id === z.id).mp, 2, 'a teacher screen is told what each mark earned'); h3.ws.close();
+  const ps = client(); await ps.ready; ps.send({ t: 'watch', code }); assert.ok(!('mp' in (await ps.wait('state')).students[0]), 'the projector is not'); ps.ws.close();
+  [h, a.c, b.c, z.c, none.c, pr].forEach(x => x.ws.close());
+});
+
+await test('marks give points: points follow a student who changes team, stay when the next question starts, and come back right after Undo', async () => {
+  const code = 'MPTS2', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'join', code, name: 'Eve', team: 'ta', bw: 800, bh: 500 }); const id = (await c.wait('joined')).id;
+  const score = t => h.last('score').scores[t]; const a0 = score('ta') || 0, b0 = score('tb') || 0;
+  h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score('ta'), a0 + 2);
+  h.send({ t: 'team', id, team: 'tb' }); await sleep(80); assert.deepEqual([score('ta'), score('tb')], [a0, b0 + 2], 'the 2 points moved with the student');
+  h.send({ t: 'q', question: 'Next', bg: 'blank' }); await sleep(100); assert.equal(score('tb'), b0 + 2, 'points already earned stay');
+  h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score('tb'), b0 + 4, 'a new question, a new mark, new points');
+  h.send({ t: 'q', question: 'Another', bg: 'blank' }); await sleep(80); h.send({ t: 'undoq' }); await sleep(120);
+  assert.equal(score('tb'), b0 + 4, 'Undo does not change the score'); h.send({ t: 'mark', id, m: 'almost' }); await sleep(80);
+  assert.equal(score('tb'), b0 + 3, 'and the mark that came back with Undo still knows what it gave');
+  [h, c].forEach(x => x.ws.close());
+});
+
+await test('marks give points: the teacher can change what marks are worth, or turn it off, and the marks showing are re-priced', async () => {
+  const code = 'MPTS3', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'join', code, name: 'Fay', team: 'ta', bw: 800, bh: 500 }); const id = (await c.wait('joined')).id;
+  const score = () => h.last('score').scores.ta; const a0 = score() || 0;
+  h.send({ t: 'mark', id, m: 'got' }); await sleep(80); h.send({ t: 'mpts', on: true, got: 4, almost: 2, not: 1 }); await sleep(100);
+  assert.deepEqual(h.last('score').mpts, { on: true, got: 4, almost: 2, not: 1 }); assert.equal(score(), a0 + 4, 'the mark already on is worth the new amount');
+  h.send({ t: 'mark', id, m: 'not' }); await sleep(80); assert.equal(score(), a0 + 1, 'Not yet can be worth something');
+  h.send({ t: 'mpts', on: false }); await sleep(100); assert.equal(score(), a0, 'switched off: the points are taken back'); assert.equal(h.last('score').mpts.on, false);
+  h.send({ t: 'mark', id, m: 'got' }); await sleep(80); assert.equal(score(), a0, 'and marks give nothing while it is off');
+  h.send({ t: 'mpts', on: true, got: 99, almost: -3, not: 'x' }); await sleep(100); assert.deepEqual(h.last('score').mpts, { on: true, got: 2, almost: 1, not: 0 }, 'values out of range fall back to the defaults');
+  const h2 = client(); await h2.ready; h2.send({ t: 'host', code, key: KEY }); assert.deepEqual((await h2.wait('state')).mpts, { on: true, got: 2, almost: 1, not: 0 }, 'a second teacher screen gets them');
+  [h, h2, c].forEach(x => x.ws.close());
+});
+
+// ---- "about the right place": an answer area for each piece ----
+await test('areas: a piece can have its own area, up to 400, and the browser and the server agree on what counts', async () => {
+  const input = { question: 'Continents', bg: 'blank', model: { tol: 60, pieces: [
+    { id: 1, label: 'Africa', art: 'earth', x: 100, y: 100, kx: 500, ky: 300, tl: 220 },
+    { id: 2, label: 'Spain', art: 'earth', x: 800, y: 100, kx: 300, ky: 300, tl: 5000 },
+    { id: 3, label: 'Plain', art: 'earth', x: 100, y: 500, kx: 700, ky: 500 },
+    { id: 4, label: 'Tiny', art: 'earth', x: 500, y: 500, kx: 850, ky: 150, tl: 1 }] } };
+  const m = SK.cleanModel(input.model); assert.deepEqual(m.pieces.map(p => p.tl), [220, 400, undefined, 20], 'held between 20 and 400; none means the question setting');
+  assert.deepEqual([1, 2, 3, 4].map(i => SK.tolOf(m, m.pieces[i - 1])), [220, 400, 60, 20]);
+  const code = 'ZONA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Yu', bw: 800, bh: 500 }); await s.wait('joined'); s.clear();
+  h.send({ t: 'q', ...input }); await sleep(100);
+  const srv = h.last('q'); assert.deepEqual(srv.sk.tols, { 1: 220, 2: 400, 4: 20 }); assert.ok(!/"tols"|"tl"/.test(JSON.stringify(s.last('q').q)), 'the areas are a key: students do not get them');
+  // 200 away from Africa's spot counts (area 220); 200 away from the plain piece (area 60) does not; 25 away from the tiny one (area 20) does not
+  assert.deepEqual(SK.modelCheck(m, { 1: { x: 700, y: 300 }, 3: { x: 700, y: 700 }, 4: { x: 850, y: 175 } }).ok, { 1: true, 3: false, 4: false });
+  h.send({ t: 'reveal', on: true }); await sleep(60); s.clear();
+  s.send({ t: 'place', p: { 1: { x: 700, y: 300 }, 2: { x: 300, y: 300 }, 3: { x: 700, y: 700 }, 4: { x: 850, y: 175 } } }); await sleep(100);
+  const fb = s.last('fb'); assert.deepEqual(fb.ok, { 1: true, 2: true, 3: false, 4: false }, 'the server counts the same pieces');
+  assert.deepEqual(fb.where[4], { x: 850, y: 150 }, 'a small area is shown as the exact spot'); assert.equal(fb.where[3].r, undefined, 'a normal area too');
+  s.send({ t: 'place', p: { 1: { x: 100, y: 100 }, 2: { x: 900, y: 600 } } }); await sleep(100);
+  const far = s.last('fb'); assert.deepEqual(far.ok, { 1: false, 2: false }); assert.deepEqual(far.where[1], { x: 500, y: 300, r: 220 }, 'a big area is shown as an area, not one exact point'); assert.equal(far.where[2].r, 400);
+  [h, s].forEach(c => c.ws.close());
+});
+
+await test('areas: a big area is "about right" in the results too, and the question-wide setting can be very loose', () => {
+  const m = SK.cleanModel({ tol: 150, pieces: [{ id: 1, label: 'A', art: 'earth', x: 1, y: 1, kx: 300, ky: 300 }, { id: 2, label: 'B', art: 'earth', x: 1, y: 1, kx: 600, ky: 300, tl: 40 }] });
+  assert.equal(m.tol, 150, 'Very loose is 150'); assert.equal(SK.cleanModel({ ...m, tol: 999 }).tol, 150, 'the question-wide setting stops at 150; a piece can go to 400');
+  const mix = SK.modelMix(m, { 1: { x: 600, y: 330 }, 2: { x: 300, y: 330 } });
+  assert.equal(mix[1], 2, 'A, put on B’s spot, is a mix-up with B'); assert.equal(mix[2], 1, 'B put on A’s spot (inside A’s area of 150, outside its own of 40)');
+  assert.ok(!SK.modelWarnings(m).some(t => /answer spots closer/.test(t)), 'spots 300 apart are farther than the bigger of the two areas (150): nothing to look at');
+  const near = SK.cleanModel({ tol: 20, pieces: [{ id: 1, label: 'A', art: 'earth', x: 1, y: 1, kx: 300, ky: 300, tl: 200 }, { id: 2, label: 'B', art: 'earth', x: 1, y: 1, kx: 400, ky: 300 }] });
+  assert.ok(SK.modelWarnings(near).some(t => /answer spots closer/.test(t)), 'a big area that covers a neighbour’s spot is worth a look, never a blocker'); assert.deepEqual(SK.modelIssues(near), []);
+  const c = SK.checkQuestion({ question: 'Q', bg: 'blank', model: { pieces: [{ label: 'a', kx: 100, ky: 100, tl: 250 }, { label: 'b', kx: 600, ky: 400 }] } }); assert.equal(c.q.model.pieces[0].tl, 250);
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);

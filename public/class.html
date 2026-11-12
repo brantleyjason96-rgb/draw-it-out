@@ -128,6 +128,9 @@
    <div id="trows" style="display:flex;flex-direction:column;gap:8px"></div>
    <div style="display:flex;gap:8px"><select class="inp" id="tn" aria-label="How many teams"></select><button class="b" id="mkteams" style="flex:1">Create teams</button><button class="b" id="addteam" style="flex:1">+ Team</button></div>
    <button class="tog" id="cap" style="justify-content:space-between"><span>One point per team, per question</span><i></i></button>
+   <div class="sec" style="gap:8px"><button class="tog" id="mpon" style="justify-content:space-between" aria-describedby="mphint"><span>Marks give points to the team</span><i></i></button>
+    <div id="mprow" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:flex;gap:6px;align-items:center">Got it <select class="inp" id="mpgot" style="width:auto"></select></label><label style="display:flex;gap:6px;align-items:center">Almost <select class="inp" id="mpalmost" style="width:auto"></select></label><label style="display:flex;gap:6px;align-items:center">Not yet <select class="inp" id="mpnot" style="width:auto"></select></label></div>
+    <div class="mut" id="mphint" style="font-size:var(--fs-sm)">Your Got it, Almost and Not yet on a drawing give that student's team points. Change a mark and the points change with it.</div></div>
    <button class="b danger" id="rsc" style="margin-top:auto;border-color:var(--c-bad-line)">Reset all scores to 0</button>
   </section>
   <section style="flex:1;min-width:0">
@@ -211,7 +214,7 @@ setCpick(per().name); $('#code').textContent = code; $('#pname').textContent = p
 const S = { mview: 'draw', q: { question: '', bg: 'graph', img: null }, sk: null, revealed: false, projSum: false, simple: false, im: null, spot: null, picks: [], hide: true, board: false, frozen: false, phist: [], stu: new Map(), conn: false };
 let TM = loadTM(code); TM.scores = TM.scores || {};
 const save = () => saveTM(code, TM);
-const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: withScores ? TM.scores : undefined });
+const sendSetup = withScores => ws.send({ t: 'setup', teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, mpts: TM.mpts, scores: withScores ? TM.scores : undefined });
 // Another device (or a student joining) can change teams and the class list on the server; keep this copy in step.
 // Names exist only where the class list was uploaded, so entries are merged by id and a new entry shows initials.
 let pendingSync = false;
@@ -219,6 +222,7 @@ const editing = () => pendingSync || $('#tdlg').open; // don't overwrite what th
 function adopt(m) {
   if (m.teams) { TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap; }
   if (m.scores) TM.scores = m.scores;
+  if (m.mpts) TM.mpts = cleanMp(m.mpts);
   if (m.roster) {
     const old = new Map(TM.roster.map(e => [e.rid, e]));
     TM.roster = m.roster.map(e => { const o = old.get(e.rid); return o ? { ...o, ini: e.ini, team: e.team } : { rid: e.rid, first: e.ini, last: '', ini: e.ini, team: e.team }; });
@@ -238,7 +242,7 @@ const ph = matchMedia('(max-width:700px)');
 let tab = 'review', pi = 0;
 const phoneList = () => [...S.stu.values()];
 
-const ws = connect(onmsg, () => ws.send({ t: 'host', code, key, setup: { teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, scores: TM.scores } }), ok => {
+const ws = connect(onmsg, () => ws.send({ t: 'host', code, key, setup: { teams: TM.teams, roster: pubRoster(TM), cap: TM.cap, mpts: TM.mpts, scores: TM.scores } }), ok => {
   S.conn = ok; $('#dot').classList.toggle('ok', ok); $('#pdot').classList.toggle('ok', ok);
   if (!ok) $('#cnt').textContent = 'Connecting… the server may be waking up (up to a minute)'; else ui();
 });
@@ -256,7 +260,7 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="pchip" hidden></span><span class="chip proj mchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="mk" role="group" aria-label="Your mark for this drawing (private)"></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="chip mpchip" hidden title="Points this mark gave the team"></span><span class="pchip" hidden></span><span class="chip proj mchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="mk" role="group" aria-label="Your mark for this drawing (private)"></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
     c.querySelector('.badge').append(icoEl('screen', 'sm'), 'On projector');
     c.querySelector('.tchip').append(icoEl('chev', 'sm'));
     c.querySelector('.mk').append(...markBtns(s));
@@ -273,14 +277,14 @@ function addStu(d) {
     c.querySelector('.ok').onclick = e => { e.stopPropagation(); award(s); };
     $('#grid').append(c); s.el = c; s.cv = c.querySelector('canvas'); S.stu.set(d.id, s);
   }
-  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, sort: d.sort || {}, pl: d.pl || {}, done: !!d.done, pulse: d.pulse || null, live: d.live !== false, dirty: true }); ui();
+  Object.assign(s, { name: d.name, objs: d.objs, bw: d.bw, bh: d.bh, team: d.team || null, rid: d.rid || null, aw: !!d.aw, mp: d.mp || 0, sort: d.sort || {}, pl: d.pl || {}, done: !!d.done, pulse: d.pulse || null, live: d.live !== false, dirty: true }); ui();
 }
 // A model question's pieces with the key joined on: the teacher's copy, used for the green and red rings and the counts.
 // S.sk = { pos, idea, tol } arrives with the question (hosts only). Students and the projector never get it.
 function modelFull() {
   const m = S.q && S.q.model; if (!m) return null;
   const k = S.sk && S.sk.pos ? S.sk : null; if (!k) return m;
-  return { ...m, tol: k.tol, atol: k.atol || 30, pieces: m.pieces.map(p => ({ ...p, kx: k.pos[p.id] ? k.pos[p.id].x : p.x, ky: k.pos[p.id] ? k.pos[p.id].y : p.y, ...(p.turn ? { ka: (k.ang || {})[p.id] || 0 } : {}), idea: (k.idea || {})[p.id] || '' })) };
+  return { ...m, tol: k.tol, atol: k.atol || 30, pieces: m.pieces.map(p => ({ ...p, ...((k.tols || {})[p.id] != null ? { tl: k.tols[p.id] } : {}), kx: k.pos[p.id] ? k.pos[p.id].x : p.x, ky: k.pos[p.id] ? k.pos[p.id].y : p.y, ...(p.turn ? { ka: (k.ang || {})[p.id] || 0 } : {}), idea: (k.idea || {})[p.id] || '' })) };
 }
 const hasKey = () => !!(S.q && S.q.model && S.sk && S.sk.pos);
 const mpOf = s => (S.q.model ? { model: S.q.model, pl: s.pl || {}, ok: hasKey() ? SK.modelCheck(modelFull(), s.pl || {}).ok : undefined } : undefined);
@@ -319,11 +323,11 @@ function onmsg(m) {
     }
     case 'restore': startLesson(m.at, m.q); setQ(m.q); S.sk = m.sk || null; SR.reset(); MR.reset(); ui(); break;
     case 'score': // team names/icons are always adopted (a rename must show here too); scores wait while the sheet is open
-      TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap;
+      TM.teams = m.teams.map(t => ({ ...t })); TM.cap = !!m.cap; if (m.mpts) TM.mpts = cleanMp(m.mpts);
       if (editing()) TM.scores = Object.fromEntries(TM.teams.map(t => [t.id, TM.scores[t.id] || 0]));
       else TM.scores = m.scores;
       save(); ui(); sheetUI(); break;
-    case 'setup': if (!editing()) adopt({ roster: m.roster }); m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; } }); ui(); sheetUI(); break;
+    case 'setup': if (!editing()) adopt({ roster: m.roster }); m.metas.forEach(x => { const t = S.stu.get(x.id); if (t) { t.team = x.team; t.aw = x.aw; t.mp = x.mp || 0; } }); ui(); sheetUI(); break;
     case 'live': if (s) { s.live = !!m.on; ui(); } break;
     case 'gone': if (s) { s.el.remove(); S.stu.delete(m.id); ui(); } break;
     case 'board': S.board = m.on; ui(); break;
@@ -377,6 +381,8 @@ function setMark(s, v) { // pressing the mark that is already on takes it off
   const cur = S.marks[s.id] || null, next = cur === v ? null : v;
   if (next) S.marks[s.id] = next; else delete S.marks[s.id];
   ws.send({ t: 'mark', id: s.id, m: next }); paintMarks();
+  const tm = teamOf(s.team), pts = TM.mpts.on && next ? TM.mpts[next] : 0; // what the server will give the team for this mark
+  if (next && TM.mpts.on && pts && tm) toast('+' + pts + ' for ' + tm.name);
 }
 function paintMarks() {
   const sort = S.q.kind === 'sort';
@@ -577,6 +583,7 @@ function ui() {
   const want = TM.teams.map(t => t.id + t.name + (t.emoji || '')).join('|');
   S.stu.forEach(s => {
     s.el.querySelector('.nm').textContent = disp(s); modelChip(s);
+    const mc = s.el.querySelector('.mpchip'); if (mc) { mc.hidden = !s.mp; mc.textContent = '+' + (s.mp || 0); }
     s.el.classList.toggle('off', s.live === false); s.el.querySelector('.offl').hidden = s.live !== false;
     const tm = teamOf(s.team), tch = s.el.querySelector('.tchip'), ok = s.el.querySelector('.ok');
     s.el.style.setProperty('--tc', tm ? tm.color : 'var(--c-line)');
@@ -1035,6 +1042,8 @@ function sheetUI() {
   });
   if (!TM.teams.length) box.append(el('div', { className: 'mut', textContent: 'No teams yet. Choose how many and press Create teams.' }));
   $('#cap').classList.toggle('on', !!TM.cap);
+  $('#mpon').classList.toggle('on', TM.mpts.on); $('#mpon').setAttribute('aria-pressed', TM.mpts.on); $('#mprow').style.opacity = TM.mpts.on ? '' : '.5';
+  ['got', 'almost', 'not'].forEach(k => { const sel = $('#mp' + k); if (!sel.options.length) [0, 1, 2, 3, 4, 5].forEach(n => sel.append(el('option', { value: n, textContent: '+' + n }))); sel.value = TM.mpts[k]; sel.disabled = !TM.mpts.on; });
   $('#rcount').textContent = TM.roster.length ? TM.roster.length + ' students' : 'No class list';
   $('#rclr').hidden = !TM.roster.length;
   const rows = $('#rrows'); rows.innerHTML = '';
@@ -1060,6 +1069,9 @@ $('#mkteams').onclick = async () => {
 };
 $('#addteam').onclick = () => { if (TM.teams.length >= 12) return toast('12 teams is the most.'); TM.teams.push(newTeam(TM.teams)); teamsChanged(); };
 $('#cap').onclick = () => { TM.cap = !TM.cap; teamsChanged(); };
+const mptsChanged = () => { save(); ws.send({ t: 'mpts', ...TM.mpts }); sheetUI(); ui(); };
+$('#mpon').onclick = () => { TM.mpts.on = !TM.mpts.on; mptsChanged(); };
+['got', 'almost', 'not'].forEach(k => ($('#mp' + k).onchange = e => { TM.mpts[k] = +e.target.value; mptsChanged(); }));
 $('#rsc').onclick = async () => { if (await ask('', { title: 'Set every team back to 0 points?', ok: 'Reset all', cancel: 'Keep points', danger: true })) ws.send({ t: 'resetscores' }); };
 $('#rclr').onclick = async () => { if (await ask('Signed-in students will be sent back to the join screen. Teams and points are kept.', { title: 'Remove the class list?', ok: 'Remove list', cancel: 'Keep list', danger: true })) { TM.roster = []; save(); sendSetup(); ui(); sheetUI(); } };
 function parseCSV(text) {

@@ -113,8 +113,8 @@ const MR = (() => {
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 3;
     m.pieces.forEach(p => { // every answer spot, so a mix-up is easy to read: this piece's in green, the others faint
       const me = p.id === k.id; x.setLineDash([10, 7]); x.strokeStyle = me ? '#0E7C4A' : '#94A3B8'; x.fillStyle = me ? 'rgba(14,124,74,.14)' : 'rgba(148,163,184,.10)';
-      x.beginPath(); x.arc(p.kx, p.ky, me ? m.tol : A / 2, 0, 7); x.fill(); x.stroke(); x.setLineDash([]);
-      x.font = (me ? '800 ' : '700 ') + '26px ' + FONT; x.fillStyle = me ? '#0A5A36' : '#64748B'; x.fillText(p.label, p.kx, p.ky + (me ? m.tol : A / 2) + 18);
+      const zr = me ? SK.tolOf(m, p) : A / 2; x.beginPath(); x.arc(p.kx, p.ky, zr, 0, 7); x.fill(); x.stroke(); x.setLineDash([]);
+      x.font = (me ? '800 ' : '700 ') + '26px ' + FONT; x.fillStyle = me ? '#0A5A36' : '#64748B'; x.fillText(p.label, p.kx, p.ky + zr + 18);
     });
     D.started.forEach(s => { const q = s.pl[k.id]; if (!q) return; const ok = s.g.ok[k.id]; x.beginPath(); x.arc(q.x, q.y, 13, 0, 7); x.fillStyle = ok ? 'rgba(14,124,74,.9)' : s.mix[k.id] === SK.TURN ? 'rgba(217,119,6,.95)' : 'rgba(179,38,30,.9)'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke(); });
   }

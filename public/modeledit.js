@@ -85,7 +85,7 @@ const ME = (() => {
     const x = cv.getContext('2d'), b = c.bg(), key = view === 'key';
     x.setTransform(cv.width / st.w, 0, 0, cv.height / st.h, 0, 0);
     paintModelBg(x, m, b.bg, b.im, st.w, st.h);
-    paintPieces(x, m, plNow(), st.w, st.h, { tolRings: key ? m.tol : 0, spots: !key && m.spots === 'shown', focus: selId, resize: true });
+    paintPieces(x, m, plNow(), st.w, st.h, { tolRings: key ? m.tol : 0, spots: !key && m.spots === 'shown', focus: selId, resize: true, zoneHandle: key ? selId : undefined });
     cv.setAttribute('aria-label', (key ? 'Answer key board. ' : 'Student start board. ') + 'Drag a piece, or choose one and use the arrow keys to move it.');
   }
   const paintSoon = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paint(); }); };
@@ -97,14 +97,15 @@ const ME = (() => {
     cv.addEventListener('pointerdown', e => {
       const m = D(), st = SK.stageOf(m), t = toStage(e), hit = pieceAt(m, plNow(), st.w, st.h, t.x, t.y, 6);
       const sp = selId != null ? m.pieces.find(q => q.id === selId) : null;
+      if (sp && view === 'key' && zoneAt(m, sp.id, st.w, st.h, t.x, t.y, 6)) { e.preventDefault(); cv.setPointerCapture(e.pointerId); drag = { id: sp.id, zone: true, moved: false }; return; }
       if (sp && resizeAt(m, plNow(), sp.id, st.w, st.h, t.x, t.y, 6)) { e.preventDefault(); cv.setPointerCapture(e.pointerId); drag = { id: sp.id, size: true, moved: false }; return; }
       if (sp && sp.turn && handleAt(m, plNow(), sp.id, st.w, st.h, t.x, t.y, 6)) { e.preventDefault(); cv.setPointerCapture(e.pointerId); drag = { id: sp.id, rot: true, moved: false }; return; }
       if (!hit) { selId = null; paint(); renderLists(); return; }
       e.preventDefault(); cv.setPointerCapture(e.pointerId); cv.focus(); const was = selId; selId = hit.id; if (was !== selId) renderLists();
       const pos = plNow()[hit.id] || { x: hit.x, y: hit.y }; drag = { id: hit.id, dx: pos.x - t.x, dy: pos.y - t.y, moved: false }; paint();
     });
-    cv.addEventListener('pointermove', e => { if (!drag) return; const p = D().pieces.find(q => q.id === drag.id), t = toStage(e); if (!p) return; if (drag.size) { const pos = plNow()[p.id] || { x: p.x, y: p.y }, b1 = SK.boxOf({ ...p, s: 1 }); setSize(p, Math.max(2 * Math.abs(t.x - pos.x) / b1.w, 2 * Math.abs(t.y - pos.y) / b1.h)); } else if (drag.rot) { const pos = plNow()[p.id] || { x: p.x, y: p.y }; setAng(p, Math.round(angleTo(pos, t.x, t.y) / 5) * 5); } else setPos(p, t.x + drag.dx, t.y + drag.dy); drag.moved = true; paintSoon(); });
-    const up = () => { if (drag && drag.moved) { c.changed(); report(); if (drag.size) renderLists(); } drag = null; };
+    cv.addEventListener('pointermove', e => { if (!drag) return; const p = D().pieces.find(q => q.id === drag.id), t = toStage(e); if (!p) return; if (drag.zone) { p.tl = Math.min(SK.MODEL.ZONE[1], Math.max(SK.MODEL.ZONE[0], Math.round(Math.hypot(t.x - p.kx, t.y - p.ky) / 5) * 5)); } else if (drag.size) { const pos = plNow()[p.id] || { x: p.x, y: p.y }, b1 = SK.boxOf({ ...p, s: 1 }); setSize(p, Math.max(2 * Math.abs(t.x - pos.x) / b1.w, 2 * Math.abs(t.y - pos.y) / b1.h)); } else if (drag.rot) { const pos = plNow()[p.id] || { x: p.x, y: p.y }; setAng(p, Math.round(angleTo(pos, t.x, t.y) / 5) * 5); } else setPos(p, t.x + drag.dx, t.y + drag.dy); drag.moved = true; paintSoon(); });
+    const up = () => { if (drag && drag.moved) { c.changed(); report(); if (drag.size || drag.zone) renderLists(); } drag = null; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('keydown', e => {
       const p = D().pieces.find(q => q.id === selId); if (!p) return;
@@ -137,6 +138,12 @@ const ME = (() => {
       const sz = el('input', { type: 'range', min: 50, max: 400, step: 5, value: Math.round((p.s || 1) * 100), style: 'flex:1;min-width:80px' }); sz.setAttribute('aria-label', 'Size of piece ' + (i + 1));
       sz.oninput = () => { setSize(p, sz.value / 100); szv.textContent = sz.value + '%'; selId = p.id; touch(); };
       const szrow = el('div', { style: 'display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)' }, el('span', { className: 'mut', textContent: 'Size' }), sz, szv);
+      // the area where this piece counts as right: starts as the question's setting; a bigger area for a piece that only has to be about right
+      const zv = el('span', { className: 'mut', style: 'min-width:46px;text-align:right', textContent: String(p.tl || m.tol) });
+      const zs = el('input', { type: 'range', min: 20, max: 400, step: 5, value: p.tl || m.tol, style: 'flex:1;min-width:80px' }); zs.setAttribute('aria-label', 'How close counts for piece ' + (i + 1));
+      zs.oninput = () => { p.tl = +zs.value; zv.textContent = zs.value; selId = p.id; touch(); }; zs.onchange = () => renderLists(); // the button to go back to the question's setting appears once you let go
+      const zrow = el('div', { style: 'display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)' }, el('span', { className: 'mut', textContent: 'Area' }), zs, zv);
+      if (p.tl != null) zrow.append(el('button', { type: 'button', className: 'b sm', textContent: 'Same as the rest', title: 'Use the setting for the whole question', onclick: () => { delete p.tl; touch(true); } }));
       const tl = el('label', { style: 'display:flex;gap:6px;align-items:center;font-size:var(--fs-sm);white-space:nowrap' }), tb = el('input', { type: 'checkbox', checked: !!p.turn }); tb.setAttribute('aria-label', 'Piece ' + (i + 1) + ' can turn'); tl.append(tb, 'Students turn it');
       tb.onchange = () => { if (tb.checked) { p.turn = true; p.ka = p.ka || 0; p.a = SK.ang(p.ka + 90 + (p.id * 53) % 181); selId = p.id; } else delete p.turn; touch(true); };
       const turns = [];
@@ -148,7 +155,7 @@ const ME = (() => {
         if (p._pic && p._pic.raw !== p._pic.cut) { const cut = p.img === p._pic.cut; pic.push(el('button', { type: 'button', className: 'b sm', textContent: cut ? 'White is see-through' : 'White is kept', title: 'The white around the picture', onclick: () => { p.img = cut ? p._pic.raw : p._pic.cut; touch(true); } })); }
         pic.push(el('span', { className: 'mut', style: 'font-size:var(--fs-xs)', textContent: 'PNG with a see-through background looks best.' }));
       }
-      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;' + (selId === p.id ? 'border-color:var(--c-primary)' : '') }, row(inp, art, x), ...(pic.length ? [el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, ...pic)] : []), idea, szrow, el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, tl, ...turns)));
+      E.rows.append(el('div', { style: 'border:1px solid var(--c-line);border-radius:var(--r-lg);padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;' + (selId === p.id ? 'border-color:var(--c-primary)' : '') }, row(inp, art, x), ...(pic.length ? [el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, ...pic)] : []), idea, szrow, zrow, el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, tl, ...turns)));
     });
     const add = el('button', { className: 'b sm', textContent: '+ Add piece', disabled: m.pieces.length >= SK.MODEL.PIECES });
     add.onclick = () => {
@@ -174,7 +181,7 @@ const ME = (() => {
       }, m.stage === 'tall' ? 'Pieces are about the same size on every screen, so a tall board is easier on a phone held upright.' : 'On a phone held upright a wide board gets small. Choose Tall for a question meant for phones.'),
       seg('Can students see where the spots are?', m.spots, [['hidden', 'Students find the spot'], ['shown', 'Show outlines']], v => { m.spots = v; touch(true); },
         m.spots === 'hidden' ? 'The answer spots are never sent to students or the projector. The app checks each piece against your key.' : 'Faint outlines show on every student’s page and pieces slip into them. The spots are public, so this is a puzzle more than a check.'),
-      seg('How close counts as right?', m.tol, [[20, 'Very tight'], [35, 'Tight'], [60, 'Normal'], [90, 'Loose']], v => { m.tol = +v; touch(true); })
+      seg('How close counts as right?', m.tol, [[20, 'Very tight'], [35, 'Tight'], [60, 'Normal'], [90, 'Loose'], [150, 'Very loose']], v => { m.tol = +v; m.pieces.forEach(p => delete p.tl); touch(true); }, 'Sets every piece. For a piece that only has to be in about the right place, use its Area slider, or drag the round handle on the edge of its ring on the board.')
     );
     if (m.pieces.some(p => p.turn)) E.opts.append(seg('How close must the turn be?', m.atol || 30, [[15, 'Tight (15°)'], [30, 'Normal (30°)'], [45, 'Loose (45°)']], v => { m.atol = +v; touch(true); }, 'In Answer key, turn each piece to the way it should face. In Student start, turn it to the way students first see it.'));
     const fb = el('select', { className: 'inp' }); fb.setAttribute('aria-label', 'When students see if they are right');
@@ -184,7 +191,7 @@ const ME = (() => {
   }
   function setView(v) {
     view = v; c.el.tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-    c.el.hint.textContent = v === 'key' ? 'Drag each piece to where it belongs. The dashed ring is how close counts as right. These spots stay on the server. Pick a piece to see its handles: the square corner changes its size.' : 'This is what a student sees first. Drag pieces to change where they start, or press Scatter.';
+    c.el.hint.textContent = v === 'key' ? 'Drag each piece to where it belongs. The dashed ring is the area where a piece counts as right. These spots stay on the server. Pick a piece to see its handles: the square corner changes its size, and the round handle on its ring changes the area.' : 'This is what a student sees first. Drag pieces to change where they start, or press Scatter.';
     paint();
   }
   return {
