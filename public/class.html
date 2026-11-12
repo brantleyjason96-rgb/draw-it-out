@@ -130,7 +130,7 @@
    <button class="tog" id="cap" style="justify-content:space-between"><span>One point per team, per question</span><i></i></button>
    <div class="sec" style="gap:8px"><button class="tog" id="mpon" style="justify-content:space-between" aria-describedby="mphint"><span>Marks give points to the team</span><i></i></button>
     <div id="mprow" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label style="display:flex;gap:6px;align-items:center">Got it <select class="inp" id="mpgot" style="width:auto"></select></label><label style="display:flex;gap:6px;align-items:center">Almost <select class="inp" id="mpalmost" style="width:auto"></select></label><label style="display:flex;gap:6px;align-items:center">Not yet <select class="inp" id="mpnot" style="width:auto"></select></label></div>
-    <div class="mut" id="mphint" style="font-size:var(--fs-sm)">Your Got it, Almost and Not yet on a drawing give that student's team points. Change a mark and the points change with it.</div></div>
+    <div class="mut" id="mphint" style="font-size:var(--fs-sm)">Your Got it, Almost and Not yet on a drawing give that student's team points. Change a mark and the points change with it. A sort question gives 4, 3, 2 or 1 points for 100%, 75%, 50% or 25% of cards right, when you press Reveal answers.</div></div>
    <button class="b danger" id="rsc" style="margin-top:auto;border-color:var(--c-bad-line)">Reset all scores to 0</button>
   </section>
   <section style="flex:1;min-width:0">
@@ -260,7 +260,7 @@ function addStu(d) {
   if (!s) {
     s = { id: d.id, dirty: true, t: 0 };
     const c = document.createElement('div'); c.className = 'stu';
-    c.innerHTML = '<div class="top"><span class="nm"></span><span class="chip mpchip" hidden title="Points this mark gave the team"></span><span class="pchip" hidden></span><span class="chip proj mchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="mk" role="group" aria-label="Your mark for this drawing (private)"></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
+    c.innerHTML = '<div class="top"><span class="nm"></span><span class="chip mpchip" hidden title="Points this mark or sort answer gave the team"></span><span class="pchip" hidden></span><span class="chip proj mchip" hidden></span><span class="offl" hidden>Not connected</span><button class="b sq ter smore" aria-haspopup="true" aria-label="More for this student" title="More for this student"></button></div><div class="thumbw"><canvas width="480" height="300"></canvas><span class="badge" hidden></span></div><div class="mk" role="group" aria-label="Your mark for this drawing (private)"></div><div class="r2"><button class="tchip" aria-haspopup="true" title="Change team"><i class="td"></i><span class="tn"></span></button><button class="ok" aria-label="Give this team a point">' + ico('check', 'sm') + ' +1</button></div>';
     c.querySelector('.badge').append(icoEl('screen', 'sm'), 'On projector');
     c.querySelector('.tchip').append(icoEl('chev', 'sm'));
     c.querySelector('.mk').append(...markBtns(s));

@@ -283,9 +283,17 @@ const cleanMpts = o => {
   const n = (v, d) => (Number.isInteger(v) && v >= 0 && v <= 5 ? v : d), x = o && typeof o === 'object' ? o : {};
   return { on: x.on !== false, got: n(x.got, 2), almost: n(x.almost, 1), not: n(x.not, 0) };
 };
+// A sort question has no marks: once the teacher presses Reveal answers, a student's share of cards in the right lane gives their team
+// 4 points for 100%, 3 for 75% or more, 2 for 50% or more, 1 for 25% or more, none below that. Cards left unplaced count as wrong.
+const SORT_BANDS = [[100, 4], [75, 3], [50, 2], [25, 1]];
+function sortPoints(r, s) {
+  const sq = sortOf(r); if (!sq || !r.sk || !r.revealed || !sq.cards.length) return 0;
+  const pct = 100 * sq.cards.filter(c => s.sort && s.sort[c.id] === r.sk.lane[c.id]).length / sq.cards.length;
+  const b = SORT_BANDS.find(x => pct >= x[0]); return b ? b[1] : 0;
+}
 // `mp` is how many points this student's mark has given, and `mpt` the team that holds them. Safe to call again at any time.
 function applyMark(r, s) {
-  const m = r.marks[s.id], want = r.mpts.on && m && MARKS.includes(m) ? r.mpts[m] : 0, to = s.team && s.team in r.scores ? s.team : null;
+  const m = r.marks[s.id], want = !r.mpts.on ? 0 : sortOf(r) ? sortPoints(r, s) : m && MARKS.includes(m) ? r.mpts[m] : 0, to = s.team && s.team in r.scores ? s.team : null;
   if (s.mp && s.mpt && s.mpt in r.scores) r.scores[s.mpt] = Math.max(0, r.scores[s.mpt] - s.mp); // take back what the old mark gave
   s.mp = 0; s.mpt = null;
   if (want && to) { r.scores[to] = Math.min(9999, (r.scores[to] || 0) + want); s.mp = want; s.mpt = to; }
@@ -626,6 +634,7 @@ wss.on('connection', (ws, req) => {
         if (!sortOf(room) || me.done) return;
         me.sort = cleanPlace(room, m.p);
         if (m.done === true && placedAll(room, me)) me.done = true;
+        if (room.revealed) { const had = me.mp || 0; applyMark(room, me); if (me.mp !== had) pushScores(room); } // answers already revealed: the team's points follow the answer
         toWatchers(room, { t: 'sort', id: me.id, p: me.sort, done: !!me.done });
         tx(me.ws, { t: 'sorted', p: me.sort, done: !!me.done }); sendFb(room, me); pushSummary(room);
       } else if (m.t === 'place') { // a model question: the student's moved pieces, one small map
@@ -730,6 +739,11 @@ wss.on('connection', (ws, req) => {
         if (!sortOf(room) && !modelOf(room)) return;
         room.revealed = !!m.on; toWatchers(room, { t: 'reveal', on: room.revealed });
         room.students.forEach(s => { if (room.revealed) sendFb(room, s); else tx(s.ws, { t: 'fb', ok: {}, where: {}, off: true }); });
+        if (sortOf(room)) { // Reveal gives (and hiding takes back) the team points for sort answers
+          room.students.forEach(s => applyMark(room, s)); pushScores(room);
+          const lost = room.mpts.on && room.revealed ? [...room.students.values()].filter(s => !s.team && sortPoints(room, s) > 0).length : 0;
+          if (lost) toHosts(room, { t: 'note', m: lost + (lost === 1 ? ' student has' : ' students have') + ' no team, so their points went to no one.' });
+        }
       } else if (m.t === 'reopen') { // let one student change their sort again
         const s = room.students.get(m.id); if (!s || !s.done) return;
         s.done = false; tx(s.ws, { t: 'sorted', p: s.sort || {}, done: false }); toWatchers(room, { t: 'sort', id: s.id, p: s.sort || {}, done: false });

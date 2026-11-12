@@ -1640,6 +1640,31 @@ await test('marks give points: the teacher can change what marks are worth, or t
   [h, h2, c].forEach(x => x.ws.close());
 });
 
+// ---- sort answers give points to the student's team when the teacher reveals ----
+await test('sort points: 100% is 4, 75% is 3, 50% is 2, 25% is 1, and they land on Reveal, follow answer changes, and come back off on hide', async () => {
+  const code = 'SPTS1', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY, setup: { teams, roster: [] } }); await h.wait('state');
+  h.send(SORT); await sleep(80);
+  const mkS = async (name, team) => { const c = client(); await c.ready; c.send({ t: 'join', code, name, team, bw: 800, bh: 500 }); const j = await c.wait('joined'); return { c, id: j.id }; };
+  const w = await mkS('W', 'ta'), x = await mkS('X', 'ta'), y = await mkS('Y', 'ta'), z = await mkS('Z', 'ta'), q = await mkS('Q', 'ta'), o = await mkS('O', 'tb'), none = await mkS('N', null);
+  const right = { 1: 'A', 2: 'B', 3: 'C', 4: 'B' }, score = t => h.last('score').scores[t], a0 = h.last('score') ? score('ta') : 0;
+  const put = (s, p) => s.c.send({ t: 'sort', p }); const b0 = (h.last('score') || { scores: {} }).scores.tb || 0;
+  put(w, right); put(x, { 1: 'A', 2: 'B', 3: 'C', 4: 'A' }); put(y, { 1: 'A', 2: 'B', 3: 'A', 4: 'A' }); put(z, { 1: 'A', 2: 'C', 3: 'A', 4: 'A' }); put(q, { 1: 'B', 2: 'A', 3: 'A', 4: 'A' }); put(o, right); put(none, right); await sleep(150);
+  h.clear(); assert.equal(h.last('score'), undefined);
+  h.send({ t: 'reveal', on: true }); await sleep(150);
+  assert.equal(score('ta'), (a0 || 0) + 4 + 3 + 2 + 1 + 0, 'Reveal gives 4, 3, 2, 1 and 0 to five students on one team');
+  assert.equal(score('tb'), b0 + 4, 'a perfect sort on another team gives that team 4'); assert.match(h.last('note').m, /1 student has no team/);
+  const hs = client(); await hs.ready; hs.send({ t: 'host', code, key: KEY }); const st = await hs.wait('state'); assert.deepEqual([w, x, y, z, q].map(s => st.students.find(v => v.id === s.id).mp), [4, 3, 2, 1, 0], 'the teacher screen shows what each answer earned');
+  for (const c of [w.c, o.c]) assert.ok(!/"mpts"|"mp"/.test(JSON.stringify(c.got)), 'students never see points per answer');
+  q.c.send({ t: 'sort', p: right }); await sleep(100); assert.equal(score('ta'), (a0 || 0) + 14, 'changing an answer after Reveal re-prices it (0 to 4)');
+  q.c.send({ t: 'sort', p: { 1: 'A', 2: 'B', 3: 'A', 4: 'A' } }); await sleep(100); assert.equal(score('ta'), (a0 || 0) + 12, 'and takes points back when it gets worse (4 to 2)');
+  h.send({ t: 'mpts', on: false }); await sleep(100); assert.equal(score('ta'), a0 || 0, 'switched off: every sort point is taken back'); assert.equal(score('tb'), b0);
+  h.send({ t: 'mpts', on: true, got: 2, almost: 1, not: 0 }); await sleep(100); assert.equal(score('ta'), (a0 || 0) + 12, 'and back on: they return');
+  h.send({ t: 'reveal', on: false }); await sleep(100); assert.deepEqual([score('ta'), score('tb')], [a0 || 0, b0], 'hiding the answers takes the points back');
+  h.send({ t: 'reveal', on: true }); await sleep(100); h.send({ t: 'q', question: 'Next', bg: 'blank' }); await sleep(100);
+  assert.deepEqual([score('ta'), score('tb')], [(a0 || 0) + 12, b0 + 4], 'points stay with the team when the next question starts');
+  [h, hs, w.c, x.c, y.c, z.c, q.c, o.c, none.c].forEach(c => c.ws.close());
+});
+
 // ---- "about the right place": an answer area for each piece ----
 await test('areas: a piece can have its own area, up to 400, and the browser and the server agree on what counts', async () => {
   const input = { question: 'Continents', bg: 'blank', model: { tol: 60, pieces: [
