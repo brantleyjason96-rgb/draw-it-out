@@ -255,6 +255,8 @@ process.on('uncaughtException', e => console.error('uncaughtException:', e && e.
 process.on('unhandledRejection', e => console.error('unhandledRejection:', e && e.stack || e));
 server.on('clientError', (e, sock) => { try { sock.destroy(); } catch {} });
 
+const newTok = () => randomUUID() + randomUUID();
+
 const wss = new WebSocketServer({ server, maxPayload: 6e6 });
 wss.on('connection', ws => {
   let room = null, role = null, me = null;
@@ -320,7 +322,11 @@ wss.on('connection', ws => {
       if (m.resume === true && ![...r.watchers].some(w => w.isHost && w.readyState === 1)) {
         return tx(ws, { t: 'err', m: 'That class has finished. Type the code your teacher gives you.' });
       }
+      // The id is only a public label (the teacher's screen and the projector see it). Coming back to a student's work
+      // takes their secret token, which is sent only to that student's own page.
       let s = typeof m.id === 'string' ? r.students.get(m.id) : null;
+      if (s && !(typeof m.tok === 'string' && s.tok && m.tok === s.tok)) s = null;
+      const verified = s;
       if (r.roster.length) { // a class list is loaded: students sign in by picking their initials, never by typing a name
         // A page that is rejoining after a refresh sends the id it already had; the roster entry can come from that,
         // so the student is not asked to pick their initials again.
@@ -333,9 +339,9 @@ wss.on('connection', ws => {
         if (s && s.rid && s.rid !== e.rid) { const old = entryOf(r, s.rid); if (old && old.sid === s.id) old.sid = null; }
         if (!s) {
           if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
-          s = { id: randomUUID(), objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
+          s = { id: randomUUID(), tok: newTok(), objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500 };
           r.students.set(s.id, s);
-        }
+        } else if (s !== verified) s.tok = newTok(); // picked up by initials, not by token: the old holder's token stops working
         s.rid = e.rid; e.sid = s.id; s.name = e.ini; s.team = e.team;
       } else {
         let name = String(m.name || '').replace(/\s+/g, ' ').trim().slice(0, 20);
@@ -344,7 +350,7 @@ wss.on('connection', ws => {
           if (!name && tm) name = tm.name + ' ' + ([...r.students.values()].filter(x => x.team === tm.id).length + 1);
           if (!name) return tx(ws, { t: 'err', m: 'Type a nickname' });
           if (r.students.size >= MAX_STU) return tx(ws, { t: 'err', m: 'Class is full' });
-          s = { id: randomUUID(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500, team: tm ? tm.id : null };
+          s = { id: randomUUID(), tok: newTok(), name, objs: [], bw: dim(m.bw) || 800, bh: dim(m.bh) || 500, team: tm ? tm.id : null };
           r.students.set(s.id, s);
         } else if (name) s.name = name;
       }
@@ -355,7 +361,7 @@ wss.on('connection', ws => {
       // `host` tells a page that is rejoining after a refresh whether a teacher is still in this class, so a student
       // whose lesson has ended is sent back to the join steps instead of sitting in a room nobody is running.
       const hostLive = [...r.watchers].some(w => w.isHost && w.readyState === 1);
-      tx(ws, { t: 'joined', id: s.id, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: hostLive, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
+      tx(ws, { t: 'joined', id: s.id, tok: s.tok, q: r.q, sort: s.sort || {}, done: !!s.done, fb: fbOf(r, s), objs: s.objs, bw: s.bw, bh: s.bh, simple: r.simple, proj: r.picks.includes(s.id), frozen: !!r.frozen, pulse: s.pulse || null, host: hostLive, teams: r.teams, scores: r.scores, team: s.team || null, ini: s.rid ? s.name : null });
       toWatchers(r, { t: 'join', s: stuView(s) });
       return pushScores(r);
     }

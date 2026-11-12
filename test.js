@@ -33,8 +33,8 @@ await test('host setup is cleaned and kept', () => {
   assert.ok(!('sid' in st.roster[0]), 'claims are not exposed');
 });
 
-async function join(rid, id) {
-  const c = client(); await c.ready; c.send({ t: 'join', code: CODE, rid, id, bw: 800, bh: 500 });
+async function join(rid, id, tok) {
+  const c = client(); await c.ready; c.send({ t: 'join', code: CODE, rid, id, tok, bw: 800, bh: 500 });
   await Promise.race([c.wait('joined'), c.wait('err')]); return c;
 }
 
@@ -51,16 +51,16 @@ await test('free-typed names are refused while a class list is loaded', async ()
   const e = await c.wait('err'); assert.match(e.m, /initials/); assert.ok(!c.last('joined'));
 });
 
-let jd, jdId;
+let jd, jdId, jdTok;
 await test('student joins by initials and is on the right team', async () => {
-  jd = await join('r0001'); const j = jd.last('joined'); jdId = j.id;
+  jd = await join('r0001'); const j = jd.last('joined'); jdId = j.id; jdTok = j.tok;
   assert.equal(j.team, 'ta'); assert.equal(j.ini, 'JD');
   const h = await host.wait('join'); assert.equal(h.s.name, 'JD'); assert.equal(h.s.team, 'ta');
 });
 
 await test('connected student\'s initials are taken; same student can reconnect', async () => {
   const other = await join('r0001'); assert.ok(other.last('err') && !other.last('joined'));
-  const again = await join('r0001', jdId); jd = again; assert.ok(again.last('joined')); assert.equal(again.last('joined').id, jdId);
+  const again = await join('r0001', jdId, jdTok); jd = again; assert.ok(again.last('joined')); assert.equal(again.last('joined').id, jdId);
 });
 
 await test('award adds a point, repeat does not double count, undo removes it', async () => {
@@ -139,7 +139,7 @@ await test('quick teams: no class list, peek offers teams, student picks a team 
   const e = client(); await e.ready; e.send({ t: 'join', code: 'QUICK' }); assert.match((await e.wait('err')).m, /nickname/);
   // rejoin must not revert a team the teacher changed
   h.send({ t: 'team', id: j.id, team: 'ta' }); await sleep(60);
-  c.send({ t: 'join', code: 'QUICK', id: j.id, team: 'tb' }); await sleep(80);
+  c.send({ t: 'join', code: 'QUICK', id: j.id, tok: j.tok, team: 'tb' }); await sleep(80);
   assert.equal(c.last('myteam').team, 'ta');
 });
 
@@ -235,7 +235,7 @@ await test('feedback "now" tells students right away, without the key', async ()
 
 await test('a new question clears sort answers; a rejoin gets its answer back', async () => {
   sb.send({ t: 'sort', p: { 1: 'A' } }); await sleep(60);
-  const again = client(); await again.ready; again.send({ t: 'join', code: SH, name: 'Bea', id: sbJ.id, bw: 800, bh: 500 });
+  const again = client(); await again.ready; again.send({ t: 'join', code: SH, name: 'Bea', id: sbJ.id, tok: sbJ.tok, bw: 800, bh: 500 });
   const j = await again.wait('joined'); assert.deepEqual(j.sort, { 1: 'A' });
   sh.send({ t: 'q', question: 'Draw it', bg: 'blank' }); await sleep(80);
   assert.equal(sh.last('state'), undefined);
@@ -426,13 +426,13 @@ const rjoin = async (msg) => { const c = client(); await c.ready; c.send({ t: 'j
 
 await test('refresh: rejoining with only the id remembered keeps the same student, team and drawing', async () => {
   const a = await rjoin({ rid: 'r0001' });
-  const id = a.last('joined').id;
+  const id = a.last('joined').id, tok = a.last('joined').tok;
   assert.equal(a.last('joined').team, 'ta');
   a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[20, 20], [90, 90]] } });
   await sleep(120);
   a.ws.close(); // the tab is refreshed: the socket goes, the page comes back with what it remembered
   await sleep(120);
-  const b = await rjoin({ id }); // no rid, no name - just the id this tab kept
+  const b = await rjoin({ id, tok }); // no rid, no name - just the id and token this tab kept
   const j = b.last('joined');
   b.ws.close();
   assert.equal(j.id, id, 'the same student, not a new one');
@@ -455,12 +455,12 @@ await test('refresh: a stale id falls back to picking initials instead of a dead
 await test('refresh: someone else already signed in under those initials is still refused', async () => {
   const a = await rjoin({ rid: 'r0002' });
   assert.equal(a.last('joined').team, 'tb');
-  const id2 = a.last('joined').id;
+  const id2 = a.last('joined').id, tok2 = a.last('joined').tok;
   const b = await rjoin({ rid: 'r0002' }); // a different tab, the first one is still live
   assert.match(b.last('err').m, /already in use/);
   assert.ok(!b.last('joined'));
   a.ws.close(); await sleep(120);
-  const c = await rjoin({ id: id2 }); // and after the tab closes, the id alone gets back in
+  const c = await rjoin({ id: id2, tok: tok2 }); // and after the tab closes, the id alone gets back in
   assert.equal(c.last('joined').id, id2);
   c.ws.close();
 });
@@ -468,13 +468,13 @@ await test('refresh: someone else already signed in under those initials is stil
 await test('refresh: a page with stale work cannot overwrite a drawing that is on the projector', async () => {
   const a = await rjoin({ rid: 'r0001' });
   if (!a.last('joined')) console.log('DEBUG', JSON.stringify(a.got));
-  const id = a.last('joined').id;
+  const id = a.last('joined').id, tok = a.last('joined').tok;
   a.send({ t: 'set', o: { id: 7, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[30, 30], [70, 70]] } });
   await sleep(120);
   resHost.send({ t: 'spot', ids: [id] }); await sleep(120);
   a.ws.close(); await sleep(120);
   // the page reloads with its copy of the drawing (have: true) while the work is on the projector
-  const b = await rjoin({ id, have: true, objs: [{ id: 9, k: 'stroke', pen: 'pen', c: '#ff0000', lw: 3, dash: 'solid', pts: [[10, 10], [20, 20]] }] });
+  const b = await rjoin({ id, tok, have: true, objs: [{ id: 9, k: 'stroke', pen: 'pen', c: '#ff0000', lw: 3, dash: 'solid', pts: [[10, 10], [20, 20]] }] });
   const objs = b.last('joined').objs;
   assert.ok(objs.some(o => o.id === 7), 'the drawing the server already had is still there');
   assert.ok(!objs.some(o => o.id === 9), 'the stale copy from the reloaded page did not replace it');
@@ -484,16 +484,16 @@ await test('refresh: a page with stale work cannot overwrite a drawing that is o
 
 await test('refresh: a rejoin is refused when no teacher is running that class, and leaves no ghost', async () => {
   const a = await rjoin({ rid: 'r0002' });
-  const id = a.last('joined').id;
+  const id = a.last('joined').id, tok = a.last('joined').tok;
   assert.equal(a.last('joined').host, true, 'the page is told a teacher is there');
   a.ws.close(); await sleep(100);
   resHost.ws.close(); await sleep(150); // the last teacher screen in this class goes away
-  const b = client(); await b.ready; b.send({ t: 'join', code: RES, id, resume: true, bw: 800, bh: 500 });
+  const b = client(); await b.ready; b.send({ t: 'join', code: RES, id, tok, resume: true, bw: 800, bh: 500 });
   const e = await b.wait('err');
   assert.match(e.m, /finished/);
   assert.ok(!b.last('joined'), 'the page is not put into a class nobody is running');
   // a plain join still works (that is how a student gets in after the teacher is back)
-  const c = await rjoin({ id });
+  const c = await rjoin({ id, tok });
   assert.equal(c.last('joined').id, id, 'their drawing and team are still there');
   c.ws.close();
   resHost2 = client(); await resHost2.ready; resHost2.send({ t: 'host', code: RES, key: KEY }); await resHost2.wait('state');
@@ -533,6 +533,39 @@ await test('safety: garbage and hostile messages do not take the server down', a
   c.send({ t: 'join', code: 'AFTER', name: { toString: 1 }, objs: 'no', bw: {}, bh: [] });
   await sleep(150);
   assert.equal((await fetch('http://localhost:' + PORT + '/healthz')).status, 200);
+});
+
+
+await test('tokens: watchers see ids but cannot use them to take over a student', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TOKEN', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TOKEN', name: 'Alice', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  assert.ok(aj.tok && aj.tok.length >= 32 && aj.tok !== aj.id, 'the student gets a separate secret');
+  a.send({ t: 'set', o: { id: 1, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } }); await sleep(80);
+  const w = client(); await w.ready; w.send({ t: 'watch', code: 'TOKEN' }); const ws0 = await w.wait('state');
+  const seen = ws0.students.find(x => x.name === 'Alice'); assert.equal(seen.id, aj.id);
+  assert.ok(!JSON.stringify(ws0).includes(aj.tok), 'the token is not in what a watcher receives');
+  assert.ok(!JSON.stringify(h.got).includes(aj.tok), 'nor in what the teacher receives');
+  for (const extra of [{}, { tok: 'x'.repeat(72) }, { tok: seen.id }]) {
+    const e = client(); await e.ready; e.send({ t: 'join', code: 'TOKEN', name: 'Mallory', id: seen.id, ...extra, bw: 800, bh: 500, objs: [], have: true });
+    const j = await e.wait('joined');
+    assert.notEqual(j.id, seen.id, 'a new student, not Alice'); assert.notEqual(j.tok, aj.tok);
+  }
+  const st = client(); await st.ready; st.send({ t: 'host', code: 'TOKEN', key: KEY }); const s2 = await st.wait('state');
+  const alice = s2.students.find(x => x.id === aj.id);
+  assert.equal(alice.name, 'Alice', 'not renamed'); assert.equal(alice.objs.length, 1, 'not wiped');
+  const back = client(); await back.ready; back.send({ t: 'join', code: 'TOKEN', id: aj.id, tok: aj.tok, bw: 800, bh: 500 });
+  const bj = await back.wait('joined'); assert.equal(bj.id, aj.id); assert.equal(bj.objs.length, 1);
+});
+
+
+await test('tokens: picking a disconnected student\'s initials works but cuts off the old token', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'TOKR', key: KEY, setup: { teams, roster } }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'TOKR', rid: 'r0001', bw: 800, bh: 500 }); const aj = await a.wait('joined');
+  a.ws.close(); await sleep(100);
+  const b = client(); await b.ready; b.send({ t: 'join', code: 'TOKR', rid: 'r0001', bw: 800, bh: 500 }); const bj = await b.wait('joined');
+  assert.equal(bj.id, aj.id); assert.notEqual(bj.tok, aj.tok, 'a new device gets a new secret');
+  const c = client(); await c.ready; c.send({ t: 'join', code: 'TOKR', id: aj.id, tok: aj.tok, bw: 800, bh: 500 });
+  assert.match((await c.wait('err')).m, /initials/, 'the old token no longer works');
 });
 
 

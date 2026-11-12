@@ -397,7 +397,7 @@ const ws = connect(onmsg, () => { if (waking) { waking = false; $('#err').textCo
   $('#dot').classList.toggle('ok', ok); $('#dot').title = $('#dot').ariaLabel = ok ? 'Connected' : 'Reconnecting…';
 });
 SS.init(o => ws.send(o));
-function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
+function sendJoin() { ws.send({ t: 'join', code: target.code, name: target.name, rid: target.rid, team: target.team, id, tok: id ? sessionStorage['do_tok_' + target.code] || null : null, objs, have: loaded, resume: resuming, bw: target.bw, bh: target.bh }); }
 
 // Join in steps: class code -> (class list loaded?) team -> your initials, or just a nickname when there is no class list.
 const pageSize = () => ({ bw: Math.min(3000, Math.max(300, Math.round(innerWidth - (innerWidth <= 700 ? 0 : 80) - 24))), bh: Math.min(3000, Math.max(300, Math.round(innerHeight - (innerWidth <= 700 ? 300 : 170)))) }); // the page is the size of this screen
@@ -541,7 +541,7 @@ function onmsg(m) {
       if (resuming) { resuming = false; target = null; id = null; jshow('code'); }
     } else if (m.nocls) setTimeout(sendJoin, 3000); // server restarted: keep retrying until the teacher is back
   } else if (m.t === 'joined') {
-    id = m.id; if (target) sessionStorage['do_id_' + target.code] = id; W = m.bw; H = m.bh; // (a page refreshed mid-join may not have a target yet)
+    id = m.id; if (target) { sessionStorage['do_id_' + target.code] = id; if (m.tok) sessionStorage['do_tok_' + target.code] = m.tok; } W = m.bw; H = m.bh; // (a page refreshed mid-join may not have a target yet)
     $('#join').hidden = true; $('#play').hidden = false; document.body.classList.add('playing');
     if (m.q.question || m.q.img || !$('#q').innerHTML) setQ(m.q);
     if (!loaded && !objs.length && m.objs.length) resetDoc(m.objs); // page was refreshed: get the drawing back
@@ -552,7 +552,7 @@ function onmsg(m) {
   else if (m.t === 'freeze') applyFreeze(!!m.on);
   else if (m.t === 'mode') applySimple(!!m.simple);
   else if (m.t === 'kicked') { // teacher cleared the class
-    sessionStorage.removeItem('do_id_' + target.code); sessionStorage.removeItem('do_rid_' + target.code); resuming = false;
+    sessionStorage.removeItem('do_id_' + target.code); sessionStorage.removeItem('do_tok_' + target.code); sessionStorage.removeItem('do_rid_' + target.code); resuming = false;
     target = id = null; loaded = false; resetDoc([]); SS.newQ(null); applyLock(false); applyFreeze(false); setPulse(null, false);
     $('#play').hidden = true; $('#join').hidden = false; document.body.classList.remove('playing'); jshow('code'); $('#err').textContent = m.why === undefined ? 'This class has ended. Your teacher will tell you when to join again.' : m.why;
   } else if (m.t === 'q') { setQ(m.q); resetDoc([]); SS.newQ(m.q); setPulse(null, false); } // a new drawing = a new colour to pick

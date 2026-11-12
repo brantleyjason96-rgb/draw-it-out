@@ -978,7 +978,7 @@ function startBots() {
   ['Maya', 'Jin', 'Sofia', 'Omar', 'Lena', 'Diego', 'Aisha', 'Noah'].forEach((nm, i) => setTimeout(() => bot(nm, i), 500 * i));
 }
 function bot(nm, i) {
-  let id = null, n = 1, timer = 0, pt = 0; const W0 = 800, H0 = 500, COL = ['#2563eb', '#dc2626', '#059669', '#f97316', '#7c3aed', '#111111'];
+  let id = null, tok = null, n = 1, timer = 0, pt = 0; const W0 = 800, H0 = 500, COL = ['#2563eb', '#dc2626', '#059669', '#f97316', '#7c3aed', '#111111'];
   // the practice students tap confidence too, so the demo shows off the outlines and the report
   const pulseSoon = () => { clearTimeout(pt); pt = setTimeout(() => { b.send({ t: 'pulse', c: ['g', 'g', 'g', 'y', 'y', 'r'][Math.random() * 6 | 0] }); pulseSoon(); }, 2500 + Math.random() * 5000); };
   const put = o => b.send({ t: 'set', o: { id: n++, lw: 3, dash: 'solid', ...o } });
@@ -1003,9 +1003,9 @@ function bot(nm, i) {
     })(0);
   };
   const b = connect(m => {
-    if (m.t === 'joined') { id = m.id; pulseSoon(); if (m.q.kind === 'sort') setTimeout(() => sortIt(m.q), 1500); else if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
+    if (m.t === 'joined') { id = m.id; tok = m.tok; pulseSoon(); if (m.q.kind === 'sort') setTimeout(() => sortIt(m.q), 1500); else if (!m.objs.length) setTimeout(scene, 800 + Math.random() * 2000); }
     else if (m.t === 'q') setTimeout(() => (m.q.kind === 'sort' ? sortIt(m.q) : scene()), 1500 + Math.random() * 3500); else if (m.t === 'freeze' && !m.on) pulseSoon();
-  }, () => b.send({ t: 'join', code, name: nm, team: TM.teams.length ? TM.teams[i % TM.teams.length].id : null, id, bw: W0, bh: H0 }));
+  }, () => b.send({ t: 'join', code, name: nm, team: TM.teams.length ? TM.teams[i % TM.teams.length].id : null, id, tok, bw: W0, bh: H0 }));
 }
 
 // ---- start ----
