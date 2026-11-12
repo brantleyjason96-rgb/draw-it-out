@@ -183,6 +183,26 @@ function hostDo(code, msgs) {
 
 // ---- question sets (IndexedDB) ----
 let sets = [];
+// ---- tags: what a question assesses (teacher-only; never sent to the server, students or the projector) ----
+// A tag is plain text. "rock cycle" and "Rock Cycle" are one tag; the spelling typed FIRST is the one shown, kept in tagLabels.
+// Each question has its own tags; each set can have tags too, and a question counts as carrying its set's tags plus its own.
+let tagLabels = {}; // key -> label
+function canonTag(t) { // the stored spelling for this tag (registering it if it is new)
+  const c = SK.cleanTag(t), k = SK.tagKey(c); if (!c) return '';
+  if (!tagLabels[k]) tagLabels[k] = c;
+  return tagLabels[k];
+}
+const canonTags = v => { const r = SK.cleanTags(v); return SK.cleanTags(r.tags.map(canonTag)).tags; };
+// { key -> { key, label, qs: questions carrying it, sets: set names, own: how many questions have it themselves } }, most used first
+function tagUsage() {
+  const m = new Map();
+  const get = t => { const k = SK.tagKey(t); if (!m.has(k)) m.set(k, { key: k, label: tagLabels[k] || t, qs: 0, own: 0, setIds: new Set() }); return m.get(k); };
+  sets.forEach(st => {
+    (st.tags || []).forEach(t => get(t).setIds.add(st.id));
+    (st.questions || []).forEach(q => { const own = new Set((q.tags || []).map(SK.tagKey)); SK.tagsOf(q, st).forEach(t => { const u = get(t); u.qs++; if (own.has(u.key)) u.own++; }); });
+  });
+  return [...m.values()].sort((a, b) => b.qs - a.qs || a.label.localeCompare(b.label));
+}
 let folders = []; // unit folders for question sets: [{ id, name }]; a set points at one with set.folder
 // A demo must not see the last demo's sets. Deleting the database and opening it in the same tick hangs the open
 // (the delete has not finished), so wait for the wipe before opening: that is why the question rail used to stay empty in demo.
@@ -193,11 +213,13 @@ const db = demoWipe.then(() => new Promise((ok, no) => { const o = indexedDB.ope
 const idbGet = k => db.then(d => new Promise(r => { const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = () => r(q.result); }));
 let saveFailShown = false;
 function saveFail() { if (saveFailShown) return; saveFailShown = true; tell('Use Back up everything to keep a copy of your work.', { title: 'Could not save in this browser' }).then(() => (saveFailShown = false)); }
-const persistSets = () => db.then(d => new Promise(ok => { const tx = d.transaction('k', 'readwrite'), o = tx.objectStore('k'); o.put(sets, 'sets'); o.put(folders, 'folders'); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => { saveFail(); ok(); }; })).catch(() => saveFail());
+const persistSets = () => db.then(d => new Promise(ok => { const tx = d.transaction('k', 'readwrite'), o = tx.objectStore('k'); o.put(sets, 'sets'); o.put(folders, 'folders'); o.put(tagLabels, 'tags'); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => { saveFail(); ok(); }; })).catch(() => saveFail());
 function loadSets() {
-  return Promise.all([idbGet('sets'), idbGet('set'), idbGet('folders')]).then(([s, old, f]) => {
+  return Promise.all([idbGet('sets'), idbGet('set'), idbGet('folders'), idbGet('tags')]).then(([s, old, f, tl]) => {
     sets = s && s.length ? s : [{ id: crypto.randomUUID(), name: old ? 'My questions' : 'My first set', questions: old || [] }];
     folders = cleanFolders(f); tidyFolders();
+    tagLabels = tl && typeof tl === 'object' && !Array.isArray(tl) ? tl : {};
+    sets.forEach(st => { st.tags = SK.cleanTags(st.tags).tags; (st.questions || []).forEach(q => { if (q.tags) { q.tags = SK.cleanTags(q.tags).tags; if (!q.tags.length) delete q.tags; } }); if (!st.tags.length) delete st.tags; });
     persistSets(); return sets;
   }).catch(() => { sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }]; folders = []; return sets; });
 }
@@ -307,14 +329,15 @@ const plain = h => new DOMParser().parseFromString(String(h).replace(/<br>/g, ' 
 const JPG = 'data:image/jpeg;base64,';
 const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
   q = q || {};
-  const text = clean(String(q.question || '')).slice(0, 2000);
-  if (q.kind === 'sort') { const sort = SK.clean(q.sort); return sort && plain(text).trim() ? { question: text, bg: 'blank', img: null, kind: 'sort', sort } : null; }
+  const text = clean(String(q.question || '')).slice(0, 2000), tags = canonTags(q.tags), tg = o => (tags.length ? { ...o, tags } : o);
+  if (q.kind === 'sort') { const sort = SK.clean(q.sort); return sort && plain(text).trim() ? tg({ question: text, bg: 'blank', img: null, kind: 'sort', sort }) : null; }
   const img = typeof q.img === 'string' && q.img.startsWith(JPG) ? q.img : null;
   let bg = ['graph', 'lined', 'blank', 'photo'].includes(q.bg) ? q.bg : 'blank'; if (bg === 'photo' && !img) bg = 'blank';
-  return plain(text).trim() || img ? { question: text, bg, img: bg === 'photo' ? img : null } : null;
+  return plain(text).trim() || img ? tg({ question: text, bg, img: bg === 'photo' ? img : null }) : null;
 }).filter(Boolean);
-function addSet(name, questions, folder) {
+function addSet(name, questions, folder, tags) {
   const st = { id: crypto.randomUUID(), name: String(name || 'New set').slice(0, 60), questions: cleanQs(questions) };
+  const tg = canonTags(tags); if (tg.length) st.tags = tg;
   if (folder && folderById(folder)) st.folder = folder;
   sets.push(st); persistSets(); return st;
 }
@@ -361,7 +384,7 @@ async function showStarters(onAdd) {
 const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 async function packSet(st) {
-  const json = JSON.stringify({ n: st.name, q: st.questions.map(q => q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg]) });
+  const json = JSON.stringify({ n: st.name, t: st.tags || undefined, q: st.questions.map(q => { const a = q.kind === 'sort' ? [q.question, 'blank', q.sort] : [q.question, q.bg === 'photo' ? 'blank' : q.bg]; if (q.tags && q.tags.length) { if (a.length < 3) a.push(null); a.push(q.tags); } return a; }) });
   if (window.CompressionStream) return 'z.' + b64u(new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()));
   return 'r.' + b64u(new TextEncoder().encode(json));
 }
@@ -369,7 +392,7 @@ async function unpackSet(t) {
   const u8 = unb64u(t.slice(2));
   const json = t[0] === 'z' ? await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(u8);
   const o = JSON.parse(json); if (!o || !Array.isArray(o.q)) throw 0;
-  return { name: String(o.n || 'Shared set').slice(0, 60), questions: cleanQs(o.q.map(x => (x[2] ? { question: x[0], kind: 'sort', sort: x[2] } : { question: x[0], bg: x[1] }))) };
+  return { name: String(o.n || 'Shared set').slice(0, 60), tags: o.t, questions: cleanQs(o.q.map(x => ({ ...(x[2] ? { question: x[0], kind: 'sort', sort: x[2] } : { question: x[0], bg: x[1] }), tags: x[3] }))) };
 }
 async function copyShareLink(st) {
   const photos = st.questions.filter(q => q.bg === 'photo' || q.img).length;
@@ -383,7 +406,7 @@ async function checkShared(after) { // call after loadSets(); a colleague's link
   history.replaceState(null, '', location.pathname + location.search);
   try {
     const st = await unpackSet(m[1]); if (!st.questions.length) throw 0;
-    if (await ask(st.questions.length + ' questions.', { title: 'Add the set "' + st.name + '" to your sets?', ok: 'Add set', cancel: 'No thanks' })) { const s = addSet(st.name, st.questions); toast('Added "' + s.name + '".'); after && after(s); }
+    if (await ask(st.questions.length + ' questions.', { title: 'Add the set "' + st.name + '" to your sets?', ok: 'Add set', cancel: 'No thanks' })) { const s = addSet(st.name, st.questions, undefined, st.tags); toast('Added "' + s.name + '".'); after && after(s); }
   } catch { tell('Ask for a new one.', { title: 'That share link could not be read' }); }
 }
 
@@ -393,7 +416,7 @@ const exportSets = list => downloadJSON('draw-it-out-question-sets.json', list);
 async function importSetsFile(file) {
   try {
     const data = JSON.parse(await file.text()); let n = 0, last = null;
-    (Array.isArray(data) ? data : []).forEach(s => { if (s && Array.isArray(s.questions)) { last = addSet(s.name || 'Imported set', s.questions); n++; } });
+    (Array.isArray(data) ? data : []).forEach(s => { if (s && Array.isArray(s.questions)) { last = addSet(s.name || 'Imported set', s.questions, undefined, s.tags); n++; } });
     if (!n) throw 0; toast('Imported ' + n + ' set' + (n === 1 ? '' : 's') + '.'); return last;
   } catch { tell('Choose a file that was saved with Export on the Question sets tab.', { title: 'That file is not a Draw It Out question set' }); return null; }
 }
@@ -406,7 +429,7 @@ async function doBackup() {
   const pick = await choose('A class list has real student names, so keep that file private. "Questions only" saves your question sets and class periods without any names.', [{ label: 'Cancel', value: null }, { label: 'Questions only', value: false }, { label: 'Include class lists', value: true, kind: 'pri' }], { title: 'What goes in the backup?' });
   if (pick === null) return;
   const withNames = pick;
-  const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, folders, periods, active: store.do_active, teams: {} };
+  const data = { app: 'draw-it-out', v: 1, saved: new Date().toISOString(), sets, folders, tagLabels, periods, active: store.do_active, teams: {} };
   if (withNames) periods.forEach(p => { const t = loadTM(p.code); if (t.teams.length || t.roster.length) data.teams[p.code] = t; });
   downloadJSON('draw-it-out-backup-' + new Date().toISOString().slice(0, 10) + '.json', data);
   store.do_lastbackup = Date.now();
@@ -416,8 +439,9 @@ async function doRestore(file, after) {
     const d = JSON.parse(await file.text()); if (!d || d.app !== 'draw-it-out' || !Array.isArray(d.sets)) throw 0;
     if (!await ask('It adds its question sets and class periods to what is already here. Nothing is deleted.', { title: 'Restore this backup?', ok: 'Restore', cancel: 'Cancel' })) return;
     let ns = 0, np = 0;
+    if (d.tagLabels && typeof d.tagLabels === 'object' && !Array.isArray(d.tagLabels)) Object.entries(d.tagLabels).forEach(([k, v]) => { const c = SK.cleanTag(v); if (c && SK.tagKey(c) === k && !tagLabels[k]) tagLabels[k] = c; }); // first spelling typed wins
     cleanFolders(d.folders).forEach(f => { if (!folderById(f.id) && folders.length < MAX_FOLDERS) folders.push(f); }); // folders first, so restored sets can point at them
-    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
+    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; const tg = canonTags(x.tags); if (tg.length) r.tags = tg; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
     (Array.isArray(d.periods) ? d.periods : []).forEach(x => {
       if (!x || !/^[A-Z0-9]{4,10}$/.test(x.code) || periods.some(y => y.code === x.code)) return;
       periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;

@@ -937,6 +937,20 @@ await test('validator: finds the JSON in a reply (code block, sentences around i
   assert.deepEqual(SK.parseSets('[{"name":"T","tags":["a","A","b"],"questions":[{"question":"A"}]}]').sets[0].tags, ['a', 'b']);
 });
 
+
+await test('privacy: tags never reach the server, students or the projector', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'PRIVT', key: KEY }); await h.wait('state');
+  const a = client(); await a.ready; a.send({ t: 'join', code: 'PRIVT', name: 'Pat', bw: 800, bh: 500 }); await a.wait('joined');
+  const p = client(); await p.ready; p.send({ t: 'watch', code: 'PRIVT' }); await p.wait('state');
+  h.send({ t: 'q', question: 'Draw it', bg: 'blank', tags: ['SecretTag'], setTags: ['SetSecret'] });
+  h.send({ t: 'q', kind: 'sort', question: 'Sort', tags: ['SecretTag2'], sort: { tags: ['x'], lanes: [{ id: 'A', name: 'a', tags: ['SecretLane'] }, { id: 'B', name: 'b' }], cards: [{ id: 1, text: 'one', lane: 'A', tags: ['SecretCard'] }, { id: 2, text: 'two', lane: 'B' }] } });
+  await sleep(150);
+  const late = client(); await late.ready; late.send({ t: 'join', code: 'PRIVT', name: 'Lee', bw: 800, bh: 500 }); await late.wait('joined');
+  const lw = client(); await lw.ready; lw.send({ t: 'watch', code: 'PRIVT' }); await lw.wait('state');
+  const lh = client(); await lh.ready; lh.send({ t: 'host', code: 'PRIVT', key: KEY }); await lh.wait('state');
+  for (const [who, c] of [['student', a], ['late student', late], ['projector', p], ['late projector', lw], ['teacher', h], ['reloaded teacher', lh]]) assert.ok(!/Secret|"tags"/.test(JSON.stringify(c.got)), who + ' never sees tags');
+});
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
