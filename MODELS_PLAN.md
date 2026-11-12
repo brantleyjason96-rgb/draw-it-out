@@ -291,3 +291,13 @@ The slideshow's *The World Today* (USGS) is now the background of a Place It que
 - **Answer spots** are the middle of each continent on the map, and the pieces are drawn at 0.72 board units per picture pixel so each is about the size of its continent on the map (the Pangaea question uses 0.77). The area is Loose (90), with its own area for the pieces that need one: Antarctica 110 (on the map it is a thin strip, the piece is round), Eurasia 75, India 45, Greenland 70, Australia 80. India and Eurasia are 77 units apart, which is why Eurasia and India are tighter than the rest.
 - **Known limits**: the pieces are cut from a different map than the world map, so a continent can be 10 to 15 percent off in size; Antarctica hangs a little below the map's edge. The photo is not carried by a share link (links are text only), so send this set as a file.
 - **A file to import**: `exports/draw-it-out-continental-drift.json` holds both starter sets (Continental Drift: the evidence, 12 questions; Draw on a Diagram, 7) in the format of Export. It goes in through *Import* on Today's Question sets, and was checked with the app's own importer: nothing skipped, no console errors.
+
+
+---
+
+## The import file works in any copy of the app
+A copy of the app without the newer drawn backgrounds (ocean, sea floor, ocean-continent boundary, volcano, fault, water cycle) turns an unknown background into a blank page. Questions 6, 8, 9 and 10 of Continental Drift were reported blank; so were 1 and 2 (on the ocean) and all of Draw on a Diagram.
+- **`exports/draw-it-out-continental-drift.json` now holds each of those backgrounds as a picture of itself** (a photo background, which every copy understands), so nothing depends on which version is running. The starter sets in the app keep the drawn backgrounds. The file is built by the same script as the starter sets, so the two cannot drift apart. A test checks that the file uses only the older backgrounds and that every question comes through the validator with no notes; it was also run through the validator from before the new backgrounds were added.
+- **Question 6** (Mesosaurus) is on a map of the Atlantic (South America and Africa) cut from the world map.
+- **Question 10** (how Pangaea broke apart) is on a picture of Pangaea assembled from the 8 pieces, without names: *Label each continent, draw the cracks where it broke apart, and add an arrow for the way each one moved.*
+- The file is 1.1 MB (14 of the 19 questions carry a picture). Pictures are not part of share links, so this set is sent as a file.

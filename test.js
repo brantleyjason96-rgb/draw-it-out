@@ -1558,6 +1558,19 @@ await test('starter sets Continental Drift and Draw on a Diagram: every question
   assert.deepEqual([3, 4, 7, 10].map(laneOf), Array(4).fill('Not evidence'), 'the worksheet key: not evidence');
 });
 
+await test('the import file works in any copy of the app: it uses only the older backgrounds, and every question comes through', () => {
+  const file = JSON.parse(fs.readFileSync('exports/draw-it-out-continental-drift.json', 'utf8')), OLDBG = ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates'];
+  assert.deepEqual(file.map(f => f.name), ['Continental Drift: the evidence', 'Draw on a Diagram']);
+  const qs = file.flatMap(f => f.questions); assert.equal(qs.length, 19);
+  for (const q of qs) {
+    if (q.kind === 'sort') continue;
+    assert.ok(OLDBG.includes(q.bg), 'an older copy of the app knows the background: ' + q.question.slice(0, 40));
+    if (q.bg === 'photo') assert.match(q.img, /^data:image\/jpeg;base64,/, 'a photo background has its picture: ' + q.question.slice(0, 40));
+    const c = SK.checkQuestion(q); assert.deepEqual([c.problems, c.notes], [[], []], q.question.slice(0, 40)); assert.equal(c.q.bg, q.bg); assert.equal(c.q.img, q.bg === 'photo' ? q.img : null);
+  }
+  const drift = file[0].questions; assert.deepEqual([5, 7, 8, 9].map(i => drift[i].bg), ['photo', 'photo', 'photo', 'photo'], 'questions 6, 8, 9 and 10 have something to draw on');
+});
+
 await test('diagrams: Scatter keeps pieces off the middle of a diagram (the Sun, the Earth, the layers)', () => {
   for (const [bg, stage] of [['orbit', 'wide'], ['phases', 'wide'], ['rings', 'wide'], ['orbit', 'tall']]) {
     const m = SK.cleanModel({ ...MODEL().model, stage }), av = SK.bgAvoid(bg, m); assert.equal(av.length, 1); SK.scatter(m, av);
