@@ -255,16 +255,38 @@ process.on('uncaughtException', e => console.error('uncaughtException:', e && e.
 process.on('unhandledRejection', e => console.error('unhandledRejection:', e && e.stack || e));
 server.on('clientError', (e, sock) => { try { sock.destroy(); } catch {} });
 
+// ---- limits ----
+const MSGS_PER_SEC = 60;                                  // per socket; the excess is dropped
+const MAX_PER_IP = +process.env.MAX_PER_IP || 150;        // a whole school shares one address, so this is generous
+const ROOM_EMPTY_MS = +process.env.ROOM_EMPTY_MS || 10 * 60e3, ROOM_WITH_STUDENTS_MS = 6 * 3600e3, SWEEP_MS = +process.env.SWEEP_MS || 30000; // (the two env overrides are for tests)
+// Behind a proxy (Render) the socket address is the proxy's. Set TRUST_PROXY=1 to use the last X-Forwarded-For entry,
+// which is the one the proxy itself added; entries to its left can be forged by the client.
+const ipOf = req => {
+  if (process.env.TRUST_PROXY) { const x = String(req.headers['x-forwarded-for'] || '').split(',').pop().trim(); if (x) return x; }
+  return req.socket.remoteAddress || '?';
+};
+const perIp = new Map();
 const newTok = () => randomUUID() + randomUUID();
 
 const wss = new WebSocketServer({ server, maxPayload: 6e6 });
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
   let room = null, role = null, me = null;
   ws.isAlive = true;
   ws.on('pong', () => (ws.isAlive = true));
   ws.on('error', e => console.error('socket error:', e && e.message)); // e.g. a frame over maxPayload; the socket is closed, the process lives on
 
-  ws.on('message', raw => { try { handle(raw); } catch (e) { console.error('message handler:', e && e.stack || e); } });
+  const ip = ipOf(req); ws.ip = ip;
+  const n = (perIp.get(ip) || 0) + 1; perIp.set(ip, n);
+  ws.on('close', () => { const k = (perIp.get(ip) || 1) - 1; if (k > 0) perIp.set(ip, k); else perIp.delete(ip); });
+  if (n > MAX_PER_IP) { tx(ws, { t: 'err', m: 'Too many connections from this network. Try again in a minute.' }); return ws.close(); }
+
+  let winStart = 0, winN = 0;
+  ws.on('message', raw => {
+    const now = Date.now();
+    if (now - winStart >= 1000) { winStart = now; winN = 0; }
+    if (++winN > MSGS_PER_SEC) return; // drop the excess
+    try { handle(raw); } catch (e) { console.error('message handler:', e && e.stack || e); }
+  });
 
   function handle(raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
@@ -276,13 +298,14 @@ wss.on('connection', ws => {
       if (m.t === 'host') {
         const key = typeof m.key === 'string' && m.key.length >= 8 && m.key.length <= 80 ? m.key : '';
         if (!goodCode(code) || !key) return tx(ws, { t: 'err', m: 'Bad code' });
+        if (ws.hostCode && ws.hostCode !== code) return tx(ws, { t: 'err', m: 'This connection already runs another class.' }); // one hosted class per socket
         if (!r) {
           if (rooms.size >= MAX_ROOMS) return tx(ws, { t: 'err', m: 'Server busy' });
           r = { key, q: cleanQ(), sk: null, revealed: false, sres: false, simple: false, spot: null, picks: [], hide: true, board: false, frozen: false, fz: null, phist: [], teams: [], roster: [], scores: {}, cap: false, qn: 0, students: new Map(), watchers: new Set(), last: Date.now() };
           if (m.setup && typeof m.setup === 'object') applySetup(r, m.setup); // a new room starts from the teacher's saved teams and scores
           rooms.set(code, r);
         } else if (r.key !== key) return tx(ws, { t: 'err', m: 'That code is in use by another teacher. Pick a different one.' });
-        role = 'host';
+        role = 'host'; ws.hostCode = code;
       } else {
         if (!r) return tx(ws, { t: 'err', m: 'No class with that code yet' });
         role = 'watch';
@@ -475,14 +498,14 @@ wss.on('connection', ws => {
   });
 });
 
-// keep connections alive through proxies, drop dead ones, forget classes idle for 6 hours
+// keep connections alive through proxies, drop dead ones, forget abandoned classes (10 minutes if nobody joined, 6 hours if students are in it)
 setInterval(() => {
   wss.clients.forEach(ws => { if (!ws.isAlive) return ws.terminate(); ws.isAlive = false; ws.ping(); });
   rooms.forEach((r, code) => {
     const live = r.watchers.size || [...r.students.values()].some(s => s.ws);
     if (live) r.last = Date.now();
-    else if (Date.now() - r.last > 6 * 3600e3) { clearTimeout(r.fz); rooms.delete(code); }
+    else if (Date.now() - r.last > (r.students.size ? ROOM_WITH_STUDENTS_MS : ROOM_EMPTY_MS)) { clearTimeout(r.fz); rooms.delete(code); }
   });
-}, 30000);
+}, SWEEP_MS);
 
 server.listen(PORT, () => console.log('Draw It Out running on port ' + PORT));

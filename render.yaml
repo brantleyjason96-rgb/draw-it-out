@@ -8,5 +8,7 @@ services:
     plan: free           # change to "starter" (about $7/mo) if you want it always awake
     healthCheckPath: /healthz
     envVars:
+      - key: TRUST_PROXY   # the per-address connection cap reads the address Render's proxy appended to X-Forwarded-For
+        value: "1"
       - key: MAX_ROOMS
         value: "300"

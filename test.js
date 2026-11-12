@@ -569,6 +569,50 @@ await test('tokens: picking a disconnected student\'s initials works but cuts of
 });
 
 
+await test('limits: one hosted class per socket', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'ONE1', key: KEY }); await h.wait('state'); h.clear();
+  for (let i = 0; i < 5; i++) h.send({ t: 'host', code: 'MANY' + i, key: KEY });
+  await sleep(150);
+  assert.match(h.last('err').m, /already runs another class/);
+  const probe = client(); await probe.ready; probe.send({ t: 'status', code: 'MANY0' });
+  assert.equal((await probe.wait('status')).live, false, 'no extra class was created');
+  h.clear(); h.send({ t: 'host', code: 'ONE1', key: KEY }); assert.ok(await h.wait('state'), 'the same class can be re-entered');
+});
+
+
+await test('limits: a flood of messages is dropped, not processed', async () => {
+  const h = client(); await h.ready; h.send({ t: 'host', code: 'FLOOD', key: KEY }); await h.wait('state');
+  const c = client(); await c.ready; c.send({ t: 'join', code: 'FLOOD', name: 'Fl', bw: 800, bh: 500 }); await c.wait('joined');
+  h.clear();
+  for (let i = 1; i <= 400; i++) c.send({ t: 'set', o: { id: i, k: 'stroke', pen: 'pen', c: '#111111', lw: 3, dash: 'solid', pts: [[10, 10], [40, 40]] } });
+  await sleep(500);
+  const n = h.got.filter(m => m.t === 'set').length;
+  assert.ok(n > 0 && n <= 65, 'about 60 got through, not 400 (' + n + ')');
+});
+
+
+await test('limits: per-address cap, and classes nobody uses are swept', async () => {
+  const P2 = PORT + 600, s2 = spawn('node', ['server.js'], { env: { ...process.env, PORT: P2, MAX_PER_IP: '4', ROOM_EMPTY_MS: '300', SWEEP_MS: '200' }, stdio: 'ignore' });
+  try {
+    await sleep(600);
+    const mk = () => { const ws = new WebSocket('ws://localhost:' + P2), got = []; ws.on('message', d => got.push(JSON.parse(d))); ws.on('error', () => {}); return { ws, got, open: new Promise(r => ws.on('open', r)), closed: new Promise(r => ws.on('close', r)) }; };
+    const send = (x, o) => x.ws.send(JSON.stringify(o));
+    const socks = [mk(), mk(), mk(), mk()]; await Promise.all(socks.map(x => x.open));
+    const fifth = mk(); await Promise.race([fifth.closed, sleep(1500)]);
+    assert.equal(fifth.ws.readyState >= 2, true, 'the 5th connection from one address is refused');
+    assert.ok(fifth.got.some(m => m.t === 'err'), 'and told why');
+    socks[0].ws.close(); await sleep(150);
+    const again = mk(); await again.open; await sleep(150); assert.equal(again.ws.readyState, 1, 'a freed slot can be used again');
+    send(socks[1], { t: 'host', code: 'EMPTY', key: KEY }); send(socks[2], { t: 'host', code: 'BUSY', key: KEY }); await sleep(150);
+    send(socks[3], { t: 'join', code: 'BUSY', name: 'S', bw: 800, bh: 500 }); await sleep(150);
+    socks.forEach(x => x.ws.close()); await sleep(900);
+    send(again, { t: 'status', code: 'EMPTY' }); send(again, { t: 'status', code: 'BUSY' }); await sleep(200);
+    const stat = c => again.got.find(m => m.t === 'status' && m.code === c);
+    assert.equal(stat('EMPTY').live, false, 'an empty abandoned class is deleted'); assert.equal(stat('BUSY').live, true, 'a class with a student in it is kept');
+  } finally { s2.kill(); }
+});
+
+
 await test('the Figtree font file is served as woff2', async () => {
   const r = await fetch('http://localhost:' + PORT + '/fonts/figtree-latin-wght-normal.woff2');
   assert.equal(r.status, 200);
