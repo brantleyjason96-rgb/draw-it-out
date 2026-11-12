@@ -201,3 +201,21 @@ Rotation, drawn diagram backgrounds, pictures of your own, outline polish and th
 - Pictures of your own do not travel in share links (text only, by design); a teacher who wants to send a set with pictures exports it as a file.
 - The drawn diagrams are fixed pictures: there is no way yet to add labels or move parts of them. A photo background is still the way to use your own diagram.
 - Picture pieces do not use the "cut-out with a see-through background" step beyond the edge-white removal (no magic-wand or manual erase).
+
+
+---
+
+## After phase C: sizes, and close-together pieces no longer block saving
+A teacher building a continents jigsaw could not save it (“the pieces are too close”) and could not make the pictures bigger. Both are fixed. `npm test`: 120 tests (116 before; 4 new). Run in Chromium end to end with three continent-shaped pictures: sized by slider, by dragging the corner square and by `+` / `-`, answer spots close together, *Very tight* and *Show outlines*, saved, sent, and placed by a student (3 of 3 right).
+
+**Changes**
+- **Piece size** `s` (0.5 to 4, kept to 5%), and for your own pictures the shape `ar` (width / height). One rule for the size of a piece (`SK.boxOf` in the browser, `boxOf` on the server) is used for hit tests, outlines, rings, the turn handle, keeping the piece whole on the board, and Scatter.
+- Saving is blocked only by what would break the question. *Pieces overlap at the start*, *answer spots are close together* and *a turning piece already faces the answer* are now **warnings** (`SK.modelWarnings`), shown as “Worth a look” and never stopping Save. The close-spots warning says why it matters (a piece put on its neighbour's spot would count) and that it is fine for a jigsaw.
+- A fourth closeness, **Very tight (20)**.
+- A text card's text grows with its size; a card is kept whole on the board (before, the card's edge could sit off the board by a few units).
+- Scatter works for big pieces: it asks for less room between pieces before giving up.
+
+**Known limits**
+- Outlines for a picture piece are a box, not the shape of the continent (the piece's size and shape are known, its outline is not). A jigsaw with *Show outlines* therefore shows boxes that overlap where the continents touch.
+- Closeness is a distance in board units, the same for a small piece and a huge one. A very big piece with *Very tight* is hard to place exactly; *Tight* is usually right for a jigsaw.
+- Answer spots can overlap; a student can't tell from the outlines which one is which, only from the labels.

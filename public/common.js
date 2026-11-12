@@ -36,7 +36,7 @@ function paintModelBg(x, model, bg, im, bw, bh) {
   x.fillStyle = '#E5E7EB'; x.fillRect(0, 0, bw, bh);
   x.save(); x.translate(r.x, r.y); x.beginPath(); x.rect(0, 0, r.w, r.h); x.clip(); paintBg(x, bg, im, r.w, r.h); x.restore();
 }
-const pieceBox = p => (p.art === 'card' ? { w: MA * 1.3, h: MA * .8 } : { w: MA, h: MA });
+const pieceBox = p => SK.boxOf(p); // the size of a piece on the board: its picture size times its own size setting (sortkit.js)
 const P2 = typeof Path2D === 'function' ? {
   land: new Path2D('M22 34c8-8 18-6 22 2s-6 12-10 18-14 4-14-4 0-10 2-16zM56 54c8-4 18 0 20 8s-8 16-14 14-10-14-6-22z'), axis: new Path2D('M30 12l40 76'),
   rays: new Path2D('M50 3v12M50 85v12M3 50h12M85 50h12M17 17l8 8M75 75l8 8M83 17l-8 8M25 75l-8 8'), arrow: new Path2D('M8 40h52V22l32 28-32 28V60H8z')
@@ -82,8 +82,8 @@ function wrapLines(x, text, maxW) {
   out.push(line); return out;
 }
 // the handle for turning a selected piece sits above it (in the piece's own frame), so it turns with the piece
-const HANDLE = MA / 2 + 40;
-const handlePos = (pos, a) => { const r = ((a || 0) - 90) * Math.PI / 180; return { x: pos.x + HANDLE * Math.cos(r), y: pos.y + HANDLE * Math.sin(r) }; };
+const handleR = p => { const b = pieceBox(p); return Math.max(b.w, b.h) / 2 + 40; }; // how far above the piece the handle sits: its size plus a stem
+const handlePos = (pos, a, r) => { const t = ((a || 0) - 90) * Math.PI / 180, d = r || MA / 2 + 40; return { x: pos.x + d * Math.cos(t), y: pos.y + d * Math.sin(t) }; };
 const angleTo = (pos, sx, sy) => ((Math.round(Math.atan2(sy - pos.y, sx - pos.x) * 180 / Math.PI + 90) % 360) + 360) % 360;
 // one piece, centred on pos (and turned by pos.a if it can turn). o: { fs (label size), ok (true | false | undefined), focus (selected), alpha, noLabel }
 function drawPiece(x, p, pos, o) {
@@ -93,21 +93,26 @@ function drawPiece(x, p, pos, o) {
   if (card) {
     rot(() => {
       x.shadowColor = 'rgba(23,33,43,.35)'; x.shadowBlur = 3; x.shadowOffsetY = 1; x.fillStyle = '#FDE68A'; x.beginPath(); x.roundRect(-b.w / 2, -b.h / 2, b.w, b.h, 8); x.fill();
-      x.shadowColor = 'transparent'; x.fillStyle = '#422006';
-      const ln = wrapLines(x, p.label, b.w - 12).slice(0, 3), lh = fs * 1.15; ln.forEach((t, i) => x.fillText(t, 0, (i - (ln.length - 1) / 2) * lh));
+      x.shadowColor = 'transparent'; x.fillStyle = '#422006'; const cf = fs * Math.min(2, Math.max(.8, p.s || 1)); x.font = '700 ' + cf + 'px ' + FONT;
+      const ln = wrapLines(x, p.label, b.w - 12).slice(0, 4), lh = cf * 1.15; ln.forEach((t, i) => x.fillText(t, 0, (i - (ln.length - 1) / 2) * lh));
     });
   } else {
-    rot(() => { x.shadowColor = 'rgba(23,33,43,.35)'; x.shadowBlur = 3; x.shadowOffsetY = 1; drawArt(x, p.art, 0, 0, MA, p.img); });
-    if (!o.noLabel) { const w = Math.min(x.measureText(p.label).width + 10, MA * 2.4), y = pos.y + MA / 2 + 4 + fs * .65; x.fillStyle = 'rgba(255,255,255,.88)'; x.beginPath(); x.roundRect(pos.x - w / 2, y - fs * .65, w, fs * 1.3, 6); x.fill(); x.fillStyle = '#17212B'; x.fillText(p.label, pos.x, y); }
+    rot(() => { x.shadowColor = 'rgba(23,33,43,.35)'; x.shadowBlur = 3; x.shadowOffsetY = 1; drawArt(x, p.art, 0, 0, Math.max(b.w, b.h), p.img); });
+    if (!o.noLabel) { const w = Math.min(x.measureText(p.label).width + 10, MA * 2.4), y = pos.y + b.h / 2 + 4 + fs * .65; x.fillStyle = 'rgba(255,255,255,.88)'; x.beginPath(); x.roundRect(pos.x - w / 2, y - fs * .65, w, fs * 1.3, 6); x.fill(); x.fillStyle = '#17212B'; x.fillText(p.label, pos.x, y); }
   }
-  const ring = (c, lw) => { x.strokeStyle = c; x.lineWidth = lw; x.beginPath(); if (card) rot(() => { x.beginPath(); x.roundRect(-b.w / 2 - 3, -b.h / 2 - 3, b.w + 6, b.h + 6, 10); x.stroke(); }); else { x.arc(pos.x, pos.y, MA / 2 + 4, 0, 7); x.stroke(); } };
+  const boxy = card || p.art === 'img', R = Math.max(b.w, b.h) / 2;
+  const ring = (c, lw) => { x.strokeStyle = c; x.lineWidth = lw; x.beginPath(); if (boxy) rot(() => { x.beginPath(); x.roundRect(-b.w / 2 - 3, -b.h / 2 - 3, b.w + 6, b.h + 6, 10); x.stroke(); }); else { x.arc(pos.x, pos.y, R + 4, 0, 7); x.stroke(); } };
   if (o.focus) {
     x.setLineDash([8, 5]); ring('#0B6BCB', 5); x.setLineDash([]);
     if (p.turn) { // the turn handle: a dot on a short stem, with a turning arrow in it
-      const h = handlePos(pos, turn), e = handlePos(pos, turn); const r0 = MA / 2 + 6, ra = (turn - 90) * Math.PI / 180;
+      const h = handlePos(pos, turn, R + 40), e = h; const r0 = R + 6, ra = (turn - 90) * Math.PI / 180;
       x.strokeStyle = '#0B6BCB'; x.lineWidth = 4; x.beginPath(); x.moveTo(pos.x + r0 * Math.cos(ra), pos.y + r0 * Math.sin(ra)); x.lineTo(e.x, e.y); x.stroke();
       x.beginPath(); x.arc(h.x, h.y, 20, 0, 7); x.fillStyle = '#0B6BCB'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke();
       x.fillStyle = '#fff'; x.font = '800 26px ' + FONT; x.fillText('↻', h.x, h.y + 1);
+    }
+    if (o.resize) { // the size handle: a small square on the bottom-right corner (the editor only)
+      const cx = pos.x + b.w / 2, cy = pos.y + b.h / 2; x.beginPath(); x.roundRect(cx - 13, cy - 13, 26, 26, 6); x.fillStyle = '#0B6BCB'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.stroke();
+      x.fillStyle = '#fff'; x.font = '800 20px ' + FONT; x.fillText('⤡', cx, cy + 1);
     }
   }
   if (o.ok !== undefined) {
@@ -121,7 +126,7 @@ function drawPiece(x, p, pos, o) {
 function paintPieces(x, model, pl, bw, bh, o = {}) {
   const r = stageRect(model, bw, bh), fs = Math.max(21, 10 / r.k);
   x.save(); x.translate(r.x, r.y); x.scale(r.k, r.k);
-  const shape = (p, X, Y, pad, stroke, fill) => { x.setLineDash([10, 7]); x.lineWidth = 3; x.beginPath(); if (p.art === 'card') { const b = pieceBox(p); x.roundRect(X - b.w / 2 - pad, Y - b.h / 2 - pad, b.w + pad * 2, b.h + pad * 2, 12); } else x.arc(X, Y, MA / 2 + pad, 0, 7); if (fill) { x.fillStyle = fill; x.fill(); } x.strokeStyle = stroke; x.stroke(); x.setLineDash([]); };
+  const shape = (p, X, Y, pad, stroke, fill) => { const b = pieceBox(p); x.setLineDash([10, 7]); x.lineWidth = 3; x.beginPath(); if (p.art === 'card' || p.art === 'img') x.roundRect(X - b.w / 2 - pad, Y - b.h / 2 - pad, b.w + pad * 2, b.h + pad * 2, 12); else x.arc(X, Y, Math.max(b.w, b.h) / 2 + pad, 0, 7); if (fill) { x.fillStyle = fill; x.fill(); } x.strokeStyle = stroke; x.stroke(); x.setLineDash([]); };
   const circle = (X, Y, rad, stroke, fill) => { x.setLineDash([10, 7]); x.lineWidth = 3; x.beginPath(); x.arc(X, Y, rad, 0, 7); if (fill) { x.fillStyle = fill; x.fill(); } x.strokeStyle = stroke; x.stroke(); x.setLineDash([]); };
   if (o.spots) model.pieces.forEach(p => { // outlines in the shape of the piece; one that has a piece in it is filled in more
     if (p.kx == null) return; const taken = model.pieces.some(q => pl && pl[q.id] && Math.hypot(pl[q.id].x - p.kx, pl[q.id].y - p.ky) < 20);
@@ -133,13 +138,13 @@ function paintPieces(x, model, pl, bw, bh, o = {}) {
     if (p.turn && k.a != null) drawPiece(x, p, { x: k.x, y: k.y, a: k.a }, { fs, alpha: .38, noLabel: true }); // a faint copy of the piece, facing the right way
     if (pl && pl[p.id] && Math.hypot(pl[p.id].x - k.x, pl[p.id].y - k.y) < MA) return; // already in the right place (only the angle is wrong): the faint copy says which way, a label on top of the piece would only crowd it
     if (o.whereLabels === false) return; // the teacher's board lists where each piece belongs in words, so the labels would only crowd it
-    x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = p.label + ' goes here', w = x.measureText(t).width + 10, y = k.y + MA / 2 + 12 + fs * .65;
+    x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = p.label + ' goes here', w = x.measureText(t).width + 10, y = k.y + pieceBox(p).h / 2 + 12 + fs * .65;
     x.fillStyle = '#fff'; x.beginPath(); x.roundRect(k.x - w / 2, y - fs * .65, w, fs * 1.3, 6); x.fill(); x.fillStyle = '#8C1D18'; x.fillText(t, k.x, y);
   });
   model.pieces.forEach(p => {
     if (o.skip === p.id || (o.only != null && o.only !== p.id)) return;
     const pos = pl && pl[p.id] ? pl[p.id] : { x: p.x, y: p.y };
-    drawPiece(x, p, pos, { fs, ok: o.ok ? o.ok[p.id] : undefined, focus: o.focus === p.id });
+    drawPiece(x, p, pos, { fs, ok: o.ok ? o.ok[p.id] : undefined, focus: o.focus === p.id, resize: o.resize && o.focus === p.id });
   });
   x.restore();
 }
@@ -155,8 +160,14 @@ function pieceAt(model, pl, bw, bh, px, py, pad = 0) {
 // is a point on the turn handle of piece `id`? (page units)
 function handleAt(model, pl, id, bw, bh, px, py, pad = 0) {
   const p = model.pieces.find(q => q.id === id); if (!p || !p.turn) return false;
-  const r = stageRect(model, bw, bh), pos = pl && pl[id] ? pl[id] : { x: p.x, y: p.y }, h = handlePos(pos, pos.a != null ? pos.a : p.a || 0);
+  const r = stageRect(model, bw, bh), pos = pl && pl[id] ? pl[id] : { x: p.x, y: p.y }, h = handlePos(pos, pos.a != null ? pos.a : p.a || 0, handleR(p));
   return Math.hypot((px - r.x) / r.k - h.x, (py - r.y) / r.k - h.y) <= 24 + pad / r.k;
+}
+// is a point on the size handle (the bottom-right corner) of piece `id`? (page units; the editor only)
+function resizeAt(model, pl, id, bw, bh, px, py, pad = 0) {
+  const p = model.pieces.find(q => q.id === id); if (!p) return false;
+  const r = stageRect(model, bw, bh), pos = pl && pl[id] ? pl[id] : { x: p.x, y: p.y }, b = pieceBox(p);
+  return Math.hypot((px - r.x) / r.k - (pos.x + b.w / 2), (py - r.y) / r.k - (pos.y + b.h / 2)) <= 20 + pad / r.k;
 }
 
 // ---- drawn diagrams: page backgrounds for pieces questions (orbit, Earth's layers, moon phases, plate boundaries) ----

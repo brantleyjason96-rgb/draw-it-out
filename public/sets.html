@@ -57,6 +57,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 #sstu .dock{justify-content:space-between;font-weight:600;font-size:var(--fs-md)}
 #sstu .dock span+span{color:var(--mut);font-weight:500}
 .issue{font-size:var(--fs-sm);color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:var(--r-md);padding:8px 12px}
+.warnnote{font-size:var(--fs-sm);color:var(--c-ink-2);background:var(--c-fill);border-radius:var(--r-md);padding:8px 12px}
 .okmsg{font-size:var(--fs-sm);color:var(--c-good-strong);background:var(--c-good-soft);border-radius:var(--r-md);padding:8px 12px;font-weight:600}
 @media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
 /* phones: the top bar wraps instead of pushing the page wider than the screen */
@@ -408,10 +409,11 @@ $('#modeltog').onclick = () => {
 };
 ME.mount({
   get: () => draft.model, changed: markDirty, bg: () => ({ bg: draft.bg, im: pim }),
-  issues: list => {
+  issues: (list, warns = []) => { // list stops Save; warns are worth a look but the question works
     modelIssues = list; const box = $('#missues'); box.innerHTML = '';
     if (list.length) list.forEach(t => box.append(el('div', { className: 'issue', textContent: t })));
     else if (draft.model) box.append(el('div', { className: 'okmsg', textContent: 'Ready. ' + draft.model.pieces.length + ' pieces, each with an answer spot.' }));
+    warns.forEach(t => box.append(el('div', { className: 'warnnote', textContent: 'Worth a look: ' + t })));
     refreshSave();
   },
   el: { rows: $('#mrows'), opts: $('#mopts'), canvas: $('#mcanvas'), tabs: $('#mtabs'), hint: $('#mhint') }

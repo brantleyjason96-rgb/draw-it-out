@@ -174,6 +174,13 @@ function cleanPlace(r, p) {
 // start spots. Only when the teacher chose "show outlines" (spots: 'shown') are the answer spots public, on purpose.
 const MAX_PIECES = 12, PIECE_A = 108, IMG_MAX = 140000, IMG_TOTAL = 700000;
 const PIECE_ARTS = ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'];
+// the size of a piece on the board; the same rule as SK.boxOf in public/sortkit.js
+const boxOf = p => {
+  const s = isNum(p.s) ? Math.min(4, Math.max(.5, p.s)) : 1;
+  if (p.art === 'card') return { w: PIECE_A * 1.3 * s, h: PIECE_A * .8 * s };
+  if (p.art === 'img' && isNum(p.ar) && p.ar > 0) { const ar = Math.min(5, Math.max(.2, p.ar)); return ar >= 1 ? { w: PIECE_A * s, h: PIECE_A * s / ar } : { w: PIECE_A * s * ar, h: PIECE_A * s }; }
+  return { w: PIECE_A * s, h: PIECE_A * s };
+};
 const imgOk = v => typeof v === 'string' && v.length <= IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v);
 const ang = v => ((Math.round(v) % 360) + 360) % 360;
 const angDiff = (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); };
@@ -181,8 +188,7 @@ const STAGES = { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } };
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 function cleanModel(m) {
   if (!m || typeof m !== 'object') return null;
-  const stage = m.stage === 'tall' ? 'tall' : 'wide', st = STAGES[stage], lo = PIECE_A / 2;
-  const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
+  const stage = m.stage === 'tall' ? 'tall' : 'wide', st = STAGES[stage], cl = (v, a, b) => Math.min(b, Math.max(a, v));
   const pieces = [], seen = new Set(), pos = {}, idea = {}, ka = {}; let imgBytes = 0;
   (Array.isArray(m.pieces) ? m.pieces : []).slice(0, MAX_PIECES).forEach(p => {
     if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
@@ -190,8 +196,11 @@ function cleanModel(m) {
     let art = PIECE_ARTS.includes(p.art) ? p.art : 'card', img = null;
     if (art === 'img') { if (imgOk(p.img) && imgBytes + p.img.length <= IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
     seen.add(p.id);
+    const s = isNum(p.s) ? Math.round(cl(p.s, .5, 4) * 20) / 20 : 1, ar = art === 'img' && isNum(p.ar) ? Math.round(cl(p.ar, .2, 5) * 100) / 100 : null;
+    const bx = boxOf({ art, s, ar }), cx = v => Math.round(cl(v, bx.w / 2, st.w - bx.w / 2)), cy = v => Math.round(cl(v, bx.h / 2, st.h - bx.h / 2)); // the whole piece stays on the board
     const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y) };
-    if (img) o.img = img;
+    if (s !== 1) o.s = s;
+    if (img) { o.img = img; if (ar) o.ar = ar; }
     if (p.turn === true) { o.turn = true; o.a = ang(isNum(p.a) ? p.a : 0); ka[p.id] = ang(isNum(p.ka) ? p.ka : 0); }
     pieces.push(o);
     pos[p.id] = { x: cx(p.kx), y: cy(p.ky) };
@@ -213,10 +222,11 @@ const modelOf = r => r.q.model || null;
 // a student's moved pieces, rebuilt against the live question: { pieceId: { x, y } } (a piece the student has not moved is not in it)
 function cleanPl(r, p) {
   const mq = modelOf(r), out = {}; if (!mq || !p || typeof p !== 'object') return out;
-  const st = STAGES[mq.stage], lo = PIECE_A / 2;
+  const st = STAGES[mq.stage];
   mq.pieces.forEach(c => {
     const v = p[c.id]; if (!v || typeof v !== 'object' || !isNum(v.x) || !isNum(v.y)) return;
-    out[c.id] = { x: Math.round(Math.min(st.w - lo, Math.max(lo, v.x))), y: Math.round(Math.min(st.h - lo, Math.max(lo, v.y))) };
+    const bx = boxOf(c);
+    out[c.id] = { x: Math.round(Math.min(st.w - bx.w / 2, Math.max(bx.w / 2, v.x))), y: Math.round(Math.min(st.h - bx.h / 2, Math.max(bx.h / 2, v.y))) };
     if (c.turn) out[c.id].a = ang(isNum(v.a) ? v.a : c.a || 0); // a piece that can turn always carries its angle; one that cannot never does
   });
   return out;

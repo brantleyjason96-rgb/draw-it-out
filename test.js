@@ -1339,7 +1339,7 @@ await test('pieces: the scatter puts every piece on the stage, apart, and away f
     assert.deepEqual(SK.modelIssues(m), [], stage + ': no problems listed');
   }
   const m = SK.cleanModel(MODEL().model); m.pieces[1].x = m.pieces[0].x; m.pieces[1].y = m.pieces[0].y; m.pieces[2].label = ' ';
-  assert.ok(SK.modelIssues(m).some(t => /on top of each other/.test(t)));
+  assert.ok(SK.modelWarnings(m).some(t => /overlap at the start/.test(t)), 'overlapping pieces are a warning'); assert.ok(!SK.modelIssues(m).some(t => /overlap/.test(t)), 'and do not stop the question');
 });
 
 await test('pieces: a pasted or imported question with no start positions is scattered and says so', async () => {
@@ -1484,7 +1484,7 @@ await test('turning: the editor rules scatter turning pieces away from the answe
   const m = SK.cleanModel(TURNQ().model); SK.scatter(m);
   m.pieces.filter(p => p.turn).forEach(p => assert.ok(SK.angDiff(p.a, p.ka) >= 90, 'starts 90 or more degrees from its answer, got ' + SK.angDiff(p.a, p.ka)));
   assert.deepEqual(SK.modelIssues(m), []);
-  m.pieces[1].a = m.pieces[1].ka + 10; assert.ok(SK.modelIssues(m).some(t => /already faces the right way/.test(t)));
+  m.pieces[1].a = m.pieces[1].ka + 10; assert.ok(SK.modelWarnings(m).some(t => /already faces the right way/.test(t))); assert.deepEqual(SK.modelIssues(m), [], 'a warning, not a reason to refuse it');
   m.pieces[1].a = 270; m.pieces[0].art = 'img'; m.pieces[0].img = null; assert.ok(SK.modelIssues(m).some(t => /has no picture yet/.test(t)));
 });
 
@@ -1521,7 +1521,7 @@ await test('starter set Place It!: seasons, layers, moon phases and three plate 
     const c = SK.checkQuestion(q); assert.deepEqual([c.problems, c.notes], [[], []], q.question.slice(0, 40));
     const m = c.q.model, right = Object.fromEntries(m.pieces.map(p => [p.id, { x: p.kx, y: p.ky, ...(p.turn ? { a: p.ka } : {}) }]));
     assert.equal(SK.modelCheck(m, right).right, m.pieces.length, 'every piece is right at its answer spot: ' + q.question.slice(0, 40));
-    assert.equal(SK.modelCheck(m, {}).right, 0); assert.deepEqual(SK.modelIssues(m), []);
+    assert.equal(SK.modelCheck(m, {}).right, 0); assert.deepEqual(SK.modelIssues(m), []); assert.deepEqual(SK.modelWarnings(m), [], 'a shipped starter has nothing worth a look');
     m.pieces.forEach(p => assert.ok(!SK.modelCheck(m, { [p.id]: { x: p.x, y: p.y, ...(p.turn ? { a: p.a } : {}) } }).ok[p.id], 'a piece does not start already right: ' + p.label));
   }
   const arrows = set.questions.slice(3).map(q => q.model.pieces.map(p => p.ka)); assert.deepEqual(arrows, [[0, 180], [180, 0], [270, 90]], 'convergent, divergent, transform');
@@ -1533,6 +1533,60 @@ await test('diagrams: Scatter keeps pieces off the middle of a diagram (the Sun,
     m.pieces.forEach(p => assert.ok(Math.hypot(p.x - av[0].x, p.y - av[0].y) >= av[0].r, bg + '/' + stage + ': ' + p.label + ' starts on the diagram'));
   }
   assert.deepEqual(SK.bgAvoid('graph', SK.cleanModel(MODEL().model)), [], 'a plain background has nothing to avoid');
+});
+
+// ---- piece sizes, and a jigsaw whose pieces are close together ----
+await test('sizes: a piece is as big as its size setting says, and the browser and the server agree where it may sit', async () => {
+  assert.deepEqual(SK.boxOf({ art: 'earth' }), { w: 108, h: 108 }); assert.deepEqual(SK.boxOf({ art: 'earth', s: 2 }), { w: 216, h: 216 });
+  assert.deepEqual(SK.boxOf({ art: 'card', s: 1 }), { w: 140.4, h: 86.4 }); assert.equal(SK.boxOf({ art: 'earth', s: 99 }).w, 432, 'the biggest is 400%'); assert.equal(SK.boxOf({ art: 'earth', s: 0.01 }).w, 54, 'the smallest is 50%');
+  assert.deepEqual(SK.boxOf({ art: 'img', s: 2, ar: 2 }), { w: 216, h: 108 }, 'a wide picture: its long side is the size'); assert.deepEqual(SK.boxOf({ art: 'img', s: 1, ar: 0.5 }), { w: 54, h: 108 });
+  assert.deepEqual(SK.boxOf({ art: 'img', s: 1 }), { w: 108, h: 108 }, 'no shape known: a square');
+  const input = { question: 'Continents', bg: 'blank', model: { pieces: [
+    { id: 1, label: 'Africa', art: 'img', img: PNG, ar: 0.8, s: 3, x: 5000, y: -50, kx: 5000, ky: 9999 },
+    { id: 2, label: 'Small', art: 'earth', s: 0.01, x: 0, y: 0, kx: 0, ky: 0 }, { id: 3, label: 'Big card', art: 'card', s: 2.337, x: 100, y: 100, kx: 5000, ky: 0 }] } };
+  const code = 'SIZEA', h = client(); await h.ready; h.send({ t: 'host', code, key: KEY }); await h.wait('state');
+  const s = client(); await s.ready; s.send({ t: 'join', code, name: 'Xan', bw: 800, bh: 500 }); await s.wait('joined'); s.clear();
+  h.send({ t: 'q', ...input }); await sleep(100);
+  const srv = h.last('q'), mine = SK.cleanModel(input.model);
+  assert.deepEqual(mine.pieces.map(p => [p.id, p.s, p.ar, p.x, p.y]), srv.q.model.pieces.map(p => [p.id, p.s, p.ar, p.x, p.y]), 'size, shape and where the whole piece may sit agree');
+  assert.deepEqual(Object.fromEntries(mine.pieces.map(p => [p.id, { x: p.kx, y: p.ky }])), srv.sk.pos);
+  const p1 = mine.pieces[0], b1 = SK.boxOf(p1); assert.equal(p1.s, 3); assert.equal(p1.ar, 0.8); assert.equal(p1.x, 1000 - Math.round(b1.w / 2), 'the whole of a big piece stays on the board, on the right'); assert.equal(p1.y, Math.round(b1.h / 2), 'and at the top');
+  assert.equal(mine.pieces[1].s, 0.5); assert.equal(mine.pieces[2].s, 2.35, 'sizes are kept to 5%');
+  assert.ok(!('s' in SK.cleanModel({ pieces: [{ id: 1, label: 'a', art: 'earth', s: 1, x: 1, y: 1, kx: 1, ky: 1 }, { id: 2, label: 'b', x: 1, y: 1, kx: 1, ky: 1 }] }).pieces[0]), 'a normal size is not stored');
+  const sq = s.last('q').q.model.pieces; assert.equal(sq[0].s, 3); assert.equal(sq[0].ar, 0.8); assert.ok(!('s' in sq[0] && sq[0].s === 1)); assert.ok(!('kx' in sq[0]), 'the size is public, the answer spot is not');
+  // a student's piece is kept whole on the board using its size
+  s.send({ t: 'place', p: { 1: { x: 5000, y: 5000 }, 2: { x: -9, y: -9 } } }); await sleep(100);
+  const pl = h.last('pl').p; assert.deepEqual(pl[1], { x: 1000 - Math.round(b1.w / 2), y: 625 - Math.round(b1.h / 2) }); assert.deepEqual(pl[2], { x: 27, y: 27 }, 'a half-size piece may sit closer to the edge');
+  [h, s].forEach(c => c.ws.close());
+});
+
+await test('sizes: pieces that are close together are a warning, not a reason to refuse the question (continents that fit together)', () => {
+  const jig = { stage: 'wide', tol: 20, pieces: [
+    { id: 1, label: 'South America', art: 'img', img: PNG, ar: 0.6, s: 2.5, x: 120, y: 450, kx: 380, ky: 330 },
+    { id: 2, label: 'Africa', art: 'img', img: PNG, ar: 0.85, s: 3, x: 850, y: 450, kx: 470, ky: 300 },
+    { id: 3, label: 'Antarctica', art: 'img', img: PNG, ar: 1.6, s: 2, x: 500, y: 560, kx: 520, ky: 440 }] };
+  const m = SK.cleanModel(jig); assert.ok(m, 'saved'); assert.equal(m.tol, 20, 'Very tight (20) is allowed');
+  assert.deepEqual(SK.modelIssues(m), [], 'nothing stops it from being saved');
+  const w = SK.modelWarnings(m); assert.ok(w.some(t => /answer spots closer/.test(t)) === (Math.hypot(380 - 470, 330 - 300) < 20), 'warned only when they are closer than "how close counts"');
+  m.tol = 150; assert.ok(SK.modelWarnings(m).some(t => /answer spots closer/.test(t) && /fine for a jigsaw/.test(t)), 'a loose setting warns, and says it is fine for a jigsaw');
+  assert.deepEqual(SK.modelIssues(m), [], 'still nothing stops it');
+  m.pieces[1].x = m.pieces[0].x; m.pieces[1].y = m.pieces[0].y; assert.ok(SK.modelWarnings(m).some(t => /overlap at the start/.test(t))); assert.deepEqual(SK.modelIssues(m), []);
+  m.pieces[0].label = ' '; assert.ok(SK.modelIssues(m).some(t => /no label/.test(t)), 'a piece with no label still stops it');
+  const t = SK.cleanModel({ ...jig, tol: 5 }); assert.equal(t.tol, 20, 'closer than 20 is held at 20');
+});
+
+await test('sizes: Scatter works for big pieces too, by asking for less room when the stage is crowded', () => {
+  const m = SK.cleanModel({ pieces: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, label: 'P' + i, art: 'img', img: PNG, ar: 1, s: 2.5, x: 500, y: 300, kx: 150 + (i % 3) * 350, ky: 150 + Math.floor(i / 3) * 330 })) });
+  SK.scatter(m); const st = SK.stageOf(m);
+  m.pieces.forEach(p => { const b = SK.boxOf(p); assert.ok(p.x >= b.w / 2 - 1 && p.x <= st.w - b.w / 2 + 1 && p.y >= b.h / 2 - 1 && p.y <= st.h - b.h / 2 + 1, 'on the board: ' + p.label + ' ' + p.x + ',' + p.y); });
+  assert.equal(new Set(m.pieces.map(p => p.x + ',' + p.y)).size, 6, 'six different start spots');
+  const small = SK.cleanModel({ pieces: [{ id: 1, label: 'a', art: 'earth', x: 1, y: 1, kx: 200, ky: 200 }, { id: 2, label: 'b', art: 'earth', x: 1, y: 1, kx: 800, ky: 400 }] }); SK.scatter(small);
+  small.pieces.forEach(p => small.pieces.forEach(q => assert.ok(Math.hypot(p.x - q.kx, p.y - q.ky) >= 108 * 1.3 - 1, 'normal-size pieces are scattered as before')));
+});
+
+await test('sizes: a pasted or imported question keeps the size and shape of its pieces', () => {
+  const c = SK.checkQuestion({ question: 'Fit the continents', bg: 'blank', model: { spots: 'shown', pieces: [{ label: 'Africa', art: 'img', img: PNG, ar: 0.85, s: 3, kx: 500, ky: 300 }, { label: 'Europe', art: 'card', s: 0.8, kx: 520, ky: 120 }] } });
+  assert.deepEqual([c.problems, c.q.model.pieces[0].s, c.q.model.pieces[0].ar, c.q.model.pieces[1].s], [[], 3, 0.85, 0.8]);
 });
 
 await test('the Figtree font file is served as woff2', async () => {

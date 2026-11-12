@@ -31,17 +31,24 @@ const SK = {
   // ARTS: built-in pictures ('img' is the teacher's own picture, a data: image kept with the piece). The moon phases are as seen from Earth,
   // lit on the right (or on the left with -l). Angles are degrees, clockwise, 0 = the picture as drawn (an arrow points right).
   MODEL: { PIECES: 12, ARTS: ['earth', 'sun', 'moon', 'arrow', 'card', 'moon-new', 'moon-crescent', 'moon-quarter', 'moon-gibbous', 'moon-full', 'moon-crescent-l', 'moon-quarter-l', 'moon-gibbous-l', 'img'],
-    A: 108, TOL: [20, 150], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
+    A: 108, SIZE: [0.5, 4], AR: [0.2, 5], TOL: [20, 150], ATOL: [10, 90], IMG_MAX: 140000, IMG_TOTAL: 700000, STAGES: { wide: { w: 1000, h: 625 }, tall: { w: 625, h: 1000 } } },
   BGS: ['graph', 'lined', 'blank', 'photo', 'orbit', 'rings', 'phases', 'plates'], // page backgrounds; the last four are drawn diagrams (common.js)
   ang: v => ((Math.round(v) % 360) + 360) % 360,
   angDiff: (a, b) => { const d = (((a - b) % 360) + 360) % 360; return Math.min(d, 360 - d); },
   imgOk: s => typeof s === 'string' && s.length <= SK.MODEL.IMG_MAX && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(s),
   stageOf: m => SK.MODEL.STAGES[m && m.stage === 'tall' ? 'tall' : 'wide'],
+  // The size of a piece on the board, in stage units: its picture size (108) times its own size setting `s` (0.5 to 4). A text card is a wider
+  // note; a picture of your own takes its own shape (`ar` = width / height) with its long side at that size. The server has the same rule.
+  boxOf(p) {
+    const M = SK.MODEL, ok = v => typeof v === 'number' && isFinite(v), s = ok(p && p.s) ? Math.min(M.SIZE[1], Math.max(M.SIZE[0], p.s)) : 1;
+    if (p.art === 'card') return { w: M.A * 1.3 * s, h: M.A * .8 * s };
+    if (p.art === 'img' && ok(p.ar) && p.ar > 0) { const ar = Math.min(M.AR[1], Math.max(M.AR[0], p.ar)); return ar >= 1 ? { w: M.A * s, h: M.A * s / ar } : { w: M.A * s * ar, h: M.A * s }; }
+    return { w: M.A * s, h: M.A * s };
+  },
   // exact rules of the server's cleanModel. Returns null unless there are 2+ pieces with a label and an answer spot.
   cleanModel(m) {
     if (!m || typeof m !== 'object') return null;
-    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, num = v => typeof v === 'number' && isFinite(v);
-    const cx = v => Math.round(Math.min(st.w - lo, Math.max(lo, v))), cy = v => Math.round(Math.min(st.h - lo, Math.max(lo, v)));
+    const M = SK.MODEL, st = SK.stageOf(m), num = v => typeof v === 'number' && isFinite(v), cl = (v, a, b) => Math.min(b, Math.max(a, v));
     const pieces = [], seen = new Set(); let imgBytes = 0;
     (Array.isArray(m.pieces) ? m.pieces : []).slice(0, M.PIECES).forEach(p => {
       if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 1e6 || seen.has(p.id)) return;
@@ -49,8 +56,11 @@ const SK = {
       let art = M.ARTS.includes(p.art) ? p.art : 'card', img = null;
       if (art === 'img') { if (SK.imgOk(p.img) && imgBytes + p.img.length <= M.IMG_TOTAL) { img = p.img; imgBytes += img.length; } else art = 'card'; }
       seen.add(p.id);
+      const s = num(p.s) ? Math.round(cl(p.s, M.SIZE[0], M.SIZE[1]) * 20) / 20 : 1, ar = art === 'img' && num(p.ar) ? Math.round(cl(p.ar, M.AR[0], M.AR[1]) * 100) / 100 : null;
+      const bx = SK.boxOf({ art, s, ar }), cx = v => Math.round(cl(v, bx.w / 2, st.w - bx.w / 2)), cy = v => Math.round(cl(v, bx.h / 2, st.h - bx.h / 2));
       const o = { id: p.id, label, art, x: cx(p.x), y: cy(p.y), kx: cx(p.kx), ky: cy(p.ky), idea: SK.str(p.idea, 30) };
-      if (img) o.img = img;
+      if (s !== 1) o.s = s;
+      if (img) { o.img = img; if (ar) o.ar = ar; }
       if (p.turn === true) { o.turn = true; o.a = SK.ang(num(p.a) ? p.a : 0); o.ka = SK.ang(num(p.ka) ? p.ka : 0); }
       pieces.push(o);
     });
@@ -61,15 +71,20 @@ const SK = {
   // Used by the editor's Scatter button and for imported pieces that have no start position.
   // `avoid` = [{ x, y, r }]: parts of the background (a Sun, an Earth) that a piece should not start on top of; see bgAvoid.
   scatter(m, avoid) {
-    const M = SK.MODEL, st = SK.stageOf(m), lo = M.A / 2, P = m.pieces, far = M.A * 1.3, gap = M.A * 1.15, cand = [], av = avoid || [];
-    for (let x = lo + 10; x <= st.w - lo - 10; x += 60) for (let y = lo + 10; y <= st.h - lo - 10; y += 60) {
-      const d = Math.min(...P.map(p => Math.hypot(x - p.kx, y - p.ky)), ...av.map(a => Math.hypot(x - a.x, y - a.y) - a.r));
-      if (d >= far) cand.push({ x, y, d });
+    const M = SK.MODEL, st = SK.stageOf(m), P = m.pieces, av = avoid || [];
+    const big = M.A * Math.max(...P.map(p => Math.min(M.SIZE[1], Math.max(M.SIZE[0], p.s || 1)))), lo = big / 2; // sized for the biggest piece
+    let pick = [];
+    for (const f of [1, .8, .6, .4]) { // big pieces crowd the stage: ask for less room between them before giving up
+      const far = big * 1.3 * f, gap = big * 1.15 * f, cand = [];
+      for (let x = lo + 10; x <= st.w - lo - 10; x += 60) for (let y = lo + 10; y <= st.h - lo - 10; y += 60) {
+        const d = Math.min(...P.map(p => Math.hypot(x - p.kx, y - p.ky)), ...av.map(a => Math.hypot(x - a.x, y - a.y) - a.r));
+        if (d >= far) cand.push({ x, y, d });
+      }
+      cand.sort((a, b) => b.d - a.d);
+      pick = []; cand.forEach(c => { if (pick.length < P.length && pick.every(q => Math.hypot(c.x - q.x, c.y - q.y) >= gap)) pick.push(c); });
+      if (pick.length >= P.length) break;
     }
-    cand.sort((a, b) => b.d - a.d);
-    const pick = [];
-    cand.forEach(c => { if (pick.length < P.length && pick.every(q => Math.hypot(c.x - q.x, c.y - q.y) >= gap)) pick.push(c); });
-    while (pick.length < P.length) pick.push({ x: lo + 10 + pick.length * 20, y: st.h - lo - 10 }); // a crowded stage: stack along the bottom rather than fail
+    while (pick.length < P.length) pick.push({ x: Math.min(st.w - lo, lo + 10 + pick.length * 20), y: st.h - lo - 10 }); // a crowded stage: stack along the bottom rather than fail
     const ord = SK.order(P.map(p => ({ id: p.id })), 'scatter' + P.length, true).map(c => c.id);
     P.forEach((p, i) => { const c = pick[ord.indexOf(p.id)]; p.x = Math.round(c.x); p.y = Math.round(c.y); if (p.turn) p.a = SK.ang((p.ka || 0) + 90 + (p.id * 53) % 181); }); // a turning piece starts 90 to 270 degrees from its answer
     return m;
@@ -79,22 +94,29 @@ const SK = {
     const st = SK.stageOf(m), k = Math.min(st.w / 1000, st.h / 625), r = { orbit: 70, phases: 60, rings: 220 }[bg];
     return r ? [{ x: st.w / 2, y: st.h / 2, r: r * k }] : [];
   },
-  // plain-language problems with a draft model, shown in the editor; an empty list means it can be saved
+  // Problems that stop a question from working, in plain words, shown in the editor. An empty list means it can be saved.
+  // Things worth a look that do NOT stop it (pieces close together, a piece that already faces the answer) are in modelWarnings.
   modelIssues(m) {
-    const out = [], P = m.pieces, A = SK.MODEL.A;
+    const out = [], P = m.pieces;
     if (P.length < 2) out.push('Add at least 2 pieces.');
     if (P.some(p => !p.label.trim())) out.push('A piece has no label.');
     const nm = p => '“' + (p.label.trim() || 'A piece') + '”';
+    const noPic = P.find(p => p.art === 'img' && !SK.imgOk(p.img)); if (noPic) out.push(nm(noPic) + ' has no picture yet. Choose a picture, or pick a different one from the list.');
+    if (P.reduce((n, p) => n + (p.art === 'img' && SK.imgOk(p.img) ? p.img.length : 0), 0) > SK.MODEL.IMG_TOTAL) out.push('The pictures are too big together. Remove one, or use smaller pictures.');
+    return out;
+  },
+  // Worth a look, but the question works and can be saved. A jigsaw (continents that fit together) has pieces whose answer spots are close by nature.
+  modelWarnings(m) {
+    const out = [], P = m.pieces, big = p => { const b = SK.boxOf(p); return Math.max(b.w, b.h); };
+    const nm = p => '“' + (p.label.trim() || 'A piece') + '”';
     outer: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-      if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < A * .9) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' sit on top of each other at the start. Drag one in Student start, or press Scatter.'); break outer; }
+      if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < .9 * (big(P[i]) + big(P[j])) / 2) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' overlap at the start, so one hides the other. Drag one in Student start, or press Scatter.'); break outer; }
     }
     outer2: for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < m.tol) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”. Move one, or choose Tight.'); break outer2; }
+      if (Math.hypot(P[i].kx - P[j].kx, P[i].ky - P[j].ky) < m.tol) { out.push(nm(P[i]) + ' and ' + nm(P[j]) + ' have answer spots closer than “how close counts”, so a piece put on the other’s spot would also count as right. That is fine for a jigsaw; choose Tight or Very tight to be stricter.'); break outer2; }
     }
     const atol = m.atol || 30, face = P.find(p => p.turn && SK.angDiff(p.a || 0, p.ka || 0) <= atol);
     if (face) out.push(nm(face) + ' already faces the right way at the start. Turn it in Student start.');
-    const noPic = P.find(p => p.art === 'img' && !SK.imgOk(p.img)); if (noPic) out.push(nm(noPic) + ' has no picture yet. Choose a picture, or pick a different one from the list.');
-    if (P.reduce((n, p) => n + (p.art === 'img' && SK.imgOk(p.img) ? p.img.length : 0), 0) > SK.MODEL.IMG_TOTAL) out.push('The pictures are too big together. Remove one, or use smaller pictures.');
     return out;
   },
   // Is each placed piece within tol of its answer spot (and, for a piece that turns, facing within atol of the answer)? m = full model; pl = { pieceId: { x, y, a? } } (only pieces the student moved).
@@ -244,7 +266,7 @@ const SK = {
             if (p.art != null && !M.ARTS.includes(p.art)) notes.push('the picture "' + SK.str(p.art, 20) + '" is not one of ' + M.ARTS.filter(a => a !== 'img').join(', ') + ', so the piece became a text card');
             if (p.art === 'img' && !SK.imgOk(p.img)) notes.push('the own picture for "' + lb.slice(0, 24) + '" is not a PNG, JPEG or WebP under ' + Math.round(M.IMG_MAX / 1000) + ' KB, so the piece became a text card');
             if (!num(p.x) || !num(p.y) || (p.turn === true && !num(p.a))) noStart++;
-            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, img: p.img, turn: p.turn, a: p.a, ka: p.ka, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
+            pieces.push({ id: useIds ? p.id : i + 1, label: lb, art: p.art, img: p.img, ar: p.ar, s: p.s, turn: p.turn, a: p.a, ka: p.ka, x: num(p.x) ? p.x : p.kx, y: num(p.y) ? p.y : p.ky, kx: p.kx, ky: p.ky, idea: p.idea });
           });
           if (!problems.length) {
             model = SK.cleanModel({ ...m, pieces });

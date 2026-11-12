@@ -12,9 +12,9 @@ const MP = (() => {
   const angOf = p => { const q = pl[p.id]; return q && q.a != null ? q.a : p.a || 0; };
   const pieceById = id => (model ? model.pieces.find(p => p.id === id) : null);
   const nMoved = () => (model ? model.pieces.filter(p => pl[p.id]).length : 0);
-  const clampPos = (x, y) => { const s = MSTAGE[model.stage] || MSTAGE.wide; return { x: Math.round(Math.min(s.w - lo, Math.max(lo, x))), y: Math.round(Math.min(s.h - lo, Math.max(lo, y))) }; };
+  const clampPos = (x, y, p) => { const s = MSTAGE[model.stage] || MSTAGE.wide, b = pieceBox(p); return { x: Math.round(Math.min(s.w - b.w / 2, Math.max(b.w / 2, x))), y: Math.round(Math.min(s.h - b.h / 2, Math.max(b.h / 2, y))) }; };
   // one place that writes a piece's entry: a piece that can turn always carries its angle, one that cannot never does
-  const put = (p, x, y, a) => { const q = clampPos(x, y); if (p.turn) q.a = ((Math.round(a == null ? angOf(p) : a) % 360) + 360) % 360; pl[p.id] = q; };
+  const put = (p, x, y, a) => { const q = clampPos(x, y, p); if (p.turn) q.a = ((Math.round(a == null ? angOf(p) : a) % 360) + 360) % 360; pl[p.id] = q; };
   const redraw = () => { rev++; ctx.bump(); ctx.draw(); };
   function push(now) { // while dragging, about 8 updates a second; the last one always goes out
     const go = () => { clearTimeout(sendT); sendT = 0; ctx.send({ t: 'place', p: pl }); };
@@ -111,7 +111,7 @@ const MP = (() => {
     move(p) {
       if (!drag) return; const r = stageRect(model, ctx.W(), ctx.H()), pc = pieceById(drag.id);
       if (drag.rot) { const a = angleTo(posOf(pc), (p[0] - r.x) / r.k, (p[1] - r.y) / r.k); const q = posOf(pc); put(pc, q.x, q.y, Math.round(a / 5) * 5); }
-      else { const q = clampPos((p[0] - r.x) / r.k + drag.dx, (p[1] - r.y) / r.k + drag.dy); put(pc, q.x, q.y); }
+      else { put(pc, (p[0] - r.x) / r.k + drag.dx, (p[1] - r.y) / r.k + drag.dy); }
       drag.moved = true; ctx.draw(); push(false);
     },
     drop() {
