@@ -160,6 +160,37 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
 .tcard.dragging{opacity:.4}
 .tcard.over{outline:3px dashed var(--c-focus);outline-offset:2px}
 #tab-sets .menu button,#tamw .menu button{justify-content:flex-start;gap:10px;text-align:left}
+/* ===== Question sets library ===== */
+.lib{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start}
+.lrail{display:flex;flex-direction:column;gap:12px;position:sticky;top:12px;min-width:0}
+.lnav{display:flex;flex-direction:column;gap:2px}
+.lnav button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;border:0;background:none;border-radius:var(--r-md);font-weight:600;font-size:var(--fs-md);text-align:left;color:var(--c-ink)}
+.lnav button .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lnav button small{color:var(--mut);font-weight:600;font-size:var(--fs-sm)}
+.lnav button:hover{background:var(--c-fill)}
+.lnav button[aria-current=true]{background:var(--c-primary-tint);color:var(--c-primary-strong)}
+.lnav button[aria-current=true] small{color:inherit}
+.lnav button.add{color:var(--c-ink-2);font-weight:500}
+.lnav .lbl{padding:14px 12px 2px}
+#lviewsel{display:none;font-weight:700}
+.lmain{min-width:0;gap:14px}
+.lacts{display:flex;align-items:center;gap:8px}
+#newset{min-height:48px;padding:0 18px;gap:8px}
+.slist{background:#fff;border:1px solid var(--line);border-radius:var(--r-xl)}
+.srow2{position:relative;display:grid;grid-template-columns:44px minmax(0,1.5fr) minmax(0,1.1fr) 132px auto;gap:14px;align-items:center;padding:12px 8px 12px 16px;border-top:1px solid var(--line)}
+.srow2:first-child{border-top:0}
+.srow2 .snm{display:block;font-weight:700;font-size:var(--fs-lg);line-height:1.25;color:var(--c-ink);text-decoration:none;overflow-wrap:anywhere}
+.srow2 .snm:hover{text-decoration:underline}
+.srow2 .smix{font-size:var(--fs-sm);color:var(--mut)}
+.srow2 .tgrow{margin-top:0}
+.srow2 .sed{font-size:var(--fs-sm);color:var(--mut)}
+.srow2 .sacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.srow2 .sacts .b{text-decoration:none;gap:6px}
+.srow2 .tgmatch{margin-top:8px}
+.lempty{padding:28px 20px;text-align:center;color:var(--mut);font-size:var(--fs-md);display:flex;flex-direction:column;align-items:center;gap:12px}
+@media(max-width:1100px){.srow2{grid-template-columns:44px minmax(0,1fr) auto}.srow2 .stags{grid-column:2/4;grid-row:2}.srow2 .sed{display:none}}
+@media(max-width:900px){.lib{grid-template-columns:1fr;gap:16px}.lrail{position:static}.lnav{display:none}#lviewsel{display:block}}
+@media(max-width:560px){.srow2{grid-template-columns:44px minmax(0,1fr);padding-right:16px}.srow2 .stags{grid-column:1/3}.srow2 .sacts{grid-column:1/3;grid-row:3;justify-content:flex-start}.srow2 .sacts .b{flex:1}}
 </style>
 </head>
 <body>
@@ -201,19 +232,26 @@ h1{font-size:var(--fs-4xl);letter-spacing:-.01em}
   <div id="dashbody" aria-live="polite"></div>
  </div>
 
- <div id="tab-sets" hidden style="display:flex;flex-direction:column;gap:26px">
-  <section class="sec">
+ <!-- Question sets: a library. Folders and views down the side, one list of sets, one "New set" button. -->
+ <div id="tab-sets" hidden class="lib">
+  <aside class="lrail" aria-label="Browse your question sets">
+   <input class="inp" id="lsearch" type="search" placeholder="Search sets and questions" aria-label="Search sets and questions" autocomplete="off">
+   <select class="inp" id="lviewsel" aria-label="Show"></select>
+   <nav class="lnav" id="lnav" aria-label="Folders and views"></nav>
+  </aside>
+  <section class="sec lmain">
    <div class="sech">
-    <div class="lbl">Your question sets</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b pri" id="newset">+ New set</button><button class="b" id="aibtn" title="Write a prompt for any AI tool, then paste its answer back here">Build with AI</button><button class="b" id="tagsbtn" title="See, rename, merge or delete your tags">Tags</button><span style="position:relative"><button class="b" id="newbtn" aria-haspopup="true">New <svg data-i="chev" class="sm"></svg></button></span></div>
-    <input type="file" id="impfile" accept=".json,application/json" hidden><button id="newfolder" hidden></button>
+    <div style="min-width:0"><h2 id="lh" style="font-size:var(--fs-2xl);overflow-wrap:anywhere"></h2><div class="mut" id="lsub" style="font-size:var(--fs-md)"></div></div>
+    <div class="lacts"><span id="lfmenuw" style="position:relative" hidden><button class="dots" id="lfmenu" aria-haspopup="true" aria-label="Folder options" title="Folder options"><svg data-i="dots"></svg></button></span><span style="position:relative"><button class="b pri" id="newset" aria-haspopup="true"><svg data-i="plus"></svg>New set<svg data-i="chev" class="sm"></svg></button></span></div>
+    <input type="file" id="impfile" accept=".json,application/json" hidden>
    </div>
-   <div id="tagfilter" class="tgfilter" hidden role="group" aria-label="Filter question sets by tag"></div>
-   <div class="grid" id="sets"></div>
-  </section>
-  <section class="sec">
-   <div class="sech"><h2 style="font-size:var(--fs-2xl)">Starter sets</h2><div class="filters" id="sfilter" role="group" aria-label="Subject"></div></div>
-   <div class="shelf" id="shelf"></div>
+   <div id="tagfilter" class="tgfilter" hidden role="group" aria-label="Your tags"></div>
+   <div id="sets"></div>
+   <div id="shelfwrap" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="filters" id="sfilter" role="group" aria-label="Subject"></div>
+    <div class="shelf" id="shelf"></div>
+   </div>
+   <div class="sr" id="llive" role="status"></div>
   </section>
  </div>
 
@@ -361,18 +399,39 @@ async function addClass() {
   const c = newPeriod(name); renderClasses(); toast('Added "' + name + '". Code ' + c + '.');
 }
 
-const fcoll = () => { try { return JSON.parse(store.do_fcollapsed || '{}') || {}; } catch { return {}; } };
-function setCard(s) {
-  const c = el('div', { className: 'card setc' });
-  const band = el('div', { className: 'band' }); band.style.background = tileOf(s);
-  const nSort = s.questions.filter(q => q.kind === 'sort').length, mix = el('div', { className: 'mix' }, ...(nSort < s.questions.length ? [el('span', { className: 'chip', textContent: (s.questions.length - nSort) + ' Draw' })] : []), ...(nSort ? [el('span', { className: 'chip', textContent: nSort + ' Sort' })] : []));
-  const hd = el('div', { className: 'hd' }, el('div', { style: 'min-width:0' }, el('div', { textContent: s.name, style: 'font-weight:700;font-size:var(--fs-lg);line-height:1.2;overflow-wrap:anywhere' }), el('div', { className: 'mut', textContent: s.questions.length + ' question' + (s.questions.length === 1 ? '' : 's'), style: 'font-size:var(--fs-sm)' })));
-  const mv = el('button', { className: 'b', title: 'Move to a folder', 'aria-label': 'Move to a folder', onclick: () => folderPicker(s, renderSets), style: 'min-width:48px;padding:0 10px' }, icoEl('folder'));
-  mv.setAttribute('aria-label', 'Move "' + s.name + '" to a folder');
-  const btns = el('div', { style: 'display:flex;gap:8px' }, el('a', { className: 'b', textContent: 'Edit', href: '/sets?id=' + s.id, style: 'flex:1;text-decoration:none' }), el('button', { className: 'b', textContent: 'Share link', style: 'flex:1', onclick: () => copyShareLink(s) }), mv);
-  const tg = setTagChips(s); if (tg) c.append(band, hd, mix, tg, btns); else c.append(band, hd, mix, btns);
-  if (tagFilter) { const ms = s.questions.filter(q => SK.tagsOf(q, s).some(t => SK.tagKey(t) === tagFilter)); c.classList.add('filtered'); const box = el('div', { className: 'tgmatch' }, el('b', { textContent: ms.length + ' of ' + s.questions.length + ' questions match' }), ...ms.slice(0, 3).map(q => el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' })), ...(ms.length > 3 ? [el('small', { className: 'mut', textContent: 'and ' + (ms.length - 3) + ' more' })] : [])); c.insertBefore(box, btns); }
-  return c;
+// ---- Question sets library: one row per set ----
+// view: 'all' | 'recent' | 'none' (not in a folder) | 'f:<folder id>' | 'starters' | 'tags'. It is remembered, so the editor's way back lands where you were.
+let view = store.do_libview || 'all', search = '';
+const viewFolder = () => (view.startsWith('f:') ? folderById(view.slice(2)) : null);
+function setView(v, keepSearch) { view = v; try { store.do_libview = v; } catch {} if (v !== 'tags') tagFilter = ''; if (!keepSearch) { search = ''; $('#lsearch').value = ''; } renderSets(); if (v === 'starters') renderShelf(); }
+const qHit = (q, t) => plain(q.question).toLowerCase().includes(t);
+const setHit = (s, t) => s.name.toLowerCase().includes(t) || (s.tags || []).some(x => tagLabel(x).toLowerCase().includes(t)) || s.questions.some(q => qHit(q, t) || (q.tags || []).some(x => tagLabel(x).toLowerCase().includes(t)));
+function setRow(s) {
+  const r = el('div', { className: 'srow2' }), tile = el('div', { className: 'tile' }); tile.style.background = tileOf(s);
+  const info = el('div', { style: 'min-width:0' }, el('a', { className: 'snm', href: '/sets?id=' + s.id, textContent: s.name }), el('div', { className: 'smix', textContent: setMixText(s) }));
+  const t = search.trim().toLowerCase();
+  const ms = tagFilter ? s.questions.filter(q => SK.tagsOf(q, s).some(x => SK.tagKey(x) === tagFilter)) : t ? s.questions.filter(q => qHit(q, t)) : [];
+  if (ms.length) info.append(el('div', { className: 'tgmatch' }, el('b', { textContent: ms.length + ' of ' + s.questions.length + ' questions match' }), ...ms.slice(0, 3).map(q => el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' })), ...(ms.length > 3 ? [el('small', { className: 'mut', textContent: 'and ' + (ms.length - 3) + ' more' })] : [])));
+  const dots = el('button', { className: 'dots', title: 'More for this set', onclick: e => setMenu(s, r, e) }, icoEl('dots')); dots.setAttribute('aria-label', 'More for ' + s.name); dots.setAttribute('aria-haspopup', 'true');
+  const open = el('a', { className: 'b', textContent: s.questions.length ? 'Open' : 'Add questions', href: '/sets?id=' + s.id }); open.setAttribute('aria-label', (s.questions.length ? 'Open ' : 'Add questions to ') + s.name);
+  const acts = el('div', { className: 'sacts' }, open);
+  if (s.questions.length) { const tb = el('button', { className: 'b', title: 'Open a class with this set loaded', onclick: () => teachSet(s) }, icoEl('play', 'sm'), 'Teach'); tb.setAttribute('aria-label', 'Teach with ' + s.name); acts.append(tb); }
+  acts.append(dots);
+  r.append(tile, info, el('div', { className: 'stags' }, setTagChips(s) || ''), el('div', { className: 'sed', textContent: editedText(s.edited) }), acts);
+  return r;
+}
+function setMenu(s, row, e) {
+  e.stopPropagation(); const had = menu; closeMenu(); if (had && had.dataset.set === s.id) return;
+  menu = el('div', { className: 'menu' }); menu.dataset.set = s.id; menu.style.cssText = 'top:56px;right:8px;min-width:230px';
+  const add = (ic, t, f, cls) => menu.append(el('button', { className: cls || '', onclick: ev => { ev.stopPropagation(); closeMenu(); f(); } }, icoEl(ic, 'sm'), ' ' + t));
+  add('edit', 'Rename', () => renameSetDialog(s, renderSets));
+  add('dup', 'Make a copy', () => { const c = copySet(s); renderSets(); toast('Made "' + c.name + '".'); });
+  add('folder', 'Move to a folder…', () => folderPicker(s, renderSets));
+  add('link', 'Share link', () => copyShareLink(s));
+  add('file', 'Export as a file', () => exportSets([s]));
+  menu.append(el('hr'));
+  add('trash', 'Delete', () => deleteSetDialog(s, () => { renderSets(); renderShelf(); toast('Deleted "' + s.name + '".'); }), 'danger');
+  row.append(menu); menu.querySelector('button').focus();
 }
 // ---- tags on the Question sets tab: chips on each set, a filter, and the Tags dialog ----
 let tagFilter = ''; // a tag key, or '' for all sets
@@ -382,19 +441,17 @@ function setTagChips(s) {
   const untagged = s.questions.filter(q => !SK.tagsOf(q, s).length).length;
   if (!n.size && !untagged) return null;
   const top = [...n.entries()].sort((a, b) => b[1].c - a[1].c), row = el('div', { className: 'tgrow tgset' });
-  top.slice(0, 5).forEach(([k, o]) => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === k ? ' on' : ''), textContent: o.label, title: 'Show only sets and questions tagged ' + o.label }); b.setAttribute('aria-pressed', tagFilter === k ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === k ? '' : k; renderSets(); }; row.append(b); });
-  if (top.length > 5) row.append(el('span', { className: 'tg none', textContent: '+' + (top.length - 5) + ' more', title: top.slice(5).map(x => x[1].label).join(', ') }));
+  top.slice(0, 2).forEach(([k, o]) => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === k ? ' on' : ''), textContent: o.label, title: 'Show every set and question tagged ' + o.label }); b.setAttribute('aria-pressed', tagFilter === k ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === k ? '' : k; setView('tags'); }; row.append(b); });
+  if (top.length > 2) row.append(el('span', { className: 'tg none', textContent: '+' + (top.length - 2), title: top.slice(2).map(x => x[1].label).join(', ') }));
   if (untagged) row.append(el('span', { className: 'tg none', textContent: untagged + ' with no tag', title: 'Open the set to add tags' }));
   return row;
 }
-function renderTagFilter() {
-  const box = $('#tagfilter'), use = tagUsage(); box.hidden = !use.length; box.replaceChildren();
-  if (!use.length) return;
+function renderTagFilter() { // the Tags view: every tag as a button; pick one to see the sets and questions that carry it
+  const box = $('#tagfilter'), use = tagUsage(); box.hidden = view !== 'tags' || !!search.trim(); box.replaceChildren();
+  if (box.hidden) return;
   if (tagFilter && !use.some(u => u.key === tagFilter)) tagFilter = '';
-  box.append(el('span', { className: 'mut', textContent: 'Filter by tag: ' }));
-  use.slice(0, 12).forEach(u => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === u.key ? ' on' : ''), textContent: u.label + ' · ' + u.qs }); b.setAttribute('aria-pressed', tagFilter === u.key ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === u.key ? '' : u.key; renderSets(); }; box.append(b); });
-  if (use.length > 12) box.append(el('span', { className: 'mut', textContent: '+' + (use.length - 12) + ' more in Tags' }));
-  if (tagFilter) box.append(el('button', { type: 'button', className: 'b sm', textContent: 'Show all sets', onclick: () => { tagFilter = ''; renderSets(); } }));
+  use.forEach(u => { const b = el('button', { type: 'button', className: 'tg' + (tagFilter === u.key ? ' on' : ''), textContent: u.label + ' · ' + u.qs }); b.setAttribute('aria-pressed', tagFilter === u.key ? 'true' : 'false'); b.onclick = () => { tagFilter = tagFilter === u.key ? '' : u.key; renderSets(); }; box.append(b); });
+  if (use.length) box.append(el('button', { type: 'button', className: 'b sm', textContent: 'Rename, merge or delete tags', onclick: tagsDialog }));
 }
 async function tagsDialog() {
   document.getElementById('tgdlg')?.remove();
@@ -419,42 +476,63 @@ async function tagsDialog() {
     el('p', { className: 'aibstep', textContent: 'Tags say what a question assesses. Matching ignores capitals and extra spaces.' }), el('div', { className: 'aibbody' }, list, live));
   d.addEventListener('close', () => d.remove()); paint(); document.body.append(d); d.showModal();
 }
-$('#tagsbtn').onclick = tagsDialog;
 function folderMenu(f, anchor) {
   if (menu) return closeMenu();
-  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:48px;right:0;min-width:240px';
   const add = (t, fn, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); fn(); } }));
-  add('New set in this folder…', () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'), f.id));
   add('Rename folder', async () => { const v = ((await askText('Folder name', f.name, { title: 'Rename this folder', required: 'Type a folder name', ok: 'Rename', max: 40 })) || '').trim(); if (v) { renameFolder(f, v); renderSets(); } });
   add('Delete folder', async () => {
     const n = sets.filter(x => x.folder === f.id).length;
     if (!await ask(n ? 'The ' + n + ' set' + (n === 1 ? '' : 's') + ' inside will be kept and moved out of the folder.' : '', { title: 'Delete the folder "' + f.name + '"?', ok: 'Delete folder', cancel: 'Keep folder', danger: true })) return;
-    deleteFolder(f); renderSets();
+    deleteFolder(f); setView('all');
   }, 'danger');
   anchor.append(menu);
 }
-function carries(s) { return !tagFilter || (s.tags || []).some(t => SK.tagKey(t) === tagFilter) || s.questions.some(q => SK.tagsOf(q, s).some(t => SK.tagKey(t) === tagFilter)); }
-function renderSets() {
-  closeMenu(); renderTagFilter();
-  const box = $('#sets'); box.innerHTML = ''; box.className = folders.length ? 'fstack' : 'grid';
-  if (tagFilter && !sets.some(carries)) box.append(el('div', { className: 'mut', textContent: 'No set has that tag.' }));
-  if (!folders.length) { sets.filter(carries).forEach(s => box.append(setCard(s))); return; }
-  const coll = fcoll();
-  setGroups().forEach(g => {
-    g = { ...g, sets: g.sets.filter(carries) }; if ((!g.folder || tagFilter) && !g.sets.length) return;
-    const id = g.folder ? g.folder.id : '_none', open = !coll[id];
-    const tog = el('button', { className: 'ftog', onclick: () => { const c = fcoll(); c[id] = open ? 1 : 0; try { store.do_fcollapsed = JSON.stringify(c); } catch {} renderSets(); } },
-      el('span', { className: 'chev' }, icoEl('chev', 'sm')), el('span', { className: 'fn' }, ...(g.folder ? [icoEl('folder', 'sm'), ' ' + g.folder.name] : ['Not in a folder'])), el('small', { textContent: g.sets.length + ' set' + (g.sets.length === 1 ? '' : 's') }));
-    tog.setAttribute('aria-expanded', open ? 'true' : 'false');
-    const head = el('div', { className: 'fhead' }, tog);
-    if (g.folder) { const dots = el('button', { className: 'dots', title: 'Folder options', onclick: e => { e.stopPropagation(); folderMenu(g.folder, head); } }, icoEl('dots')); dots.setAttribute('aria-label', 'Options for folder ' + g.folder.name); head.append(dots); }
-    const grp = el('div', { className: 'fgroup' }, head);
-    if (open) {
-      if (g.sets.length) { const gr = el('div', { className: 'grid' }); g.sets.forEach(x => gr.append(setCard(x))); grp.append(gr); }
-      else grp.append(el('div', { className: 'fempty', textContent: 'Empty. Use the folder button on a set to move it here.' }));
-    }
-    box.append(grp);
+const carries = s => (s.tags || []).some(t => SK.tagKey(t) === tagFilter) || s.questions.some(q => SK.tagsOf(q, s).some(t => SK.tagKey(t) === tagFilter));
+const startersLeft = () => { if (!starters) return null; const have = new Set(sets.map(s => s.name)); return starters.filter(s => !have.has(s.name)).length; };
+function renderRail() {
+  const loose = sets.filter(x => !folderById(x.folder)).length, sl = startersLeft(), nt = tagUsage().length;
+  const items = [{ v: 'all', t: 'All sets', n: sets.length }, { v: 'recent', t: 'Recently edited' },
+    { head: 'Folders' }, ...folders.map(f => ({ v: 'f:' + f.id, t: f.name, n: sets.filter(x => x.folder === f.id).length, ic: 'folder' })),
+    ...(folders.length ? [{ v: 'none', t: 'Not in a folder', n: loose }] : []), { add: 1 },
+    { head: 'More' }, { v: 'starters', t: 'Starter sets', n: sl, ic: 'star' }, { v: 'tags', t: 'Tags', n: nt, ic: 'tag' }];
+  const nav = $('#lnav'), sel = $('#lviewsel'); nav.replaceChildren(); sel.replaceChildren();
+  items.forEach(x => {
+    if (x.head) return nav.append(el('div', { className: 'lbl', textContent: x.head }));
+    if (x.add) return nav.append(el('button', { type: 'button', className: 'add', onclick: newFolder }, icoEl('plus', 'sm'), el('span', { className: 'nm', textContent: 'New folder' })));
+    const b = el('button', { type: 'button', onclick: () => setView(x.v) }, ...(x.ic ? [icoEl(x.ic, 'sm')] : []), el('span', { className: 'nm', textContent: x.t }), ...(x.n == null ? [] : [el('small', { textContent: x.n })]));
+    if (x.v === view && !search.trim()) b.setAttribute('aria-current', 'true');
+    nav.append(b); sel.append(el('option', { value: x.v, textContent: (x.ic === 'folder' ? 'Folder: ' : '') + x.t + (x.n == null ? '' : ' (' + x.n + ')') }));
   });
+  sel.append(el('option', { value: '__newf', textContent: '＋ New folder…' })); sel.value = view;
+}
+async function newFolder() {
+  const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) { renderRail(); return; }
+  const f = addFolder(n); if (!f) { renderRail(); return toast('That is the most folders.'); }
+  setView('f:' + f.id);
+}
+function renderSets() {
+  closeMenu();
+  if (view.startsWith('f:') && !viewFolder()) view = 'all'; // the folder was deleted
+  if (!['all', 'recent', 'none', 'starters', 'tags'].includes(view) && !viewFolder()) view = 'all';
+  renderRail(); renderTagFilter();
+  const t = search.trim().toLowerCase(), f = viewFolder(), box = $('#sets'); box.replaceChildren();
+  const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  let list, head, sub = '', empty = '';
+  if (t) { list = sets.filter(s => setHit(s, t)); head = 'Search: “' + search.trim() + '”'; sub = plural(list.length, 'set') + ' found in all your sets'; empty = 'Nothing matches. Search looks at set names, tags and question text.'; }
+  else if (view === 'starters') { list = null; head = 'Starter sets'; sub = 'Ready-made sets. Add makes your own copy, which you can edit freely.'; }
+  else if (view === 'tags') { const use = tagUsage(); list = tagFilter ? sets.filter(carries) : []; head = tagFilter ? 'Tagged “' + (tagLabels[tagFilter] || tagFilter) + '”' : 'Tags'; sub = !use.length ? '' : tagFilter ? plural(list.length, 'set') : 'Tags say what a question assesses. Pick one to see its sets and questions.'; empty = use.length ? '' : 'No tags yet. Add them in the question editor, or let Build with AI add them.'; }
+  else if (view === 'recent') { list = sets.filter(s => s.edited).sort((a, b) => b.edited - a.edited).slice(0, 8); head = 'Recently edited'; sub = list.length ? 'The sets you changed last' : ''; empty = 'Sets you create or change will show up here.'; }
+  else if (view === 'none') { list = sets.filter(x => !folderById(x.folder)); head = 'Not in a folder'; empty = 'Every set is in a folder.'; }
+  else if (f) { list = sets.filter(x => x.folder === f.id); head = f.name; empty = 'This folder is empty. Use New set, or “Move to a folder…” on a set’s ⋯ menu.'; }
+  else { list = sets; head = 'All sets'; }
+  if (list && !sub && list.length) sub = plural(list.length, 'set') + ' · ' + plural(list.reduce((a, s) => a + s.questions.length, 0), 'question');
+  $('#lh').textContent = head; $('#lsub').textContent = sub; $('#lsub').hidden = !sub;
+  $('#lfmenuw').hidden = !f || !!t; $('#shelfwrap').hidden = view !== 'starters' || !!t; box.hidden = !list;
+  if (!list) return;
+  if (list.length) { const sl = el('div', { className: 'slist' }); list.forEach(s => sl.append(setRow(s))); box.append(sl); }
+  else if (empty) box.append(el('div', { className: 'slist lempty' }, el('span', { textContent: empty })));
+  if (t) $('#llive').textContent = sub;
 }
 let shelfSubject = 'All';
 async function renderShelf() {
@@ -466,11 +544,12 @@ async function renderShelf() {
   const f = $('#sfilter'); f.textContent = '';
   subs.forEach(sub => { const b = el('button', { textContent: sub, onclick: () => { shelfSubject = sub; renderShelf(); } }); b.setAttribute('aria-pressed', sub === shelfSubject ? 'true' : 'false'); f.append(b); });
   const show = left.filter(s => shelfSubject === 'All' || s.subject === shelfSubject);
+  renderRail();
   if (!show.length) { box.append(el('div', { className: 'mut', textContent: left.length ? 'No starter sets in this subject.' : 'You have added every starter set.' })); return; }
   show.forEach(st => {
     const tile = el('div', { className: 'tile' }); tile.style.background = tileOf({ id: st.id });
     const t = el('div', {}, tile, el('div', { style: 'flex:1;min-width:0' }, el('div', { textContent: st.name, style: 'font-weight:700' }), el('div', { className: 'mut', textContent: st.questions.length + ' questions · ' + st.subject, style: 'font-size:var(--fs-sm)' })));
-    const b = el('button', { className: 'b', textContent: 'Add' }); b.setAttribute('aria-label', 'Add ' + st.name + ' to my sets'); b.onclick = () => { addSet(st.name, st.questions); toast('Added "' + st.name + '".'); renderSets(); renderShelf(); };
+    const b = el('button', { className: 'b', textContent: 'Add' }); b.setAttribute('aria-label', 'Add ' + st.name + ' to my sets'); b.onclick = () => { const a = addSet(st.name, st.questions, (viewFolder() || {}).id); renderSets(); renderShelf(); toast('Added "' + a.name + '" to your sets.'); };
     t.append(b); box.append(t);
   });
 }
@@ -496,16 +575,22 @@ function renderBackup() {
   $('#bkd').textContent = backupText() + '. A backup file lets you move to another computer.';
 }
 
-$('#newset').onclick = () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'));
-$('#newfolder').onclick = async () => { const n = ((await askText('Folder name', '', { title: 'New folder', required: 'Type a folder name', text: 'For example Unit 3: Plate Tectonics.', ok: 'Create', max: 40 })) || '').trim(); if (!n) return; if (!addFolder(n)) return toast('That is the most folders.'); renderSets(); };
-$('#aibtn').onclick = () => AIB.open(() => { renderSets(); renderShelf(); });
-$('#newbtn').onclick = e => {
+// One "New set" button: every way to start a set
+$('#newset').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
-  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:220px';
-  const add = (ic, t, fn) => menu.append(el('button', { onclick: () => { closeMenu(); fn(); } }, icoEl(ic, 'sm'), ' ' + t));
-  add('folder', 'New folder', () => $('#newfolder').click()); add('file', 'Import a file', () => $('#impfile').click());
-  $('#newbtn').parentElement.append(menu);
+  menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:calc(100% + 4px);right:0;min-width:300px';
+  const add = (ic, t, sub, fn) => menu.append(el('button', { onclick: () => { closeMenu(); fn(); } }, icoEl(ic, 'sm'), el('span', {}, t, el('small', { textContent: sub }))));
+  add('plus', 'Start blank', 'Name it, then add questions', () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new'), (viewFolder() || {}).id));
+  add('bolt', 'Build with AI', 'Write a prompt, paste the answer back', () => AIB.open(() => { renderSets(); renderShelf(); }));
+  add('star', 'Pick a starter set', 'Ready-made sets you can edit', () => setView('starters'));
+  add('file', 'Import a file', 'From Export, or from a colleague', () => $('#impfile').click());
+  $('#newset').parentElement.append(menu); menu.querySelector('button').focus();
 };
+$('#lfmenu').onclick = e => { e.stopPropagation(); const f = viewFolder(); if (f) folderMenu(f, $('#lfmenuw')); };
+let searchT = 0;
+$('#lsearch').oninput = e => { search = e.target.value; clearTimeout(searchT); searchT = setTimeout(renderSets, 120); };
+$('#lviewsel').onchange = e => { if (e.target.value === '__newf') newFolder(); else setView(e.target.value); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && menu) closeMenu(); });
 $('#impfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await importSetsFile(f)) { renderSets(); renderShelf(); } };
 $('#bkup').onclick = async () => { await doBackup(); renderBackup(); };
 $('#rst').onclick = () => $('#restore').click();
@@ -524,7 +609,7 @@ function setTab(t) {
   $$('.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'); });
   $('#tab-classes').hidden = t !== 'classes'; $('#tab-sets').hidden = t !== 'sets'; $('#tab-dash').hidden = t !== 'dash';
   $('#tab-teams').hidden = t !== 'teams';
-  const HD = { classes: ['Today', 'Pick a class to start, or set up team names and icons.'], dash: ['Dashboard', 'Who needs help, and where each class is on each tag.'], sets: ['Question sets', 'Your sets are ready to send. Add a starter set to get going.'], teams: ['Teams', 'Names and icons are saved on this computer.'] }[t];
+  const HD = { classes: ['Today', 'Pick a class to start, or set up team names and icons.'], dash: ['Dashboard', 'Who needs help, and where each class is on each tag.'], sets: ['Question sets', 'Build, organise and share the questions you send to a class.'], teams: ['Teams', 'Names and icons are saved on this computer.'] }[t];
   $('#pgh').textContent = HD[0]; $('#pgs').textContent = HD[1];
   const u = new URL(location.href);
   u.searchParams.set('tab', t);
