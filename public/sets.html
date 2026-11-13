@@ -59,7 +59,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .issue{font-size:var(--fs-sm);color:var(--amber-d);background:var(--amber);border:1px solid var(--amber-b);border-radius:var(--r-md);padding:8px 12px}
 .warnnote{font-size:var(--fs-sm);color:var(--c-ink-2);background:var(--c-fill);border-radius:var(--r-md);padding:8px 12px}
 .okmsg{font-size:var(--fs-sm);color:var(--c-good-strong);background:var(--c-good-soft);border-radius:var(--r-md);padding:8px 12px;font-weight:600}
-@media(max-width:1180px){.wrap{grid-template-columns:1fr}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
+@media(max-width:1180px){.wrap{grid-template-columns:minmax(0,1fr)}.list,.edit{border-right:0;border-bottom:1px solid var(--line)}.tb{padding:0 12px}}
 /* phones: the top bar wraps instead of pushing the page wider than the screen */
 @media(max-width:600px){
  .tb{height:auto;min-height:68px;flex-wrap:wrap;padding:8px 12px;gap:8px}
@@ -102,29 +102,60 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .q .tgrow{margin-top:0}
 .tg.set{background:var(--c-fill);color:var(--c-ink-2);font-weight:600}
 #tagsec{display:flex;flex-direction:column}
+/* ===== editor: the path back, the save status and one-line question rows ===== */
+.crumb{flex:1 1 auto}
+.crumb .cf{color:#fff;opacity:.75;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22ch}
+.crumb .cf:before{content:'›';margin-right:10px}
+.crumb .snm{min-width:0;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;border:1px solid transparent;border-radius:var(--r-md);background:none;color:#fff;font-weight:700;font-size:var(--fs-lg)}
+.crumb .snm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crumb .snm:hover{background:var(--dark2);border-color:var(--c-dark-line)}
+.crumb .snm svg{opacity:.7}
+.sstat{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:var(--fs-sm);white-space:nowrap;color:var(--c-good-on-dark)}
+.sstat.un{color:var(--c-warn-on-dark)}
+.q{position:relative;flex-direction:row;align-items:center;gap:8px;padding:6px 4px 6px 8px;border-width:1px}
+.q.on{box-shadow:inset 0 0 0 1px var(--pri)}
+.q .grab{flex:none;color:var(--c-control);cursor:grab;display:inline-grid;place-items:center}
+.q .x{flex:1;min-width:0;font-size:var(--fs-md);line-height:1.3}
+.q .tick{margin:0}
+.q .udot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--c-warn-fill)}
+.q .chip{flex:none}
+.q .tg.none{flex:none;font-size:var(--fs-xs);padding:2px 8px}
+.q .qm{flex:none;min-width:36px;padding:0}
+.q.dragging{opacity:.4}
+.q.over{outline:3px dashed var(--c-focus);outline-offset:1px}
+.q .menu{top:44px;right:0;min-width:220px}
+.q .menu button{justify-content:flex-start;gap:10px}
+@media(max-width:1180px){.sstat{display:none}}
+@media(max-width:600px){.crumb .cf{display:none}.savebar .b.big{padding:0 14px;white-space:nowrap}}
 </style>
 </head>
 <body>
 <div class="tb">
- <div class="grp">
-  <a class="b dk" id="back" href="/teacher" style="text-decoration:none"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg><span id="backt">Today</span></a>
-  <div style="font-weight:700;font-size:var(--fs-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sname"></div>
+ <div class="grp crumb">
+  <a class="b dk" id="back" href="/teacher?tab=sets" style="text-decoration:none"><svg data-i="back" class="sm"></svg><span id="backt">Question sets</span></a>
+  <span class="cf" id="crumbf" hidden></span>
+  <button class="snm" id="sname" title="Rename this set"></button>
  </div>
  <div class="grp" style="position:relative">
+  <span class="sstat" id="sstat" role="status"></span>
   <button class="b dk" id="share">Share link</button>
-  <button class="b dk" id="manage">Manage set <svg data-i="chev" class="sm"></svg></button>
+  <button class="b dk" id="manage" aria-haspopup="true">Manage set <svg data-i="chev" class="sm"></svg></button>
+  <button class="b pri" id="done">Done</button>
  </div>
 </div>
 <div class="wrap">
  <section class="col list">
-  <div>
-   <div class="lbl" id="cnt"></div>
-   <h2 style="font-size:var(--fs-2xl);margin-top:2px">Questions</h2>
-   <div class="tgrow" id="settags" style="align-items:center"></div>
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+   <div style="min-width:0">
+    <div class="lbl" id="cnt"></div>
+    <h2 style="font-size:var(--fs-2xl);margin-top:2px">Questions</h2>
+   </div>
+   <button class="b sm ter" id="tagmode" aria-pressed="false" title="Tick several questions, then add or remove a tag on all of them"><svg data-i="tag" class="sm"></svg>Tag several</button>
   </div>
+  <div class="tgrow" id="settags" style="align-items:center;margin-top:0"></div>
+  <button class="b" id="add"><svg data-i="plus"></svg>Add question</button>
   <div id="bulk" class="bulk" hidden role="region" aria-label="Tag several questions at once"></div>
-  <div id="qlist" style="display:flex;flex-direction:column;gap:8px"></div>
-  <button class="b" id="add">+ Add question</button>
+  <div id="qlist" style="display:flex;flex-direction:column;gap:6px"></div>
  </section>
 
  <section class="col edit">
@@ -178,9 +209,12 @@ body{min-height:100vh;display:flex;flex-direction:column}
     <div id="sissues" class="sec"></div>
    </div>
    <div class="savebar">
-    <button class="b pri big" id="save">Save question</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+     <button class="b pri big" id="save" style="flex:1">Save question</button>
+     <button class="b big" id="savenext" style="flex:1">Save and go to next</button>
+    </div>
     <div style="display:flex;gap:10px">
-     <button class="b" id="cancel" style="flex:1">Cancel</button>
+     <button class="b ter" id="cancel" style="flex:1">Discard changes</button>
      <button class="b" id="sendnow" style="flex:2" hidden title="Students see it now. It is not added to your set.">Send now, don't save</button>
     </div>
    </div>
@@ -223,8 +257,9 @@ body{min-height:100vh;display:flex;flex-direction:column}
 const sp = new URLSearchParams(location.search), classCode = (sp.get('code') || '').toUpperCase();
 let set = null, sel = -1, draft = null, dirty = false, pim = null;
 const BG = [['graph', 'Graph paper'], ['lined', 'Lined'], ['blank', 'Blank'], ['photo', 'Photo'], ['orbit', 'Orbit diagram'], ['rings', 'Earth’s layers'], ['phases', 'Moon orbit'], ['plates', 'Plate boundary']]; // the last four are drawn diagrams (common.js), made for pieces
-const backUrl = classCode ? '/class?code=' + classCode : '/teacher';
-$('#back').href = backUrl; $('#backt').textContent = classCode ? ((periodOf(classCode) || {}).name || 'Class') : 'Today';
+const backUrl = classCode ? '/class?code=' + classCode : '/teacher?tab=sets'; // back to where you came from: the class, or the Question sets library
+$('#back').href = backUrl; $('#backt').textContent = classCode ? ((periodOf(classCode) || {}).name || 'Class') : 'Question sets';
+const saveSet = () => { touchSet(set); return persistSets(); }; // every change made here stamps the set's "edited" date
 $('#sendnow').hidden = !classCode;
 
 loadSets().then(() => {
@@ -245,7 +280,15 @@ async function pick(i, force) {
 }
 function loadDraft() { $('#qin').innerHTML = clean(draft.question); tagbox.setTags(draft.tags || []); }
 function readDraft() { draft.question = clean($('#qin').innerHTML); }
-const markDirty = () => { dirty = true; };
+// What is saved and what is not: a line in the top bar, and a dot on the question being edited.
+function renderStatus() {
+  const st = $('#sstat'); st.classList.toggle('un', dirty);
+  st.replaceChildren(...(dirty ? [sel === -1 ? 'New question not saved yet' : 'Question ' + (sel + 1) + ' has unsaved changes'] : [icoEl('check', 'sm'), 'All questions saved']));
+  const row = $('#qlist .q.on'); if (row) { let d = row.querySelector('.udot'); if (dirty && !d) { d = el('span', { className: 'udot', title: 'Unsaved changes' }); row.querySelector('.x').after(d); } else if (!dirty && d) d.remove(); }
+  $('#elbl').textContent = (sel === -1 ? 'New question' : 'Question ' + (sel + 1) + ' of ' + set.questions.length) + (dirty ? ' · Unsaved changes' : '');
+  $('#cancel').disabled = !dirty && sel !== -1;
+}
+const markDirty = () => { if (!dirty) { dirty = true; renderStatus(); } };
 // ---- tags: the "What does this assess?" row, the chips on the list, set-wide tags, and tagging several questions at once ----
 const tagbox = tagInput({ id: 'qtags', label: 'What this question assesses', onChange: t => { if (t.length) draft.tags = t; else delete draft.tags; markDirty(); renderList(); } });
 $('#tagbox').append(tagbox);
@@ -257,16 +300,20 @@ function renderSetTags() {
 }
 async function editSetTags() {
   const v = await askTags('Tags for the whole set', set.tags || [], { label: 'Tags for the whole set', text: 'Every question in this set counts as carrying these tags, plus its own. Press Enter or comma after each tag.', ok: 'Save set tags' });
-  if (v === null) return; if (v.length) set.tags = v; else delete set.tags; persistSets(); renderAll(); toast('Set tags saved.');
+  if (v === null) return; if (v.length) set.tags = v; else delete set.tags; saveSet(); renderAll(); toast('Set tags saved.');
 }
+let tagMode = false; // "Tag several": tick boxes appear on the list only while this is on
 function renderBulk() {
   const box = $('#bulk'), n = picked.size, total = set.questions.length;
-  box.hidden = !total;
-  if (!total) return;
-  box.replaceChildren(el('b', { textContent: n ? n + ' selected' : 'Tick questions to tag several at once' }),
-    ...(n ? [el('button', { type: 'button', className: 'b sm pri', textContent: 'Add tag to selected', onclick: bulkAdd }), el('button', { type: 'button', className: 'b sm', textContent: 'Remove tag from selected', onclick: bulkRemove })] : []),
-    el('button', { type: 'button', className: 'b sm', textContent: n === total ? 'Clear' : 'Select all', onclick: () => { if (n === total) picked.clear(); else set.questions.forEach(q => picked.add(q)); renderList(); } }));
+  $('#tagmode').hidden = total < 2; $('#tagmode').setAttribute('aria-pressed', tagMode ? 'true' : 'false'); $('#tagmode').classList.toggle('on', tagMode);
+  box.hidden = !tagMode || !total;
+  if (box.hidden) return;
+  box.replaceChildren(el('b', { textContent: n ? n + ' selected' : 'Tick the questions to tag' }),
+    ...(n ? [el('button', { type: 'button', className: 'b sm pri', textContent: 'Add tag', onclick: bulkAdd }), el('button', { type: 'button', className: 'b sm', textContent: 'Remove tag', onclick: bulkRemove })] : []),
+    el('button', { type: 'button', className: 'b sm', textContent: n === total ? 'Clear' : 'Select all', onclick: () => { if (n === total) picked.clear(); else set.questions.forEach(q => picked.add(q)); renderList(); } }),
+    el('button', { type: 'button', className: 'b sm', textContent: 'Done tagging', onclick: () => $('#tagmode').click() }));
 }
+$('#tagmode').onclick = () => { tagMode = !tagMode; if (!tagMode) picked.clear(); renderList(); };
 function syncDraftTags() { if (sel >= 0 && set.questions[sel]) { const t = set.questions[sel].tags; if (t) draft.tags = t.slice(); else delete draft.tags; tagbox.setTags(draft.tags || []); } }
 async function bulkAdd() {
   const qs = [...picked]; if (!qs.length) return;
@@ -274,7 +321,7 @@ async function bulkAdd() {
   if (v === null) return; const t = canonTag(v); if (!t) return;
   let added = 0, full = 0;
   qs.forEach(q => { const cur = q.tags || []; if (cur.some(x => SK.tagKey(x) === SK.tagKey(t))) return; if (cur.length >= SK.MAX_TAGS) { full++; return; } q.tags = [...cur, t]; added++; });
-  persistSets(); picked.clear(); syncDraftTags(); renderList(); toast('Added "' + t + '" to ' + added + ' question' + (added === 1 ? '' : 's') + '.' + (full ? ' ' + full + ' already had ' + SK.MAX_TAGS + ' tags.' : ''));
+  saveSet(); picked.clear(); syncDraftTags(); renderList(); toast('Added "' + t + '" to ' + added + ' question' + (added === 1 ? '' : 's') + '.' + (full ? ' ' + full + ' already had ' + SK.MAX_TAGS + ' tags.' : ''));
 }
 async function bulkRemove() {
   const qs = [...picked]; if (!qs.length) return;
@@ -283,37 +330,66 @@ async function bulkRemove() {
   const v = await askText('Tag to remove', '', { title: 'Remove a tag from ' + qs.length + ' question' + (qs.length === 1 ? '' : 's'), text: 'Tags on the selected questions: ' + have.join(', ') + '. (A tag that comes from the whole set is removed in the set tags.)', ok: 'Remove tag', required: 'Type the tag to remove', max: SK.TAG_LEN + 10, list: have });
   if (v === null) return; const k = SK.tagKey(v); let n = 0;
   qs.forEach(q => { if ((q.tags || []).some(x => SK.tagKey(x) === k)) { q.tags = q.tags.filter(x => SK.tagKey(x) !== k); if (!q.tags.length) delete q.tags; n++; } });
-  persistSets(); picked.clear(); syncDraftTags(); renderList(); toast(n ? 'Removed "' + v.trim() + '" from ' + n + ' question' + (n === 1 ? '' : 's') + '.' : 'None of the selected questions had that tag.');
+  saveSet(); picked.clear(); syncDraftTags(); renderList(); toast(n ? 'Removed "' + v.trim() + '" from ' + n + ' question' + (n === 1 ? '' : 's') + '.' : 'None of the selected questions had that tag.');
 }
 
-function renderAll() { $('#sname').textContent = set.name; renderList(); renderRest(); }
+function renderAll() {
+  $('#sname').replaceChildren(el('span', { textContent: set.name }), icoEl('edit', 'sm')); $('#sname').setAttribute('aria-label', 'Rename the set ' + set.name);
+  const f = folderById(set.folder); $('#crumbf').hidden = !f || !!classCode; $('#crumbf').textContent = f ? f.name : '';
+  document.title = set.name + ' – Draw It Out';
+  renderList(); renderRest(); renderStatus();
+}
 const picked = new Set(); // questions ticked for "add a tag to several at once" (kept by object, so moving a question keeps its tick)
+let qmenu = null, dragFrom = -1;
+const closeQMenu = () => { if (qmenu) { qmenu.remove(); qmenu = null; } };
+document.addEventListener('click', e => { if (qmenu && !qmenu.contains(e.target)) closeQMenu(); });
+function questionMenu(i, row, e) {
+  e.stopPropagation(); const had = qmenu; closeQMenu(); if (had && had.dataset.i === String(i)) return;
+  qmenu = el('div', { className: 'menu' }); qmenu.dataset.i = i;
+  const add = (ic, t, f, cls, off) => { const b = el('button', { className: cls || '', disabled: !!off, onclick: ev => { ev.stopPropagation(); closeQMenu(); f(); } }, icoEl(ic, 'sm'), ' ' + t); qmenu.append(b); };
+  add('up', 'Move up', () => move(i, -1), '', i === 0);
+  add('down', 'Move down', () => move(i, 1), '', i === set.questions.length - 1);
+  add('tag', 'Add or change tags', async () => { await pick(i); focusTags(); });
+  add('dup', 'Make a copy', () => copyQuestion(i));
+  qmenu.append(el('hr'));
+  add('trash', 'Delete question', () => remove(i), 'danger');
+  row.append(qmenu); (qmenu.querySelector('button:not(:disabled)') || qmenu).focus();
+}
 function renderList() {
-  const n = set.questions.length; $('#cnt').textContent = set.name + ' · ' + n + ' question' + (n === 1 ? '' : 's');
+  closeQMenu();
+  const n = set.questions.length; $('#cnt').textContent = n + ' question' + (n === 1 ? '' : 's');
   const box = $('#qlist'); box.innerHTML = '';
   [...picked].forEach(q => { if (!set.questions.includes(q)) picked.delete(q); });
   set.questions.forEach((q, i) => {
-    const row = el('div', { className: 'q' + (i === sel ? ' on' : '') }); row.tabIndex = 0; row.setAttribute('role', 'button');
-    row.onclick = () => pick(i); row.onkeydown = e => { if (e.key === 'Enter') pick(i); };
-    const t = el('div', { className: 't' }, el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: plain(q.question).trim() || '(photo only)' }), el('span', { className: 'qtype', title: q.kind === 'sort' ? 'Sort question' : 'Draw question' }, icoEl(q.kind === 'sort' ? 'shapes' : 'pen', 'sm')));
-    const m = el('div', { className: 'meta' }, q.kind === 'sort' ? el('span', { className: 'chip proj', textContent: 'Sort · ' + q.sort.cards.length + ' cards' }) : q.model ? el('span', { className: 'chip proj', textContent: 'Draw · ' + q.model.pieces.length + ' pieces' }) : el('span', { className: 'chip', textContent: (BG.find(b => b[0] === q.bg) || BG[2])[1] }), el('span', { style: 'flex:1' }));
-    const mk = (l, f, label, cls) => { const b = el('button', { className: 'b sm sq ter ' + (cls || ''), title: label, onclick: ev => { ev.stopPropagation(); f(); } }, ({ '↑': icoEl('up'), '↓': icoEl('down'), '✕': icoEl('x') })[l]); b.setAttribute('aria-label', label); return b; };
-    m.append(mk('↑', () => move(i, -1), 'Move up'), mk('↓', () => move(i, 1), 'Move down'), mk('✕', () => remove(i), 'Delete question', 'danger'));
-    const tick = el('input', { type: 'checkbox', className: 'tick', checked: picked.has(q) }); tick.setAttribute('aria-label', 'Select question ' + (i + 1) + ' to tag');
-    tick.onclick = ev => ev.stopPropagation(); tick.onchange = () => { tick.checked ? picked.add(q) : picked.delete(q); renderBulk(); };
-    t.prepend(tick);
-    row.append(t, m);
-    const own = new Set((q.tags || []).map(SK.tagKey)), all = SK.tagsOf(q, set);
-    const chips = all.length
-      ? all.map(x => el('span', { className: 'tg ro' + (own.has(SK.tagKey(x)) ? '' : ' set'), textContent: tagLabel(x), title: own.has(SK.tagKey(x)) ? 'Tag on this question' : 'Tag on the whole set' }))
-      : [el('button', { type: 'button', className: 'tg none', textContent: 'No tag', title: 'Add a tag to this question', onclick: async ev => { ev.stopPropagation(); await pick(i); focusTags(); } })];
-    row.append(el('div', { className: 'tgrow' }, ...chips)); box.append(row);
+    const text = plain(q.question).trim() || '(photo only)';
+    const row = el('div', { className: 'q' + (i === sel ? ' on' : ''), title: text }); row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', 'Question ' + (i + 1) + ': ' + text);
+    if (i === sel) row.setAttribute('aria-current', 'true');
+    row.onclick = () => pick(i); row.onkeydown = e => { if (e.target === row && e.key === 'Enter') pick(i); };
+    // drag a row to reorder (the same moves are in the row's menu for the keyboard)
+    row.draggable = !tagMode && n > 1;
+    row.ondragstart = e => { dragFrom = i; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); };
+    row.ondragend = () => { dragFrom = -1; $$('#qlist .q').forEach(x => x.classList.remove('dragging', 'over')); };
+    row.ondragover = e => { if (dragFrom < 0 || dragFrom === i) return; e.preventDefault(); row.classList.add('over'); };
+    row.ondragleave = () => row.classList.remove('over');
+    row.ondrop = e => { e.preventDefault(); const from = dragFrom; dragFrom = -1; if (from >= 0 && from !== i) reorder(from, i); };
+    if (tagMode) {
+      const tick = el('input', { type: 'checkbox', className: 'tick', checked: picked.has(q) }); tick.setAttribute('aria-label', 'Select question ' + (i + 1) + ' to tag');
+      tick.onclick = ev => ev.stopPropagation(); tick.onchange = () => { tick.checked ? picked.add(q) : picked.delete(q); renderBulk(); };
+      row.append(tick);
+    } else if (n > 1) row.append(el('span', { className: 'grab', title: 'Drag to reorder' }, icoEl('grab', 'sm')));
+    row.append(el('div', { className: 'n', textContent: i + 1 }), el('div', { className: 'x', textContent: text }));
+    if (i === sel && dirty) row.append(el('span', { className: 'udot', title: 'Unsaved changes' }));
+    if (!SK.tagsOf(q, set).length) row.append(el('button', { type: 'button', className: 'tg none', textContent: 'No tag', title: 'Add a tag to this question', onclick: async ev => { ev.stopPropagation(); await pick(i); focusTags(); } }));
+    row.append(el('span', { className: 'chip' + (q.kind === 'sort' || q.model ? ' proj' : ''), textContent: q.kind === 'sort' ? 'Sort' : q.model ? 'Pieces' : 'Draw', title: q.kind === 'sort' ? 'Sort · ' + q.sort.cards.length + ' cards' : q.model ? 'Draw · ' + q.model.pieces.length + ' pieces' : 'Draw · ' + (BG.find(b => b[0] === q.bg) || BG[2])[1] }));
+    const mb = el('button', { type: 'button', className: 'b sm ter qm', title: 'Move, tag, copy or delete', onclick: e => questionMenu(i, row, e) }, icoEl('dots')); mb.setAttribute('aria-label', 'More for question ' + (i + 1)); mb.setAttribute('aria-haspopup', 'true');
+    row.append(mb); box.append(row);
   });
+  if (!n) box.append(el('div', { className: 'mut', textContent: 'No questions yet. Write the first one, then press Save question.', style: 'padding:4px' }));
   renderBulk(); renderSetTags();
 }
 function renderRest() {
   $('#etitle').textContent = sel === -1 ? 'New question' : 'Edit question ' + (sel + 1);
-  $('#elbl').textContent = set.name;
+  const last = sel === -1 || sel === set.questions.length - 1; $('#savenext').textContent = last ? 'Save and add another' : 'Save and go to next';
   // background chooser
   const bgs = $('#bgs'); bgs.innerHTML = '';
   BG.forEach(([k, label]) => {
@@ -361,7 +437,7 @@ SE.mount({
 });
 // Save and Send now wait until a sort question is complete
 let modelIssues = [];
-function refreshSave() { const bad = (isSort() && (sortIssues.length || !plain(draft.question || '').trim())) || (hasModel() && modelIssues.length); $('#save').disabled = $('#sendnow').disabled = !!bad; }
+function refreshSave() { const bad = (isSort() && (sortIssues.length || !plain(draft.question || '').trim())) || (hasModel() && modelIssues.length); $('#save').disabled = $('#savenext').disabled = $('#sendnow').disabled = !!bad; }
 // the draft's photo, loaded once per picture; `after` repaints whatever is showing it
 function ensureImg(after) { if (draft.bg === 'photo' && draft.img && (!pim || pim.dataset.src !== draft.img)) { pim = loadImg(draft.img, after); pim.dataset.src = draft.img; } }
 const hasModel = () => !isSort() && !!draft.model;
@@ -376,14 +452,20 @@ function preview() {
   if (draft.bg === 'photo' && draft.img) { if (!pim || pim.dataset.src !== draft.img) { pim = loadImg(draft.img, paint); pim.dataset.src = draft.img; } }
   paint();
 }
-async function move(i, d) {
-  const j = i + d, a = set.questions; if (j < 0 || j >= a.length) return;
+const move = (i, d) => reorder(i, i + d);
+async function reorder(from, to) { // lift question `from` out and put it at position `to`
+  const a = set.questions; if (to < 0 || to >= a.length || from === to) return;
   if (dirty && !await ask('Unsaved changes to this question will be lost.', { title: 'Move anyway?', ok: 'Move anyway', cancel: 'Stay and keep editing', danger: true })) return;
-  [a[i], a[j]] = [a[j], a[i]]; persistSets(); pick(sel === i ? j : sel === j ? i : sel, true);
+  const cur = a[sel], q = a.splice(from, 1)[0]; a.splice(to, 0, q); saveSet(); pick(sel >= 0 ? a.indexOf(cur) : -1, true);
+}
+async function copyQuestion(i) {
+  if (set.questions.length >= SK.MAX_QS) return toast('A set holds at most ' + SK.MAX_QS + ' questions.');
+  if (dirty && !await ask('Unsaved changes to the question you are editing will be lost.', { title: 'Copy anyway?', ok: 'Copy anyway', cancel: 'Stay and keep editing', danger: true })) return;
+  set.questions.splice(i + 1, 0, JSON.parse(JSON.stringify(set.questions[i]))); saveSet(); pick(i + 1, true); toast('Copied. This is the copy.');
 }
 async function remove(i) {
   if (!await ask('', { title: 'Delete question ' + (i + 1) + '?', ok: 'Delete', cancel: 'Keep', danger: true })) return;
-  set.questions.splice(i, 1); persistSets();
+  set.questions.splice(i, 1); saveSet();
   if (!set.questions.length) pick(-1, true); else pick(Math.min(i, set.questions.length - 1), true);
 }
 
@@ -425,15 +507,29 @@ const finished = () => {
   const bg = draft.bg === 'photo' && !draft.img ? 'blank' : draft.bg, o = { question: draft.question, bg, img: bg === 'photo' ? draft.img : null };
   if (draft.model) { const model = SK.cleanModel(draft.model); if (!model) return null; o.model = model; }
   return tg(o); };
-$('#save').onclick = () => {
-  const q = finished(); if (!q) return tell(isSort() ? 'See the notes under the lanes and cards.' : 'See the notes under the pieces.', { title: isSort() ? 'This sort question is not finished yet' : 'This question with pieces is not finished yet' });
-  if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
+function saveQuestion() { // true when it was saved
+  const q = finished(); if (!q) { tell(isSort() ? 'See the notes under the lanes and cards.' : 'See the notes under the pieces.', { title: isSort() ? 'This sort question is not finished yet' : 'This question with pieces is not finished yet' }); return false; }
+  if (!plain(q.question).trim() && !q.img) { tell('', { title: 'Type a question or add a photo first' }); return false; }
   if (sel === -1) { set.questions.push(q); sel = set.questions.length - 1; } else set.questions[sel] = q;
-  persistSets(); draft = JSON.parse(JSON.stringify(q)); dirty = false; renderAll(); toast('Saved.');
+  saveSet(); draft = JSON.parse(JSON.stringify(q)); dirty = false; return true;
+}
+$('#save').onclick = () => {
+  if (!saveQuestion()) return;
+  renderAll(); toast('Saved.');
   const sv = $('#save'); sv.replaceChildren(icoEl('check'), ' Saved'); clearTimeout(sv._t); sv._t = setTimeout(() => (sv.textContent = 'Save question'), 2000);
 };
+$('#savenext').onclick = () => {
+  if (!saveQuestion()) return;
+  const n = sel + 1 < set.questions.length ? sel + 1 : -1; toast(n === -1 ? 'Saved. Here is a new question.' : 'Saved. Now question ' + (n + 1) + '.');
+  pick(n, true); $('#qin').focus(); $('.col.edit').scrollIntoView({ block: 'start' });
+};
 $('#cancel').onclick = async () => { if (dirty && !await ask('', { title: 'Discard your changes to this question?', ok: 'Discard changes', cancel: 'Keep editing', danger: true })) return; if (sel === -1 && set.questions.length) pick(0, true); else pick(sel, true); };
-$('#add').onclick = () => pick(-1);
+$('#add').onclick = async () => { await pick(-1); if (sel === -1) $('#qin').focus(); };
+$('#done').onclick = async () => {
+  if (dirty && !await ask('Your changes to ' + (sel === -1 ? 'the new question' : 'question ' + (sel + 1)) + ' are not saved.', { title: 'Leave without saving?', ok: 'Leave without saving', cancel: 'Stay and keep editing', danger: true })) return;
+  dirty = false; location.href = backUrl;
+};
+$('#sname').onclick = () => renameSetDialog(set, renderAll);
 $('#sendnow').onclick = () => {
   const q = finished(); if (!q) return tell(isSort() ? 'See the notes under the lanes and cards.' : 'See the notes under the pieces.', { title: isSort() ? 'This sort question is not finished yet' : 'This question with pieces is not finished yet' });
   if (!plain(q.question).trim() && !q.img) return tell('', { title: 'Type a question or add a photo first' });
@@ -450,15 +546,15 @@ $('#manage').onclick = e => {
   e.stopPropagation(); if (menu) return closeMenu();
   menu = el('div', { className: 'menu' }); menu.style.cssText = 'top:52px;right:0;min-width:240px';
   const add = (t, f, cls) => menu.append(el('button', { textContent: t, className: cls || '', onclick: () => { closeMenu(); f(); } }));
-  add('Rename this set', async () => { const v = ((await askText('Set name', set.name, { title: 'Rename this set', required: 'Type a set name', ok: 'Rename', max: 60 })) || '').trim().slice(0, 60); if (v) { set.name = v; persistSets(); renderAll(); } });
+  add('Rename this set', () => renameSetDialog(set, renderAll));
   add('Set tags…', editSetTags);
   add('Move to a folder…', () => folderPicker(set, renderAll));
+  add('Make a copy of this set', async () => {
+    if (dirty && !await ask('The copy is made from what is saved. Unsaved changes to the question you are editing are left out.', { title: 'Copy without the unsaved changes?', ok: 'Make the copy', cancel: 'Stay and keep editing', danger: true })) return;
+    const c = copySet(set); dirty = false; persistSets().then(() => (location.href = '/sets?id=' + c.id + (classCode ? '&code=' + classCode : '')));
+  });
   add('Export this set as a file', () => exportSets([set]));
-  add('Delete this set', async () => {
-    if (!await ask('This cannot be undone.', { title: 'Delete "' + set.name + '" and all ' + set.questions.length + ' of its questions?', ok: 'Delete set', cancel: 'Keep set', danger: true })) return;
-    dirty = false; sets = sets.filter(s => s !== set); if (!sets.length) sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }];
-    persistSets().then(() => (location.href = backUrl));
-  }, 'danger');
+  add('Delete this set', () => deleteSetDialog(set, () => { dirty = false; location.href = backUrl; }), 'danger');
   $('#manage').parentNode.append(menu);
 };
 </script>
