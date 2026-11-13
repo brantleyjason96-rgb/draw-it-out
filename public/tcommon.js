@@ -448,10 +448,75 @@ const cleanQs = a => (Array.isArray(a) ? a : []).slice(0, 200).map(q => {
   return plain(text).trim() || img ? tg({ question: text, bg, img: bg === 'photo' ? img : null, ...(model ? { model } : {}) }) : null;
 }).filter(Boolean);
 function addSet(name, questions, folder, tags) {
-  const st = { id: crypto.randomUUID(), name: String(name || 'New set').slice(0, 60), questions: cleanQs(questions) };
+  const st = { id: crypto.randomUUID(), name: String(name || 'New set').slice(0, 60), questions: cleanQs(questions), edited: Date.now() };
   const tg = canonTags(tags); if (tg.length) st.tags = tg;
   if (folder && folderById(folder)) st.folder = folder;
   sets.push(st); persistSets(); return st;
+}
+// ---- things you can do to a whole set, shared by the Question sets tab, the set editor and the class screen ----
+// `edited` is when the set last changed (shown in the library). Sets saved before this existed have none.
+const touchSet = st => { if (st) st.edited = Date.now(); return st; };
+function editedText(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  const d = new Date(ms), now = new Date(), days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (days <= 0) return 'Edited today'; if (days === 1) return 'Edited yesterday';
+  return 'Edited ' + (days < 7 ? d.toLocaleDateString(undefined, { weekday: 'long' }) : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) }));
+}
+async function renameSetDialog(st, after) {
+  const v = ((await askText('Set name', st.name, { title: 'Rename this set', required: 'Type a set name', ok: 'Rename', max: 60 })) || '').trim().slice(0, 60);
+  if (!v || v === st.name) return false;
+  st.name = v; touchSet(st); await persistSets(); after && after(st); return true;
+}
+function copySet(st) { // a full copy, placed straight after the original and in the same folder
+  const c = JSON.parse(JSON.stringify(st)); c.id = crypto.randomUUID(); c.name = ('Copy of ' + st.name).slice(0, 60); c.edited = Date.now();
+  sets.splice(sets.indexOf(st) + 1, 0, c); persistSets(); return c;
+}
+async function deleteSetDialog(st, after) {
+  const n = st.questions.length;
+  if (!await ask('This cannot be undone.', { title: 'Delete "' + st.name + '"' + (n ? ' and ' + (n === 1 ? 'its question' : 'all ' + n + ' of its questions') : '') + '?', ok: 'Delete set', cancel: 'Keep set', danger: true })) return false;
+  sets = sets.filter(x => x !== st); if (!sets.length) sets = [{ id: crypto.randomUUID(), name: 'My first set', questions: [] }]; // there is always one set to send from
+  await persistSets(); after && after(); return true;
+}
+// "Teach": open a class with this set loaded. With one class it goes straight there.
+function teachSet(st) {
+  const go = code => { try { store.do_active = st.id; store['do_active_' + code] = st.id; } catch {} location.href = '/class?code=' + code; };
+  if (periods.length === 1) return go(periods[0].code);
+  const old = document.getElementById('tcdlg'); if (old) old.remove();
+  const d = el('dialog', { id: 'tcdlg' }); d.style.maxWidth = '460px';
+  const close = () => { d.close(); d.remove(); }, list = el('div', { className: 'fplist' });
+  periods.forEach(p => list.append(el('button', { className: 'fpopt', onclick: () => go(p.code) }, el('span', { textContent: p.name }), el('small', { textContent: 'Code ' + p.code }))));
+  d.append(el('div', { className: 'dh' }, el('div', {}, el('div', { className: 'lbl', textContent: 'Teach with this set' }), el('h2', { textContent: 'Which class?', style: 'font-size:var(--fs-xl)' })), el('button', { className: 'b', textContent: 'Cancel', onclick: close })), list);
+  d.addEventListener('close', () => d.remove());
+  document.body.append(d); d.showModal();
+}
+// Words for what a set holds: "5 questions · 4 Draw, 1 Sort"
+function setMixText(st) {
+  const n = st.questions.length; if (!n) return 'No questions yet';
+  const sort = st.questions.filter(q => q.kind === 'sort').length, pieces = st.questions.filter(q => q.kind !== 'sort' && q.model).length, draw = n - sort - pieces;
+  return n + ' question' + (n === 1 ? '' : 's') + ' · ' + [draw ? draw + ' Draw' : '', pieces ? pieces + ' Pieces' : '', sort ? sort + ' Sort' : ''].filter(Boolean).join(', ');
+}
+// "Choose a set": every set under its folder, with a search box. Used where a plain drop-down was (the class screen).
+function setPickerDialog(currentId, onPick, extra) {
+  const old = document.getElementById('spdlg'); if (old) old.remove();
+  const d = el('dialog', { id: 'spdlg' }); d.style.maxWidth = '520px'; d.setAttribute('aria-label', 'Choose a question set');
+  const close = () => { d.close(); d.remove(); };
+  const q = el('input', { className: 'inp', type: 'search', placeholder: 'Search sets', autocomplete: 'off' }); q.setAttribute('aria-label', 'Search sets');
+  const list = el('div', { className: 'fplist', style: 'padding-top:8px' });
+  const paint = () => {
+    const t = q.value.trim().toLowerCase(); list.replaceChildren(); let n = 0;
+    setGroups().forEach(g => {
+      const hit = g.sets.filter(x => !t || x.name.toLowerCase().includes(t) || (g.folder && g.folder.name.toLowerCase().includes(t))); if (!hit.length) return;
+      if (folders.length) list.append(el('div', { className: 'lbl', style: 'margin-top:6px' }, ...(g.folder ? [icoEl('folder', 'sm'), ' ' + g.folder.name] : ['Not in a folder'])));
+      hit.forEach(x => { n++; list.append(el('button', { className: 'fpopt' + (x.id === currentId ? ' on' : ''), onclick: () => { close(); onPick(x); } }, el('span', { textContent: x.name, style: 'min-width:0;overflow-wrap:anywhere' }), el('small', {}, ...(x.id === currentId ? [icoEl('check', 'sm'), ' open now'] : [x.questions.length + ' question' + (x.questions.length === 1 ? '' : 's')])))); });
+    });
+    if (!n) list.append(el('p', { className: 'mut', textContent: 'No set matches that.', style: 'margin:8px 4px' }));
+    (extra || []).forEach(x => list.append(el('button', { className: 'fpopt new', onclick: () => { close(); x.f(); } }, el('span', { textContent: x.t }))));
+  };
+  q.oninput = paint;
+  q.onkeydown = e => { if (e.key === 'Enter') { const b = list.querySelector('.fpopt:not(.new)'); if (b) { e.preventDefault(); b.click(); } } };
+  d.append(el('div', { className: 'dh' }, el('h2', { textContent: 'Choose a set', style: 'font-size:var(--fs-2xl)' }), el('button', { className: 'b', textContent: 'Cancel', onclick: close })), el('div', { style: 'padding:14px 24px 0' }, q), list);
+  d.addEventListener('close', () => d.remove());
+  paint(); document.body.append(d); d.showModal(); (sets.length > 6 ? q : (list.querySelector('.fpopt.on') || q)).focus();
 }
 // photos are resized to <=1600px JPEG so Chromebooks stay fast
 function takePhoto(file) {
@@ -567,7 +632,7 @@ async function doRestore(file, after) {
     let ns = 0, np = 0;
     if (d.tagLabels && typeof d.tagLabels === 'object' && !Array.isArray(d.tagLabels)) Object.entries(d.tagLabels).forEach(([k, v]) => { const c = SK.cleanTag(v); if (c && SK.tagKey(c) === k && !tagLabels[k]) tagLabels[k] = c; }); // first spelling typed wins
     cleanFolders(d.folders).forEach(f => { if (!folderById(f.id) && folders.length < MAX_FOLDERS) folders.push(f); }); // folders first, so restored sets can point at them
-    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; const tg = canonTags(x.tags); if (tg.length) r.tags = tg; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
+    d.sets.forEach(x => { if (x && typeof x.id === 'string' && !sets.some(y => y.id === x.id)) { const r = { id: x.id, name: String(x.name || 'Restored set').slice(0, 60), questions: cleanQs(x.questions) }; if (Number.isFinite(x.edited) && x.edited > 0) r.edited = x.edited; const tg = canonTags(x.tags); if (tg.length) r.tags = tg; if (x.folder && folderById(x.folder)) r.folder = x.folder; sets.push(r); ns++; } });
     (Array.isArray(d.periods) ? d.periods : []).forEach(x => {
       if (!x || !/^[A-Z0-9]{4,10}$/.test(x.code) || periods.some(y => y.code === x.code)) return;
       periods.push({ name: String(x.name || 'Restored class').slice(0, 40), code: x.code }); np++;
