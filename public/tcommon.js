@@ -351,14 +351,6 @@ function deleteFolder(f) { folders = folders.filter(x => x !== f); tidyFolders()
 function moveSet(st, folderId) { if (folderId && folderById(folderId)) st.folder = folderId; else delete st.folder; persistSets(); }
 // [{ folder, sets }]: each folder in order, then whatever is not in a folder (folder: null)
 const setGroups = () => [...folders.map(f => ({ folder: f, sets: sets.filter(x => x.folder === f.id) })), { folder: null, sets: sets.filter(x => !folderById(x.folder)) }];
-// A <select> of sets: grouped under folder names once any folders exist.
-function fillSetSelect(sel, value) {
-  sel.innerHTML = '';
-  const opt = x => el('option', { value: x.id, textContent: x.name + ' (' + x.questions.length + ')' });
-  if (!folders.length) sets.forEach(x => sel.append(opt(x)));
-  else setGroups().forEach(g => { if (!g.sets.length) return; const og = el('optgroup'); og.label = g.folder ? g.folder.name : 'Not in a folder'; g.sets.forEach(x => og.append(opt(x))); sel.append(og); });
-  sel.value = value;
-}
 // "New set" dialog: a name and, if you like, a folder (or make a new folder on the spot). after(set) runs once it is saved.
 function newSetDialog(after, presetFolder) {
   const old = document.getElementById('nsdlg'); if (old) old.remove();

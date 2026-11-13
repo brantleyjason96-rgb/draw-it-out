@@ -217,3 +217,8 @@ button.tg:focus-visible{outline:3px solid var(--c-focus,#0B6BCB);outline-offset:
 .cstrip:focus-visible{outline:3px solid var(--c-focus);outline-offset:2px}
 .bkremind{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:12px 16px;border:2px solid var(--c-warn-line);border-radius:var(--r-lg);background:var(--c-warn-soft);color:var(--c-warn-strong)}
 .bkremind[hidden]{display:none}
+
+/* the set picker button on the class screen (opens the Choose a set dialog) */
+.setpick{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;text-align:left;min-width:0;cursor:pointer}
+.setpick span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setpick:hover{background:var(--c-surface-2)}

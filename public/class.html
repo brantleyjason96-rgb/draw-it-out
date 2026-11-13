@@ -46,7 +46,7 @@
    <div class="open">
     <div class="chead"><h2>Questions</h2><button class="b sq ter" id="qshut" aria-label="Hide questions" title="Hide questions"><svg data-i="back"></svg></button></div>
     <div style="display:flex;gap:8px;padding:0 16px 8px">
-     <select class="inp" id="setsel" aria-label="Question set" style="font-weight:700"></select>
+     <button class="inp setpick" id="setsel" aria-haspopup="dialog" title="Choose another set"><span id="setselt"></span><svg data-i="chev" class="sm"></svg></button>
      <button class="b sq" id="setmenu" aria-label="Manage this set" title="Manage this set"><svg data-i="dots"></svg></button>
     </div>
     <div class="qlist" id="qlist"></div>
@@ -690,7 +690,7 @@ function go(i) {
 }
 function renderRailHead() { /* position text depends on set + cur only */ }
 function renderSet() {
-  fillSetSelect($('#setsel'), activeSet().id);
+  { const a = activeSet(), f = folderById(a.folder); $('#setselt').textContent = a.name + ' (' + a.questions.length + ')'; $('#setsel').setAttribute('aria-label', 'Question set: ' + a.name + (f ? ', in folder ' + f.name : '') + '. Choose another set'); }
   const box = $('#qlist'); box.innerHTML = ''; const n = qs().length;
   qs().forEach((q, i) => {
     const row = el('div', { className: 'qi' + (i === cur ? ' on' : '') });
@@ -730,7 +730,9 @@ async function rm(i) {
 $('#qqin').addEventListener('input', () => { $('#qqsend').disabled = !$('#qqin').value.trim(); });
 $('#qqin').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#qq').requestSubmit(); } }); // Enter sends, Shift+Enter makes a new line
 $('#qq').onsubmit = e => { e.preventDefault(); if (quickSend($('#qqin').value)) { $('#qqin').value = ''; $('#qqsend').disabled = true; } };
-$('#setsel').onchange = e => { setActiveId(e.target.value); cur = -1; setCurIdx(-1); renderSet(); };
+// the set picker lists every set under its folder, with a search box (the same list as the Question sets tab)
+$('#setsel').onclick = () => setPickerDialog(activeSet().id, x => { if (x.id === activeSet().id) return; setActiveId(x.id); cur = -1; setCurIdx(-1); renderSet(); },
+  [{ t: '＋ New set…', f: () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new&code=' + code)) }]);
 function foldRail(on) { $('#rail').classList.toggle('shut', on); try { store.do_qfold = on ? '1' : '0'; } catch (e) { } }
 try { if (store.do_qfold === '1') $('#rail').classList.add('shut'); } catch (e) { }
 $('#qopen').onclick = () => foldRail(false); $('#qshut').onclick = () => foldRail(true);
@@ -794,11 +796,12 @@ $('#more').onclick = e => {
 $('#setmenu').onclick = e => {
   e.stopPropagation();
   openMenu($('#setmenu'), [
-    { t: 'Edit this set', f: () => (location.href = '/sets?id=' + activeSet().id + '&code=' + code) },
-    { t: 'New set…', f: () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new&code=' + code)) },
+    { t: 'Open in the editor', sub: 'Add, change or reorder questions', f: () => (location.href = '/sets?id=' + activeSet().id + '&code=' + code) },
+    { t: 'Rename', f: () => renameSetDialog(activeSet(), renderSet) },
     { t: 'Move to a folder…', sub: 'Group sets by unit', f: () => folderPicker(activeSet(), renderSet) },
     { t: 'Share link', f: () => copyShareLink(activeSet()) },
-    { t: 'Export this set as a file', f: () => exportSets([activeSet()]) },
+    { t: 'Export as a file', f: () => exportSets([activeSet()]) },
+    { t: 'New set…', f: () => newSetDialog(st => (location.href = '/sets?id=' + st.id + '&q=new&code=' + code)) },
   ], 'top:50px;right:0;min-width:240px');
 };
 $('#restore').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) doRestore(f, () => location.reload()); };

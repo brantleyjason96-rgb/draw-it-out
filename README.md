@@ -11,7 +11,9 @@ Two kinds of question:
   - **Classes** tab: pick a class to start; each card shows the top three teams by points.
   - **Teams** tab: rename teams, pick an icon and colour, reorder, add or remove teams, reset scores. Copy the same teams into another class — buttons on the Teams tab, on each class card's ⋯ menu, and a link on the empty team list — with the points of any team that is already there kept. If the class is running, students and the projector update straight away. Link straight to it: `/teacher?tab=teams&class=CODE`.
   - `/class?code=…` is the teaching screen: questions on the left, drawings in the middle (click up to three to compare them on the projector), a ranked **Team scores** column on the right (collapsible; a slide-over on smaller screens), also a phone layout under 700px. The top bar holds **❄ Freeze**, and each card is outlined in the student's own red/amber/green pulse.
-  - `/sets?id=…` is the question editor (its own screen)
+  - **Question sets** tab (`/teacher?tab=sets`) is a library: folders and views down the side (All sets, Recently edited, each folder, Starter sets, Tags), a search box that looks at set names, tags and question text, and one **New set** button (Start blank, Build with AI, Pick a starter set, Import a file). Each set is one row with **Open**, **Teach** (pick a class and it opens with that set loaded) and a ⋯ menu: Rename, Make a copy, Move to a folder, Share link, Export, Delete.
+  - `/sets?id=…` is the question editor (its own screen). The top bar shows the way back (Question sets › folder › set name; click the name to rename), whether everything is saved, and **Done**. Questions are saved one at a time with **Save question** or **Save and go to next**; an unsaved question has a dot on its row. Drag a row to reorder, or use its ⋯ menu (move, tags, copy, delete). **Tag several** turns on tick boxes for tagging many questions at once.
+  - On the teaching screen the set button opens **Choose a set**: every set under its folder, with search.
   - `/class?demo=1` is the demo (eight practice students; nothing is saved)
 - Landing page: `/start`
 - Projector: opened from the teaching screen. Shows one student's work, or up to three side by side, or the leaderboard, and the frozen screen while the class is frozen.
@@ -106,9 +108,9 @@ Environment variables: `PORT` (default 3000), `MAX_ROOMS` (default 200), `MAX_PE
 - The projector shows the digits in its footer on every view and full-screen when nothing else is showing, with an optional soft chime (projector only, off by default).
 
 ## Build with AI, and tags
-- **Question sets → Build with AI** writes a prompt (type, learning goal, tags, grade, 3 to 10 questions, language support, lanes and cards for sort questions). Paste it into any AI tool, paste the answer back, and the app checks it. **The app never calls an AI service**: no key, no cost, no student data.
+- **Question sets → New set → Build with AI** writes a prompt (type, learning goal, tags, grade, 3 to 10 questions, language support, lanes and cards for sort questions). Paste it into any AI tool, paste the answer back, and the app checks it. **The app never calls an AI service**: no key, no cost, no student data.
 - The check uses one validator (`public/sortkit.js`, a copy of the server's limits) shared with the question editor and file import. Problems are listed per question in plain words and the good questions can be added while the bad ones are skipped.
-- **Tags** say what each question assesses (up to 5 per question, 30 characters, plain text; "rock cycle" and "Rock Cycle" are one tag and the first spelling typed is shown). A set can have tags too. Add them in the editor, to several questions at once, or let Build with AI add them. Filter sets by tag, and rename, merge or delete tags from the **Tags** dialog (saved lesson history follows).
+- **Tags** say what each question assesses (up to 5 per question, 30 characters, plain text; "rock cycle" and "Rock Cycle" are one tag and the first spelling typed is shown). A set can have tags too. Add them in the editor, to several questions at once, or let Build with AI add them. See every tag in the **Tags** view of the Question sets tab, pick one to list its sets and questions, and rename, merge or delete tags from there (saved lesson history follows).
 - Tags are teacher-only. They are never sent to the server, students or the projector, and they travel in export, import, backup, restore and share links.
 
 ## Lesson history and the Dashboard
